@@ -1,0 +1,50 @@
+[
+  {
+    "code": "CM",
+    "nameFr": "Cameroun",
+    "nameEn": "Cameroon",
+    "enabled": true
+  },
+  {
+    "code": "CI",
+    "nameFr": "Côte d'Ivoire",
+    "nameEn": "Ivory Coast",
+    "enabled": true
+  },
+  {
+    "code": "SN",
+    "nameFr": "Sénégal",
+    "nameEn": "Senegal",
+    "enabled": false
+  },
+  {
+    "code": "TG",
+    "nameFr": "Togo",
+    "nameEn": "Togo",
+    "enabled": false
+  },
+  {
+    "code": "BJ",
+    "nameFr": "Bénin",
+    "nameEn": "Benin",
+    "enabled": false
+  },
+  {
+    "code": "ML",
+    "nameFr": "Mali",
+    "nameEn": "Mali",
+    "enabled": false
+  },
+  {
+    "code": "HT",
+    "nameFr": "Haïti",
+    "nameEn": "Haiti",
+    "enabled": false
+  },
+  {
+    "code": "CD",
+    "nameFr": "RD Congo",
+    "nameEn": "DR Congo",
+    "enabled": false
+  }
+]

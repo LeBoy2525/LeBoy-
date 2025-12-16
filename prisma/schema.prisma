@@ -1,0 +1,336 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================
+// MODÈLES PRINCIPAUX
+// ============================================
+
+model User {
+  id                    String   @id @default(uuid())
+  email                 String   @unique
+  passwordHash          String
+  fullName              String
+  role                  String   // "admin" | "client" | "prestataire"
+  createdAt             DateTime @default(now())
+  lastLogin             DateTime?
+  emailVerified         Boolean  @default(false)
+  verificationCode      String?
+  verificationCodeExpires DateTime?
+  country               String?
+
+  @@map("users")
+}
+
+model Demande {
+  id                    String   @id @default(uuid())
+  ref                   String   @unique // D-2025-001
+  createdAt             DateTime @default(now())
+  deviceId              String?
+  
+  fullName              String
+  email                 String
+  phone                 String
+  
+  serviceType           String
+  serviceSubcategory    String?
+  serviceAutre          String?
+  country              String?
+  
+  description          String   @db.Text
+  lieu                 String?
+  budget               String?
+  urgence              String
+  
+  fileIds               String[] // Array of file IDs
+  
+  statut               String   @default("en_attente") // "en_attente" | "rejetee" | "acceptee"
+  rejeteeAt            DateTime?
+  rejeteeBy            String?
+  raisonRejet          String?  @db.Text
+  
+  deletedAt            DateTime?
+  deletedBy            String?
+  
+  // Relations
+  missions              Mission[]
+  propositions         Proposition[]
+  
+  @@map("demandes")
+}
+
+model Prestataire {
+  id                    String   @id @default(uuid())
+  ref                   String   @unique // P-2025-001
+  createdAt             DateTime @default(now())
+  
+  nomEntreprise         String
+  nomContact           String
+  email                 String   @unique
+  phone                 String
+  adresse              String
+  ville                String
+  
+  specialites          String[] // Array of service types
+  zonesIntervention    String[] // Array of cities
+  
+  passwordHash          String?  // Hash bcrypt du mot de passe
+  
+  statut               String   @default("en_attente") // "en_attente" | "actif" | "suspendu" | "rejete"
+  actifAt              DateTime?
+  suspenduAt           DateTime?
+  rejeteAt             DateTime?
+  rejeteBy             String?
+  raisonRejet          String?  @db.Text
+  
+  deletedAt            DateTime?
+  deletedBy            String?
+  
+  // Relations
+  missions              Mission[]
+  propositions         Proposition[]
+  
+  @@map("prestataires")
+}
+
+model Mission {
+  id                    String   @id @default(uuid())
+  ref                   String   @unique // M-2025-001
+  demandeId             String
+  clientEmail           String
+  prestataireId         String?
+  prestataireRef        String?
+  
+  // État interne du workflow
+  internalState         String   // MissionInternalState
+  status                String   // MissionStatus
+  
+  createdAt             DateTime @default(now())
+  dateAssignation       DateTime?
+  dateLimiteProposition DateTime?
+  dateAcceptation       DateTime?
+  datePriseEnCharge     DateTime?
+  dateDebut             DateTime?
+  dateFin               DateTime?
+  
+  // Informations de la mission
+  titre                 String
+  description           String   @db.Text
+  serviceType           String
+  lieu                  String?
+  urgence               String
+  budget                Int?
+  
+  // Tarification
+  tarifPrestataire      Int?
+  commissionICD         Int?
+  commissionHybride     Int?
+  commissionRisk        Int?
+  commissionTotale      Int?
+  fraisSupplementaires  Int?
+  tarifTotal            Int?
+  
+  // Paiement échelonné (JSON)
+  paiementEchelonne      Json?
+  
+  // Fichiers partagés (JSON array)
+  sharedFiles           Json?
+  
+  // Suivi et progression
+  progress              Json? // Array of MissionProgress
+  currentProgress       Int?  @default(0)
+  
+  // Phases d'exécution (JSON array)
+  phases                Json?
+  delaiMaximal          Int?
+  dateLimiteMission     DateTime?
+  
+  // Updates (JSON array)
+  updates               Json? @default("[]")
+  
+  // Messages (JSON array)
+  messages              Json?
+  
+  // Notes et évaluations
+  noteClient            Int?
+  notePrestataire       Int?
+  noteICD               Int?
+  noteAdminPourPrestataire Int?
+  commentaireClient     String?  @db.Text
+  commentairePrestataire String? @db.Text
+  commentaireICD        String?  @db.Text
+  commentaireAdminPourPrestataire String? @db.Text
+  
+  // Preuves de validation finale (JSON array)
+  proofs                Json?
+  proofSubmissionDate   DateTime?
+  proofValidatedByAdmin Boolean  @default(false)
+  proofValidatedAt      DateTime?
+  proofValidatedForClient Boolean @default(false)
+  proofValidatedForClientAt DateTime?
+  
+  // Fermeture de la mission
+  closedBy              String? // "client" | "admin" | "auto"
+  closedAt              DateTime?
+  
+  // Paiement et devis
+  devisGenere           Boolean  @default(false)
+  devisGenereAt         DateTime?
+  paiementEffectue      Boolean  @default(false)
+  paiementEffectueAt    DateTime?
+  avanceVersee          Boolean  @default(false)
+  avanceVerseeAt        DateTime?
+  avancePercentage      Int?
+  soldeVersee           Boolean  @default(false)
+  soldeVerseeAt         DateTime?
+  
+  // Estimation partenaire (JSON)
+  estimationPartenaire   Json?
+  
+  // Archivage/Suppression
+  archived              Boolean  @default(false)
+  archivedAt            DateTime?
+  archivedBy            String? // "client" | "prestataire" | "admin"
+  deleted               Boolean  @default(false)
+  deletedAt             DateTime?
+  deletedBy             String? // "client" | "prestataire" | "admin"
+  
+  // Relations
+  demande               Demande  @relation(fields: [demandeId], references: [id])
+  prestataire           Prestataire? @relation(fields: [prestataireId], references: [id])
+  
+  @@index([demandeId])
+  @@index([prestataireId])
+  @@index([clientEmail])
+  @@index([internalState])
+  @@map("missions")
+}
+
+model Proposition {
+  id                    String   @id @default(uuid())
+  ref                   String   @unique // PROP-2025-001
+  createdAt             DateTime @default(now())
+  
+  demandeId             String
+  prestataireId         String
+  
+  prix_prestataire      Int
+  delai_estime          Int // en jours
+  commentaire           String  @db.Text
+  difficulte_estimee    Int      @default(3) // 1 à 5
+  
+  statut                String   @default("en_attente") // "en_attente" | "acceptee" | "refusee"
+  accepteeAt            DateTime?
+  refuseeAt             DateTime?
+  accepteeBy            String?
+  refuseeBy              String?
+  raisonRefus           String?  @db.Text
+  
+  missionId             String?
+  
+  // Relations
+  demande               Demande  @relation(fields: [demandeId], references: [id])
+  prestataire           Prestataire @relation(fields: [prestataireId], references: [id])
+  
+  @@index([demandeId])
+  @@index([prestataireId])
+  @@map("propositions")
+}
+
+model AdminNotification {
+  id                    String   @id @default(uuid())
+  type                  String   // Notification type
+  title                 String
+  message               String   @db.Text
+  missionId             String?
+  missionRef            String?
+  demandeId             String?
+  clientEmail           String?
+  prestataireName       String?
+  createdAt             DateTime @default(now())
+  read                  Boolean  @default(false)
+  readAt                DateTime?
+  
+  @@index([read])
+  @@index([createdAt])
+  @@map("admin_notifications")
+}
+
+model File {
+  id                    String   @id @default(uuid())
+  fileName              String
+  fileType              String   // MIME type (ex: "application/pdf")
+  fileSize              Int      // Taille en bytes
+  filePath              String?  // DEPRECATED - Utiliser storageKey à la place
+  storageKey            String? // Clé de stockage (Blob ou chemin local)
+  storageUrl            String? // URL publique du fichier
+  uploadedBy            String
+  uploadedAt            DateTime @default(now())
+  missionId             String?
+  demandeId             String?
+  
+  @@index([missionId])
+  @@index([demandeId])
+  @@index([uploadedBy])
+  @@map("files")
+}
+
+model CommissionConfig {
+  id                    String   @id @default(uuid())
+  categoryId            String   @unique
+  categoryName          String
+  basePercent           Float
+  minCommission         Int
+  maxCommission         Int
+  riskPercent           Float
+  enabled               Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  @@map("commission_configs")
+}
+
+model Country {
+  id                    String   @id @default(uuid())
+  code                  String   @unique // CM, CI, etc.
+  name                  String
+  enabled               Boolean  @default(true)
+  
+  @@map("countries")
+}
+
+model ServiceCategory {
+  id                    String   @id @default(uuid())
+  name                  String
+  description           String?  @db.Text
+  enabled               Boolean  @default(true)
+  
+  @@map("service_categories")
+}
+
+model EmailLog {
+  id                    String   @id @default(uuid())
+  to                    String
+  from                  String
+  subject               String
+  body                  String   @db.Text
+  type                  String   // "notification" | "invoice" | "welcome" | etc.
+  status                String   @default("pending") // "pending" | "sent" | "failed"
+  error                 String?  @db.Text
+  sentAt                DateTime?
+  createdAt             DateTime @default(now())
+  
+  // Relations
+  userId                String?
+  missionId             String?
+  demandeId             String?
+  
+  @@index([to])
+  @@index([status])
+  @@index([createdAt])
+  @@map("email_logs")
+}

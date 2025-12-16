@@ -1,0 +1,93 @@
+[
+  {
+    "id": 1,
+    "email": "stevebani@outlook.fr",
+    "passwordHash": "$2a$10$Cx2i0CS.FpXzYa.0T07AbOGmmIKdvVJw9Cupw1whn0/OwrUQt8tRS",
+    "fullName": "steve bani",
+    "createdAt": "2025-12-08T23:58:26.163Z",
+    "lastLogin": "2025-12-10T04:08:16.451Z",
+    "emailVerified": true
+  },
+  {
+    "id": 2,
+    "email": "stevebani@outlook.com",
+    "passwordHash": "$2a$10$7ZQVaMgjpseDk0U5.wG4a.4T6PdKX6klWrmHV2/97bAL7Yai6qKO6",
+    "fullName": "steve nael",
+    "createdAt": "2025-12-11T18:27:23.605Z"
+  },
+  {
+    "id": 3,
+    "email": "stevenael@outlook.com",
+    "passwordHash": "$2a$10$YSs.AvqLb5pxawZKeeQ5zO7F9K7g4G9vZ8z0gukhxN.P8AdqpjNRO",
+    "fullName": "steve nael",
+    "createdAt": "2025-12-11T18:30:20.407Z"
+  },
+  {
+    "id": 4,
+    "email": "stevelino@outlook.com",
+    "passwordHash": "$2a$10$IoWIAoQQxcgzIgwWlcF1aO2M6.0sQeRfDFY2PPzaVWYthRuJisOeu",
+    "fullName": "steve nael",
+    "createdAt": "2025-12-13T02:43:22.714Z",
+    "emailVerified": true,
+    "country": "CA",
+    "lastLogin": "2025-12-14T00:28:48.595Z"
+  },
+  {
+    "id": 5,
+    "email": "test-register@example.com",
+    "passwordHash": "$2a$10$OFhdQjGv5JLAtiF4ykaF6.tknsAKk1g0Op7TXINl9qMq.RzsbOq2G",
+    "fullName": "Test User",
+    "createdAt": "2025-12-14T06:45:09.707Z",
+    "emailVerified": false,
+    "country": "CM",
+    "verificationCode": "903879",
+    "verificationCodeExpires": "2025-12-15T06:46:44.483Z"
+  },
+  {
+    "id": 6,
+    "email": "test-register@example.com",
+    "passwordHash": "$2a$10$ENwEpgVpQiNW0BDBK9QFY.nk4G9jSjr3l9jFs1Gd.hhQPRZocF7eK",
+    "fullName": "Test User 2",
+    "createdAt": "2025-12-14T06:45:09.954Z",
+    "emailVerified": false,
+    "country": "CM"
+  },
+  {
+    "id": 7,
+    "email": "test-register@example.com",
+    "passwordHash": "$2a$10$gi58uJ6/FbLMhmocIShuU.H0u/6/TbnJywQHNAukCLDFCp2m2i4p2",
+    "fullName": "Test User",
+    "createdAt": "2025-12-14T06:45:42.062Z",
+    "emailVerified": false,
+    "country": "CM"
+  },
+  {
+    "id": 8,
+    "email": "test-register@example.com",
+    "passwordHash": "$2a$10$f3rzv3QckdyeIXJpdFhdjORmgIWZOKmatT73lNYzICHWWiY6KbwKe",
+    "fullName": "Test User 2",
+    "createdAt": "2025-12-14T06:45:42.262Z",
+    "emailVerified": false,
+    "country": "CM"
+  },
+  {
+    "id": 9,
+    "email": "test-register@example.com",
+    "passwordHash": "$2a$10$.78dU0lFYw4i134L/LGNle90g0WawK2vglCunELd66o/kP2bveX/C",
+    "fullName": "Test User",
+    "createdAt": "2025-12-14T06:46:44.478Z",
+    "emailVerified": false,
+    "country": "CM"
+  },
+  {
+    "id": 10,
+    "email": "test-register-1765694879653@example.com",
+    "passwordHash": "$2a$10$OWzLiJw6kqzTaOLvnNhX/uWJhbs6QUExf.Q7Ra2SFnCndMN/xI81i",
+    "fullName": "Test User",
+    "createdAt": "2025-12-14T06:47:59.879Z",
+    "emailVerified": false,
+    "country": "CM",
+    "verificationCode": "958611",
+    "verificationCodeExpires": "2025-12-15T06:47:59.883Z"
+  }
+]

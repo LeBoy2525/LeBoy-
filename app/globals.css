@@ -1,0 +1,348 @@
+@import "tailwindcss";
+
+/* Thème clair / sombre */
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  
+  /* Variables CSS pour le thème (remplace @theme inline) */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+/* Style global du body */
+body {
+  background: var(--background);
+  color: var(--foreground);
+  margin: 0;
+}
+
+/* Classes qui utilisent les variables Next Fonts */
+.font-heading {
+  font-family: var(--font-heading);
+}
+
+.font-body {
+  font-family: var(--font-body);
+}
+
+/* Optionnel : style des titres */
+h1,
+h2,
+h3 {
+  font-family: var(--font-heading);
+  color: #0A1B2A;
+  font-weight: 800;
+}
+
+/* Animations Hero */
+@keyframes heroIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes lineIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+    filter: blur(2px);
+  }
+  to {
+    opacity: 0.55;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+.hero__content {
+  position: relative;
+  z-index: 2;
+  animation: heroIn 420ms ease-out both;
+}
+
+.hero__title {
+  color: rgba(255,255,255,0.92);
+  text-shadow:
+    0 2px 4px rgba(0,0,0,0.5),
+    0 4px 8px rgba(0,0,0,0.4),
+    0 18px 60px rgba(0,0,0,0.6);
+}
+
+.hero__title--reveal {
+  display: grid;
+  gap: 0;
+}
+
+.hero__title--reveal .reveal-line {
+  display: block;
+  opacity: 0;
+  transform: translateY(10px);
+  filter: blur(2px);
+  will-change: opacity, transform, filter;
+  animation: lineIn 520ms cubic-bezier(.2,.7,.2,1) forwards;
+  -webkit-text-stroke: 0.5px rgba(255,255,255,0.25);
+  text-shadow:
+    0 2px 4px rgba(0,0,0,0.6),
+    0 4px 8px rgba(0,0,0,0.5),
+    0 20px 60px rgba(0,0,0,0.7);
+  margin: 0;
+  padding: 0;
+  line-height: 1;
+}
+
+.hero__title--reveal .reveal-line:nth-child(1) {
+  animation-delay: 0ms;
+}
+
+.hero__title--reveal .reveal-line:nth-child(2) {
+  animation-delay: 180ms;
+}
+
+.hero__subtitle.hero__title--reveal {
+  color: rgba(255,255,255,0.92);
+  text-shadow:
+    0 2px 4px rgba(0,0,0,0.5),
+    0 4px 8px rgba(0,0,0,0.4),
+    0 18px 60px rgba(0,0,0,0.6);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero__content { 
+    animation: none; 
+  }
+  .hero__title--reveal .reveal-line {
+    animation: none;
+    opacity: 0.55;
+    transform: none;
+    filter: none;
+  }
+}
+
+/* Couleurs LeBoy */
+:root {
+  --leboy-blue-night: #0A1B2A;
+  --leboy-gold: #D4A657;
+  --leboy-cobalt: #1F4E79;
+  --leboy-gray: #F2F2F2;
+  --leboy-white: #FFFFFF;
+}
+
+/* Animation personnalisée pour le clignotement subtil et respectueux */
+@keyframes gentlePulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* Animations pour les sections */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease-out forwards;
+}
+
+.animation-delay-200 {
+  animation-delay: 0.2s;
+  opacity: 0;
+}
+
+/* Animation shimmer pour les boutons CTA */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* === Section layout (uniformise toute la page) === */
+.section {
+  padding: clamp(56px, 6vw, 92px) 0;
+}
+
+.section--tinted {
+  background: radial-gradient(1000px 500px at 50% 0%, rgba(214,170,85,0.10), transparent 55%);
+}
+
+.container {
+  width: min(1120px, calc(100% - 40px));
+  margin: 0 auto;
+}
+
+.section__head {
+  text-align: center;
+  margin-bottom: clamp(28px, 3vw, 44px);
+}
+
+.section__kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: clamp(14px, 1.5vw, 18px);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: rgba(7,27,46,0.82);
+  background: rgba(214,170,85,0.16);
+  border: 1px solid rgba(214,170,85,0.22);
+  font-weight: 700;
+}
+
+.section__title {
+  margin: 16px 0 10px;
+  font-size: clamp(32px, 4vw, 56px);
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+  color: #071b2e;
+}
+
+.section__subtitle {
+  margin: 0 auto;
+  max-width: 70ch;
+  font-size: 18px;
+  line-height: 1.6;
+  color: rgba(7,27,46,0.72);
+}
+
+/* === Cards premium (base) === */
+.card {
+  border-radius: 18px;
+  background: rgba(255,255,255,0.92);
+  border: 1px solid rgba(7,27,46,0.10);
+  box-shadow: 0 22px 60px rgba(7,27,46,0.10);
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(214,170,85,0.35);
+  box-shadow: 0 28px 80px rgba(7,27,46,0.14);
+}
+
+/* === "Ce que fait LeBoy" : steps === */
+.steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+
+.step {
+  padding: 22px;
+}
+
+.step__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.step__num {
+  font-weight: 800;
+  letter-spacing: .08em;
+  color: rgba(214,170,85,0.95);
+}
+
+.step__icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: rgba(214,170,85,0.16);
+  border: 1px solid rgba(214,170,85,0.22);
+}
+
+.step__title {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 800;
+  color: #071b2e;
+}
+
+.step__text {
+  margin: 0;
+  color: rgba(7,27,46,0.72);
+  line-height: 1.6;
+}
+
+/* === Catégories : grid catalogue === */
+.categories {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+
+.category {
+  padding: 22px;
+  display: grid;
+  gap: 10px;
+}
+
+.category__badge {
+  justify-self: start;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(7,27,46,0.78);
+  background: rgba(214,170,85,0.18);
+  border: 1px solid rgba(214,170,85,0.22);
+}
+
+.category__title {
+  margin: 4px 0 0;
+  font-size: 18px;
+  font-weight: 900;
+  color: #071b2e;
+}
+
+.category__text {
+  margin: 0;
+  color: rgba(7,27,46,0.72);
+  line-height: 1.6;
+}
+
+.category__cta {
+  margin-top: 6px;
+  font-weight: 800;
+  color: rgba(7,27,46,0.85);
+  text-decoration: none;
+}
+
+.category__cta:hover {
+  text-decoration: underline;
+}
+
+/* Responsive */
+@media (max-width: 980px) {
+  .steps, .categories { 
+    grid-template-columns: 1fr; 
+  }
+  .section__head { 
+    text-align: left; 
+  }
+}

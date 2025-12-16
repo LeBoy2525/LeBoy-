@@ -1,0 +1,766 @@
+[
+  {
+    "id": 1,
+    "ref": "M-2025-001",
+    "createdAt": "2025-12-13T06:19:59.238Z",
+    "internalState": "PROVIDER_ESTIMATED",
+    "status": "evaluation_recue_quebec",
+    "updates": [
+      {
+        "id": 1,
+        "missionId": 1,
+        "type": "status_change",
+        "author": "admin",
+        "authorEmail": "contact@leboy.com",
+        "content": "État interne changé de \"CREATED\" à \"ASSIGNED_TO_PROVIDER\"",
+        "createdAt": "2025-12-13T06:19:59.239Z"
+      },
+      {
+        "id": 2,
+        "missionId": 1,
+        "type": "status_change",
+        "author": "prestataire",
+        "authorEmail": "bibichet@gmail.com",
+        "content": "État interne changé de \"ASSIGNED_TO_PROVIDER\" à \"PROVIDER_ESTIMATED\"",
+        "createdAt": "2025-12-13T06:35:31.280Z"
+      }
+    ],
+    "sharedFiles": [],
+    "proofs": [],
+    "messages": [],
+    "currentProgress": 20,
+    "progress": [
+      {
+        "etape": "acceptation",
+        "pourcentage": 10,
+        "date": "2025-12-13T06:19:59.239Z"
+      }
+    ],
+    "demandeId": 7,
+    "clientEmail": "stevelino@outlook.fr",
+    "prestataireId": 4,
+    "prestataireRef": "P-2025-004",
+    "titre": "administratif_government - yaoundé – Jauvence",
+    "description": "besoin tu B no 3",
+    "serviceType": "administratif_government",
+    "lieu": "yaoundé – Jauvence",
+    "urgence": "urgent",
+    "tarifPrestataire": 130000,
+    "commissionICD": 0,
+    "tarifTotal": 0,
+    "dateAssignation": "2025-12-13T06:19:59.237Z",
+    "dateLimiteProposition": "2025-12-14T06:19:59.237Z",
+    "estimationPartenaire": {
+      "prixFournisseur": 130000,
+      "delaisEstimes": 36,
+      "soumiseAt": "2025-12-13T06:35:31.280Z"
+    },
+    "dateAcceptation": "2025-12-13T06:35:31.280Z",
+    "deleted": true,
+    "deletedAt": "2025-12-13T15:41:46.047Z",
+    "deletedBy": "prestataire"
+  },
+  {
+    "id": 2,
+    "ref": "M-2025-002",
+    "createdAt": "2025-12-13T06:19:59.308Z",
+    "internalState": "PROVIDER_ESTIMATED",
+    "status": "evaluation_recue_quebec",
+    "updates": [
+      {
+        "id": 1,
+        "missionId": 2,
+        "type": "status_change",
+        "author": "admin",
+        "authorEmail": "contact@leboy.com",
+        "content": "État interne changé de \"CREATED\" à \"ASSIGNED_TO_PROVIDER\"",
+        "createdAt": "2025-12-13T06:19:59.308Z"
+      },
+      {
+        "id": 2,
+        "missionId": 2,
+        "type": "status_change",
+        "author": "prestataire",
+        "authorEmail": "christinehomecare1@gmail.com",
+        "content": "État interne changé de \"ASSIGNED_TO_PROVIDER\" à \"PROVIDER_ESTIMATED\"",
+        "createdAt": "2025-12-13T06:31:26.649Z"
+      }
+    ],
+    "sharedFiles": [],
+    "proofs": [],
+    "messages": [],
+    "currentProgress": 20,
+    "progress": [
+      {
+        "etape": "acceptation",
+        "pourcentage": 10,
+        "date": "2025-12-13T06:19:59.308Z"
+      }
+    ],
+    "demandeId": 7,
+    "clientEmail": "stevelino@outlook.fr",
+    "prestataireId": 2,
+    "prestataireRef": "P-2025-002",
+    "titre": "administratif_government - yaoundé – Jauvence",
+    "description": "besoin tu B no 3",
+    "serviceType": "administratif_government",
+    "lieu": "yaoundé – Jauvence",
+    "urgence": "urgent",
+    "tarifPrestataire": 120000,
+    "commissionICD": 0,
+    "tarifTotal": 0,
+    "dateAssignation": "2025-12-13T06:19:59.308Z",
+    "dateLimiteProposition": "2025-12-14T06:19:59.308Z",
+    "estimationPartenaire": {
+      "prixFournisseur": 120000,
+      "delaisEstimes": 16,
+      "soumiseAt": "2025-12-13T06:31:26.649Z"
+    },
+    "dateAcceptation": "2025-12-13T06:31:26.649Z",
+    "deleted": true,
+    "deletedAt": "2025-12-13T15:42:23.229Z",
+    "deletedBy": "prestataire"
+  },
+  {
+    "id": 3,
+    "ref": "M-2025-003",
+    "createdAt": "2025-12-13T06:19:59.317Z",
+    "internalState": "PROVIDER_ESTIMATED",
+    "status": "evaluation_recue_quebec",
+    "updates": [
+      {
+        "id": 1,
+        "missionId": 3,
+        "type": "status_change",
+        "author": "admin",
+        "authorEmail": "contact@leboy.com",
+        "content": "État interne changé de \"CREATED\" à \"ASSIGNED_TO_PROVIDER\"",
+        "createdAt": "2025-12-13T06:19:59.317Z"
+      },
+      {
+        "id": 2,
+        "missionId": 3,
+        "type": "status_change",
+        "author": "prestataire",
+        "authorEmail": "nathanyves01@gmail.com",
+        "content": "État interne changé de \"ASSIGNED_TO_PROVIDER\" à \"PROVIDER_ESTIMATED\"",
+        "createdAt": "2025-12-13T06:28:53.751Z"
+      }
+    ],
+    "sharedFiles": [],
+    "proofs": [],
+    "messages": [],
+    "currentProgress": 20,
+    "progress": [
+      {
+        "etape": "acceptation",
+        "pourcentage": 10,
+        "date": "2025-12-13T06:19:59.317Z"
+      }
+    ],
+    "demandeId": 7,
+    "clientEmail": "stevelino@outlook.fr",
+    "prestataireId": 3,
+    "prestataireRef": "P-2025-003",
+    "titre": "administratif_government - yaoundé – Jauvence",
+    "description": "besoin tu B no 3",
+    "serviceType": "administratif_government",
+    "lieu": "yaoundé – Jauvence",
+    "urgence": "urgent",
+    "tarifPrestataire": 125000,
+    "commissionICD": 0,
+    "tarifTotal": 0,
+    "dateAssignation": "2025-12-13T06:19:59.316Z",
+    "dateLimiteProposition": "2025-12-14T06:19:59.316Z",
+    "estimationPartenaire": {
+      "prixFournisseur": 125000,
+      "delaisEstimes": 24,
+      "soumiseAt": "2025-12-13T06:28:53.751Z"
+    },
+    "dateAcceptation": "2025-12-13T06:28:53.751Z",
+    "deleted": true,
+    "deletedAt": "2025-12-13T15:43:02.950Z",
+    "deletedBy": "prestataire"
+  },
+  {
+    "id": 4,
+    "ref": "M-2025-004",
+    "createdAt": "2025-12-13T15:41:01.460Z",
+    "internalState": "PROVIDER_ESTIMATED",
+    "status": "evaluation_recue_quebec",
+    "updates": [
+      {
+        "id": 1,
+        "missionId": 4,
+        "type": "status_change",
+        "author": "admin",
+        "authorEmail": "contact@leboy.com",
+        "content": "État interne changé de \"CREATED\" à \"ASSIGNED_TO_PROVIDER\"",
+        "createdAt": "2025-12-13T15:41:01.461Z"
+      },
+      {
+        "id": 2,
+        "missionId": 4,
+        "type": "status_change",
+        "author": "prestataire",
+        "authorEmail": "nathanyves01@gmail.com",
+        "content": "État interne changé de \"ASSIGNED_TO_PROVIDER\" à \"PROVIDER_ESTIMATED\"",
+        "createdAt": "2025-12-13T15:43:20.498Z"
+      },
+      {
+        "id": 3,
+        "missionId": 4,
+        "type": "status_change",
+        "author": "admin",
+        "authorEmail": "contact@leboy.com",
+        "content": "État interne changé de \"PROVIDER_ESTIMATED\" à \"WAITING_CLIENT_PAYMENT\"",
+        "createdAt": "2025-12-13T22:27:40.873Z"
+      },
+      {
+        "id": 4,
+        "missionId": 4,
+        "type": "status_change",
+        "author": "admin",
+        "authorEmail": "contact@leboy.com",
+        "content": "État interne changé de \"PROVIDER_ESTIMATED\" à \"PROVIDER_ESTIMATED\"",
+        "createdAt": "2025-12-13T22:37:23.813Z"
+      }
+    ],
+    "sharedFiles": [],
+    "proofs": [],
+    "messages": [],
+    "currentProgress": 20,
+    "progress": [
+      {
+        "etape": "acceptation",
+        "pourcentage": 10,
+        "date": "2025-12-13T15:41:01.461Z"
+      }
+    ],
+    "demandeId": 8,
+    "clientEmail": "stevelino@outlook.com",
+    "prestataireId": 3,
+    "prestataireRef": "P-2025-003",
+    "titre": "administratif_government - yaoundé – Jauvence",
+    "description": "besoin du bulletin N3",
+    "serviceType": "administratif_government",
+    "lieu": "yaoundé – Jauvence",
+    "urgence": "normal",
+    "tarifPrestataire": 150000,
+    "dateAssignation": "2025-12-13T15:41:01.459Z",
+    "dateLimiteProposition": "2025-12-14T15:41:01.459Z",
+    "estimationPartenaire": {
+      "prixFournisseur": 150000,
+      "delaisEstimes": 1152,
+      "noteExplication": "",
+      "soumiseAt": "2025-12-13T21:39:43.683Z"
+    },
+    "dateAcceptation": "2025-12-13T15:43:20.498Z",
+    "devisGenere": false,
+    "delaiMaximal": 1152,
+    "dateLimiteMission": "2026-01-30T22:37:23.777Z",
+    "deleted": true,
+    "deletedAt": "2025-12-13T22:52:31.450Z",
+    "deletedBy": "contact@leboy.com"
+  },
+  {
+    "id": 5,
+    "ref": "M-2025-005",
+    "createdAt": "2025-12-13T15:41:01.915Z",
+    "internalState": "PROVIDER_ESTIMATED",
+    "status": "evaluation_recue_quebec",
+    "updates": [
+      {
+        "id": 1,
+        "missionId": 5,
+        "type": "status_change",
+        "author": "admin",
+        "authorEmail": "contact@leboy.com",
+        "content": "État interne changé de \"CREATED\" à \"ASSIGNED_TO_PROVIDER\"",
+        "createdAt": "2025-12-13T15:41:01.915Z"
+      },
+      {
+        "id": 2,
+        "missionId": 5,
+        "type": "status_change",
+        "author": "prestataire",
+        "authorEmail": "christinehomecare1@gmail.com",
+        "content": "État interne changé de \"ASSIGNED_TO_PROVIDER\" à \"PROVIDER_ESTIMATED\"",
+        "createdAt": "2025-12-13T15:42:42.089Z"
+      }
+    ],
+    "sharedFiles": [],
+    "proofs": [],
+    "messages": [],
+    "currentProgress": 20,
+    "progress": [
+      {
+        "etape": "acceptation",
+        "pourcentage": 10,
+        "date": "2025-12-13T15:41:01.915Z"
+      }
+    ],
+    "demandeId": 8,
+    "clientEmail": "stevelino@outlook.com",
+    "prestataireId": 2,
+    "prestataireRef": "P-2025-002",
+    "titre": "administratif_government - yaoundé – Jauvence",
+    "description": "besoin du bulletin N3",
+    "serviceType": "administratif_government",
+    "lieu": "yaoundé – Jauvence",
+    "urgence": "normal",
+    "tarifPrestataire": 140000,
+    "commissionICD": 0,
+    "tarifTotal": 0,
+    "dateAssignation": "2025-12-13T15:41:01.915Z",
+    "dateLimiteProposition": "2025-12-14T15:41:01.915Z",
+    "estimationPartenaire": {
+      "prixFournisseur": 140000,
+      "delaisEstimes": 23,
+      "soumiseAt": "2025-12-13T15:42:42.089Z"
+    },
+    "dateAcceptation": "2025-12-13T15:42:42.089Z",
+    "deleted": true,
+    "deletedAt": "2025-12-13T22:52:31.450Z",
+    "deletedBy": "contact@leboy.com"
+  },
+  {
+    "id": 6,
+    "ref": "M-2025-006",
+    "createdAt": "2025-12-13T15:41:01.926Z",
+    "internalState": "PROVIDER_ESTIMATED",
+    "status": "evaluation_recue_quebec",
+    "updates": [
+      {
+        "id": 1,
+        "missionId": 6,
+        "type": "status_change",
+        "author": "admin",
+        "authorEmail": "contact@leboy.com",
+        "content": "État interne changé de \"CREATED\" à \"ASSIGNED_TO_PROVIDER\"",
+        "createdAt": "2025-12-13T15:41:01.926Z"
+      },
+      {
+        "id": 2,
+        "missionId": 6,
+        "type": "status_change",
+        "author": "prestataire",
+        "authorEmail": "bibichet@gmail.com",
+        "content": "État interne changé de \"ASSIGNED_TO_PROVIDER\" à \"PROVIDER_ESTIMATED\"",
+        "createdAt": "2025-12-13T15:42:03.099Z"
+      },
+      {
+        "id": 3,
+        "missionId": 6,
+        "type": "status_change",
+        "author": "admin",
+        "authorEmail": "contact@leboy.com",
+        "content": "État interne changé de \"PROVIDER_ESTIMATED\" à \"WAITING_CLIENT_PAYMENT\"",
+        "createdAt": "2025-12-13T22:23:00.129Z"
+      }
+    ],
+    "sharedFiles": [],
+    "proofs": [],
+    "messages": [],
+    "currentProgress": 30,
+    "progress": [
+      {
+        "etape": "acceptation",
+        "pourcentage": 10,
+        "date": "2025-12-13T15:41:01.927Z"
+      }
+    ],
+    "demandeId": 8,
+    "clientEmail": "stevelino@outlook.com",
+    "prestataireId": 4,
+    "prestataireRef": "P-2025-004",
+    "titre": "administratif_government - yaoundé – Jauvence",
+    "description": "besoin du bulletin N3",
+    "serviceType": "administratif_government",
+    "lieu": "yaoundé – Jauvence",
+    "urgence": "normal",
+    "tarifPrestataire": 120000,
+    "dateAssignation": "2025-12-13T15:41:01.926Z",
+    "dateLimiteProposition": "2025-12-14T15:41:01.926Z",
+    "estimationPartenaire": {
+      "prixFournisseur": 120000,
+      "delaisEstimes": 12,
+      "soumiseAt": "2025-12-13T15:42:03.098Z"
+    },
+    "dateAcceptation": "2025-12-13T15:42:03.098Z",
+    "devisGenere": false,
+    "deleted": true,
+    "deletedAt": "2025-12-13T22:52:31.450Z",
+    "deletedBy": "contact@leboy.com"
+  },
+  {
+    "id": 7,
+    "ref": "M-2025-007",
+    "createdAt": "2025-12-13T22:52:59.036Z",
+    "internalState": "PROVIDER_ESTIMATED",
+    "status": "evaluation_recue_quebec",
+    "updates": [
+      {
+        "id": 1,
+        "missionId": 7,
+        "type": "status_change",
+        "author": "admin",
+        "authorEmail": "contact@leboy.com",
+        "content": "État interne changé de \"CREATED\" à \"ASSIGNED_TO_PROVIDER\"",
+        "createdAt": "2025-12-13T22:52:59.037Z"
+      },
+      {
+        "id": 2,
+        "missionId": 7,
+        "type": "status_change",
+        "author": "prestataire",
+        "authorEmail": "nathanyves01@gmail.com",
+        "content": "État interne changé de \"ASSIGNED_TO_PROVIDER\" à \"PROVIDER_ESTIMATED\"",
+        "createdAt": "2025-12-13T23:00:08.288Z"
+      },
+      {
+        "id": 3,
+        "missionId": 7,
+        "type": "status_change",
+        "author": "admin",
+        "authorEmail": "contact@leboy.com",
+        "content": "Mission archivée : prestataire non sélectionné comme gagnant.",
+        "createdAt": "2025-12-13T23:14:25.912Z"
+      }
+    ],
+    "sharedFiles": [],
+    "proofs": [],
+    "messages": [],
+    "currentProgress": 20,
+    "progress": [
+      {
+        "etape": "acceptation",
+        "pourcentage": 10,
+        "date": "2025-12-13T22:52:59.037Z"
+      }
+    ],
+    "demandeId": 9,
+    "clientEmail": "stevelino@outlook.com",
+    "prestataireId": 3,
+    "prestataireRef": "P-2025-003",
+    "titre": "entrepreneuriat_projets - Yaoundé",
+    "description": "creation entreprise de poisson",
+    "serviceType": "entrepreneuriat_projets",
+    "lieu": "Yaoundé",
+    "urgence": "normal",
+    "tarifPrestataire": 120000,
+    "commissionICD": 0,
+    "tarifTotal": 0,
+    "dateAssignation": "2025-12-13T22:52:59.036Z",
+    "dateLimiteProposition": "2025-12-14T22:52:59.036Z",
+    "estimationPartenaire": {
+      "prixFournisseur": 120000,
+      "delaisEstimes": 12,
+      "soumiseAt": "2025-12-13T23:00:08.288Z"
+    },
+    "dateAcceptation": "2025-12-13T23:00:08.288Z",
+    "archived": true,
+    "archivedAt": "2025-12-13T23:14:25.912Z",
+    "archivedBy": "admin"
+  },
+  {
+    "id": 8,
+    "ref": "M-2025-008",
+    "createdAt": "2025-12-13T22:52:59.047Z",
+    "internalState": "PROVIDER_ESTIMATED",
+    "status": "evaluation_recue_quebec",
+    "updates": [
+      {
+        "id": 1,
+        "missionId": 8,
+        "type": "status_change",
+        "author": "admin",
+        "authorEmail": "contact@leboy.com",
+        "content": "État interne changé de \"CREATED\" à \"ASSIGNED_TO_PROVIDER\"",
+        "createdAt": "2025-12-13T22:52:59.048Z"
+      },
+      {
+        "id": 2,
+        "missionId": 8,
+        "type": "status_change",
+        "author": "prestataire",
+        "authorEmail": "christinehomecare1@gmail.com",
+        "content": "État interne changé de \"ASSIGNED_TO_PROVIDER\" à \"PROVIDER_ESTIMATED\"",
+        "createdAt": "2025-12-13T23:01:33.024Z"
+      },
+      {
+        "id": 3,
+        "missionId": 8,
+        "type": "status_change",
+        "author": "admin",
+        "authorEmail": "contact@leboy.com",
+        "content": "Mission archivée : prestataire non sélectionné comme gagnant.",
+        "createdAt": "2025-12-13T23:14:25.912Z"
+      }
+    ],
+    "sharedFiles": [],
+    "proofs": [],
+    "messages": [],
+    "currentProgress": 20,
+    "progress": [
+      {
+        "etape": "acceptation",
+        "pourcentage": 10,
+        "date": "2025-12-13T22:52:59.048Z"
+      }
+    ],
+    "demandeId": 9,
+    "clientEmail": "stevelino@outlook.com",
+    "prestataireId": 2,
+    "prestataireRef": "P-2025-002",
+    "titre": "entrepreneuriat_projets - Yaoundé",
+    "description": "creation entreprise de poisson",
+    "serviceType": "entrepreneuriat_projets",
+    "lieu": "Yaoundé",
+    "urgence": "normal",
+    "tarifPrestataire": 200000,
+    "commissionICD": 0,
+    "tarifTotal": 0,
+    "dateAssignation": "2025-12-13T22:52:59.047Z",
+    "dateLimiteProposition": "2025-12-14T22:52:59.047Z",
+    "estimationPartenaire": {
+      "prixFournisseur": 200000,
+      "delaisEstimes": 4,
+      "soumiseAt": "2025-12-13T23:01:33.024Z"
+    },
+    "dateAcceptation": "2025-12-13T23:01:33.024Z",
+    "archived": true,
+    "archivedAt": "2025-12-13T23:14:25.912Z",
+    "archivedBy": "admin"
+  },
+  {
+    "id": 9,
+    "ref": "M-2025-009",
+    "createdAt": "2025-12-13T22:52:59.061Z",
+    "internalState": "COMPLETED",
+    "status": "cloture",
+    "updates": [
+      {
+        "id": 1,
+        "missionId": 9,
+        "type": "status_change",
+        "author": "admin",
+        "authorEmail": "contact@leboy.com",
+        "content": "État interne changé de \"CREATED\" à \"ASSIGNED_TO_PROVIDER\"",
+        "createdAt": "2025-12-13T22:52:59.061Z"
+      },
+      {
+        "id": 2,
+        "missionId": 9,
+        "type": "status_change",
+        "author": "prestataire",
+        "authorEmail": "bibichet@gmail.com",
+        "content": "État interne changé de \"ASSIGNED_TO_PROVIDER\" à \"PROVIDER_ESTIMATED\"",
+        "createdAt": "2025-12-13T23:00:52.860Z"
+      },
+      {
+        "id": 3,
+        "missionId": 9,
+        "type": "status_change",
+        "author": "admin",
+        "authorEmail": "contact@leboy.com",
+        "content": "État interne changé de \"PROVIDER_ESTIMATED\" à \"WAITING_CLIENT_PAYMENT\"",
+        "createdAt": "2025-12-13T23:19:19.023Z"
+      },
+      {
+        "id": 4,
+        "missionId": 9,
+        "type": "status_change",
+        "author": "prestataire",
+        "authorEmail": "stevelino@outlook.com",
+        "content": "État interne changé de \"WAITING_CLIENT_PAYMENT\" à \"PAID_WAITING_TAKEOVER\"",
+        "createdAt": "2025-12-13T23:20:09.606Z"
+      },
+      {
+        "id": 5,
+        "missionId": 9,
+        "type": "status_change",
+        "author": "admin",
+        "authorEmail": "contact@leboy.com",
+        "content": "État interne changé de \"PAID_WAITING_TAKEOVER\" à \"ADVANCE_SENT\"",
+        "createdAt": "2025-12-13T23:23:16.390Z"
+      },
+      {
+        "id": 6,
+        "missionId": 9,
+        "type": "status_change",
+        "author": "prestataire",
+        "authorEmail": "bibichet@gmail.com",
+        "content": "État interne changé de \"ADVANCE_SENT\" à \"IN_PROGRESS\"",
+        "createdAt": "2025-12-13T23:24:40.293Z"
+      },
+      {
+        "id": 7,
+        "missionId": 9,
+        "type": "status_change",
+        "author": "prestataire",
+        "authorEmail": "bibichet@gmail.com",
+        "content": "État interne changé de \"IN_PROGRESS\" à \"PROVIDER_VALIDATION_SUBMITTED\"",
+        "createdAt": "2025-12-13T23:57:25.667Z"
+      },
+      {
+        "id": 8,
+        "missionId": 9,
+        "type": "status_change",
+        "author": "admin",
+        "authorEmail": "contact@leboy.com",
+        "content": "État interne changé de \"PROVIDER_VALIDATION_SUBMITTED\" à \"ADMIN_CONFIRMED\"",
+        "createdAt": "2025-12-13T23:58:47.025Z"
+      },
+      {
+        "type": "status_change",
+        "author": "admin",
+        "authorEmail": "contact@leboy.com",
+        "content": "✅ Mission validée ! Vous pouvez maintenant consulter les preuves d'accomplissement et télécharger le rapport de mission.",
+        "id": 9,
+        "missionId": 9,
+        "createdAt": "2025-12-13T23:58:47.025Z"
+      },
+      {
+        "id": 10,
+        "missionId": 9,
+        "type": "status_change",
+        "author": "admin",
+        "authorEmail": "contact@leboy.com",
+        "content": "État interne changé de \"ADMIN_CONFIRMED\" à \"COMPLETED\"",
+        "createdAt": "2025-12-13T23:59:06.698Z"
+      },
+      {
+        "id": 11,
+        "missionId": 9,
+        "type": "status_change",
+        "author": "admin",
+        "authorEmail": "contact@leboy.com",
+        "content": "État interne changé de \"COMPLETED\" à \"ADMIN_CONFIRMED\"",
+        "createdAt": "2025-12-13T23:59:14.997Z"
+      },
+      {
+        "type": "status_change",
+        "author": "admin",
+        "authorEmail": "contact@leboy.com",
+        "content": "✅ Mission validée ! Vous pouvez maintenant consulter les preuves d'accomplissement et télécharger le rapport de mission.",
+        "id": 12,
+        "missionId": 9,
+        "createdAt": "2025-12-13T23:59:14.997Z"
+      },
+      {
+        "id": 13,
+        "missionId": 9,
+        "type": "status_change",
+        "author": "admin",
+        "authorEmail": "contact@leboy.com",
+        "content": "État interne changé de \"ADMIN_CONFIRMED\" à \"COMPLETED\"",
+        "createdAt": "2025-12-14T00:29:20.488Z"
+      }
+    ],
+    "sharedFiles": [],
+    "proofs": [
+      {
+        "id": "proof-1765670239982-ojkdal",
+        "fileId": "file-1765670239981-iu584x",
+        "fileName": "Attestation d.docx",
+        "fileType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "fileSize": 16721,
+        "uploadedAt": "2025-12-13T23:57:19.982Z",
+        "uploadedBy": "bibichet@gmail.com",
+        "validatedByAdmin": true,
+        "validatedAt": "2025-12-13T23:59:14.996Z",
+        "archivedAt": "2026-03-13T22:59:14.996Z"
+      }
+    ],
+    "messages": [],
+    "currentProgress": 100,
+    "progress": [
+      {
+        "etape": "acceptation",
+        "pourcentage": 10,
+        "date": "2025-12-13T22:52:59.061Z"
+      },
+      {
+        "etape": "en_cours",
+        "pourcentage": 50,
+        "date": "2025-12-13T23:24:40.293Z"
+      },
+      {
+        "etape": "validation",
+        "pourcentage": 80,
+        "date": "2025-12-13T23:57:25.667Z"
+      },
+      {
+        "etape": "validation",
+        "pourcentage": 95,
+        "date": "2025-12-13T23:58:47.025Z"
+      },
+      {
+        "etape": "terminee",
+        "pourcentage": 100,
+        "date": "2025-12-13T23:59:06.698Z"
+      },
+      {
+        "etape": "validation",
+        "pourcentage": 95,
+        "date": "2025-12-13T23:59:14.997Z"
+      },
+      {
+        "etape": "terminee",
+        "pourcentage": 100,
+        "date": "2025-12-14T00:29:20.488Z"
+      }
+    ],
+    "demandeId": 9,
+    "clientEmail": "stevelino@outlook.com",
+    "prestataireId": 4,
+    "prestataireRef": "P-2025-004",
+    "titre": "entrepreneuriat_projets - Yaoundé",
+    "description": "creation entreprise de poisson",
+    "serviceType": "entrepreneuriat_projets",
+    "lieu": "Yaoundé",
+    "urgence": "normal",
+    "tarifPrestataire": 130000,
+    "commissionICD": 19500,
+    "tarifTotal": 149500,
+    "dateAssignation": "2025-12-13T22:52:59.061Z",
+    "dateLimiteProposition": "2025-12-14T22:52:59.061Z",
+    "estimationPartenaire": {
+      "prixFournisseur": 130000,
+      "delaisEstimes": 24,
+      "soumiseAt": "2025-12-13T23:00:52.860Z"
+    },
+    "dateAcceptation": "2025-12-13T23:00:52.860Z",
+    "commissionHybride": 15600,
+    "commissionRisk": 3900,
+    "commissionTotale": 19500,
+    "paiementEchelonne": {
+      "type": "total"
+    },
+    "devisGenere": true,
+    "devisGenereAt": "2025-12-13T23:19:19.022Z",
+    "paiementEffectue": true,
+    "paiementEffectueAt": "2025-12-13T23:20:09.606Z",
+    "avanceVersee": true,
+    "avanceVerseeAt": "2025-12-13T23:23:16.389Z",
+    "avancePercentage": 50,
+    "datePriseEnCharge": "2025-12-13T23:24:40.293Z",
+    "dateDebut": "2025-12-13T23:24:40.293Z",
+    "proofSubmissionDate": "2025-12-13T23:57:19.982Z",
+    "proofValidatedByAdmin": true,
+    "proofValidatedAt": "2025-12-13T23:59:14.997Z",
+    "proofValidatedForClient": true,
+    "dateFin": "2025-12-13T23:58:47.025Z",
+    "soldeVersee": true,
+    "soldeVerseeAt": "2025-12-13T23:58:57.968Z",
+    "noteAdminPourPrestataire": 4,
+    "noteICD": 4,
+    "noteClient": 4,
+    "closedBy": "admin",
+    "closedAt": "2025-12-14T00:29:20.488Z",
+    "archived": true,
+    "archivedAt": "2025-12-14T00:46:38.163Z",
+    "archivedBy": "prestataire"
+  }
+]

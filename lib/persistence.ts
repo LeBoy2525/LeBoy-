@@ -1,0 +1,85 @@
+// lib/persistence.ts
+// Système de persistance avec fichiers JSON
+// ⚠️ DÉSACTIVÉ EN PRODUCTION - Utiliser PostgreSQL avec Prisma
+
+import { promises as fs } from "fs";
+import path from "path";
+
+// Désactiver le stockage JSON en production
+if (process.env.NODE_ENV === "production") {
+  console.warn("⚠️  Le stockage JSON est désactivé en production. Utilisez PostgreSQL avec Prisma.");
+}
+
+const DATA_DIR = path.join(process.cwd(), "data");
+
+// S'assurer que le dossier data existe
+async function ensureDataDir() {
+  try {
+    await fs.access(DATA_DIR);
+  } catch {
+    await fs.mkdir(DATA_DIR, { recursive: true });
+  }
+}
+
+// Charger les données depuis un fichier JSON
+export async function loadFromFile<T>(filename: string): Promise<T[]> {
+  // Pendant le build ou en production, retourner un tableau vide (les données viennent de la DB)
+  // Next.js définit NODE_ENV à "production" pendant le build
+  if (process.env.NODE_ENV === "production" || typeof window === "undefined" && process.env.NEXT_RUNTIME) {
+    return [];
+  }
+  
+  try {
+    await ensureDataDir();
+    const filePath = path.join(DATA_DIR, filename);
+    
+    try {
+      const data = await fs.readFile(filePath, "utf-8");
+      return JSON.parse(data) as T[];
+    } catch (error: any) {
+      // Si le fichier n'existe pas, retourner un tableau vide
+      if (error.code === "ENOENT") {
+        return [];
+      }
+      throw error;
+    }
+  } catch (error) {
+    console.error(`Erreur lors du chargement de ${filename}:`, error);
+    return [];
+  }
+}
+
+// Sauvegarder les données dans un fichier JSON
+export async function saveToFile<T>(filename: string, data: T[]): Promise<void> {
+  // En production ou pendant le build, ne rien faire (les données sont dans la DB)
+  if (process.env.NODE_ENV === "production" || typeof window === "undefined" && process.env.NEXT_RUNTIME) {
+    return;
+  }
+  
+  try {
+    await ensureDataDir();
+    const filePath = path.join(DATA_DIR, filename);
+    
+    // Créer un backup avant d'écrire (optionnel mais recommandé)
+    try {
+      const existingData = await fs.readFile(filePath, "utf-8");
+      const backupPath = path.join(DATA_DIR, `${filename}.backup`);
+      await fs.writeFile(backupPath, existingData, "utf-8");
+    } catch {
+      // Pas de backup si le fichier n'existe pas
+    }
+    
+    await fs.writeFile(filePath, JSON.stringify(data, null, 2), "utf-8");
+  } catch (error) {
+    console.error(`Erreur lors de la sauvegarde de ${filename}:`, error);
+    throw error;
+  }
+}
+
+// Fonction helper pour sauvegarder de manière asynchrone (non-bloquante)
+export function saveToFileAsync<T>(filename: string, data: T[]): void {
+  saveToFile(filename, data).catch((error) => {
+    console.error(`Erreur lors de la sauvegarde asynchrone de ${filename}:`, error);
+  });
+}
+

@@ -1,0 +1,15 @@
+[
+  {
+    "id": 1,
+    "createdAt": "2025-12-13T23:57:25.670Z",
+    "read": false,
+    "readAt": null,
+    "type": "mission_validation_submitted",
+    "title": "Preuves soumises pour validation",
+    "message": "Le prestataire Jocel sarl a soumis 1 preuve(s) pour la mission M-2025-009.",
+    "missionId": 9,
+    "missionRef": "M-2025-009",
+    "demandeId": 9,
+    "prestataireName": "Jocel sarl"
+  }
+]
