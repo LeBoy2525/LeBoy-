@@ -13,6 +13,28 @@ const nextConfig: NextConfig = {
       bodySizeLimit: '2mb',
     },
   },
+  
+  // Optimisations pour accélérer le build
+  compress: true,
+  
+  // Optimisations de compilation TypeScript
+  typescript: {
+    // Ignorer les erreurs TypeScript pendant le build (à activer seulement si nécessaire)
+    // ignoreBuildErrors: false,
+  },
+  
+  // ESLint est désactivé pendant le build pour accélérer
+  // Les erreurs seront détectées en développement avec `npm run lint`
+  
+  // Réduire la taille du bundle
+  outputFileTracingIncludes: {
+    '/api/**/*': ['./node_modules/**/*.wasm'],
+  },
+  
+  // Optimiser les images (si utilisées)
+  images: {
+    formats: ['image/avif', 'image/webp'],
+  },
 };
 
 export default nextConfig;
