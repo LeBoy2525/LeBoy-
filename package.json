@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "next lint .",
     "db:migrate": "prisma migrate dev",
     "db:generate": "prisma generate",
     "db:studio": "prisma studio",
@@ -24,7 +24,7 @@
     "test:migration:json": "USE_DB=false node test-migration-routes.js",
     "test:migration:db": "USE_DB=true node test-migration-routes.js",
     "postinstall": "echo 'skip prisma generate on install'",
-    "vercel-build": "next build"
+    "vercel-build": "prisma generate && next build"
   },
   "dependencies": {
     "@prisma/client": "^7.1.0",
