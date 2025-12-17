@@ -18,12 +18,6 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   
-  // ⚡ ACCÉLÉRATION : Ignorer ESLint pendant le build
-  // Les erreurs seront détectées avec `npm run lint` en local
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  
   // Optimiser les images (si utilisées)
   images: {
     formats: ['image/avif', 'image/webp'],
