@@ -1,7 +1,13 @@
 import { prisma } from "@/lib/db";
 import type { User } from "@/lib/usersStore";
 
+// Vérifier que Prisma est disponible avant d'utiliser
+if (!prisma) {
+  throw new Error("Prisma n'est pas initialisé. DATABASE_URL doit être définie pour utiliser les repositories.");
+}
+
 export async function getAllUsers() {
+  if (!prisma) throw new Error("Prisma non disponible");
   // @ts-ignore - Le client Prisma est généré mais TypeScript peut ne pas le reconnaître immédiatement
   return prisma.user.findMany({
     orderBy: {
@@ -11,6 +17,7 @@ export async function getAllUsers() {
 }
 
 export async function getUserById(id: string) {
+  if (!prisma) throw new Error("Prisma non disponible");
   // @ts-ignore
   return prisma.user.findUnique({
     where: { id },
@@ -18,6 +25,7 @@ export async function getUserById(id: string) {
 }
 
 export async function getUserByEmail(email: string) {
+  if (!prisma) throw new Error("Prisma non disponible");
   // @ts-ignore
   return prisma.user.findUnique({
     where: { email: email.toLowerCase() },
@@ -25,6 +33,7 @@ export async function getUserByEmail(email: string) {
 }
 
 export async function createUser(data: Omit<User, "id">) {
+  if (!prisma) throw new Error("Prisma non disponible");
   // @ts-ignore
   return prisma.user.create({
     data: {
@@ -43,6 +52,7 @@ export async function createUser(data: Omit<User, "id">) {
 }
 
 export async function updateUser(id: string, data: Partial<User>) {
+  if (!prisma) throw new Error("Prisma non disponible");
   const updateData: any = {};
   
   if (data.passwordHash !== undefined) updateData.passwordHash = data.passwordHash;
@@ -59,6 +69,7 @@ export async function updateUser(id: string, data: Partial<User>) {
 }
 
 export async function updateLastLogin(email: string) {
+  if (!prisma) throw new Error("Prisma non disponible");
   const user = await getUserByEmail(email);
   if (!user) return null;
   
@@ -72,6 +83,7 @@ export async function updateLastLogin(email: string) {
 }
 
 export async function setVerificationCode(email: string, code: string) {
+  if (!prisma) throw new Error("Prisma non disponible");
   const user = await getUserByEmail(email);
   if (!user) return null;
   

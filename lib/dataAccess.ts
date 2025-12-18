@@ -23,6 +23,13 @@ export async function getUserByEmail(email: string): Promise<User | null> {
 
   if (USE_DB) {
     try {
+      // Vérifier que Prisma est disponible avant d'essayer d'utiliser la DB
+      const { prisma } = await import("@/lib/db");
+      if (!prisma) {
+        // Prisma non disponible, utiliser le fallback JSON
+        return getUserByEmailJSON(emailLower);
+      }
+      
       const { getUserByEmail: getUserByEmailDB } = await import("@/repositories/usersRepo");
       const user = await getUserByEmailDB(emailLower);
       
@@ -204,6 +211,13 @@ export async function createUser(
 
   if (USE_DB) {
     try {
+      // Vérifier que Prisma est disponible avant d'essayer d'utiliser la DB
+      const { prisma } = await import("@/lib/db");
+      if (!prisma) {
+        // Prisma non disponible, utiliser le fallback JSON
+        return createUserJSON(emailLower, passwordHash, fullName, country);
+      }
+      
       const { createUser: createUserDB } = await import("@/repositories/usersRepo");
       const user = await createUserDB({
         email: emailLower,
@@ -256,6 +270,14 @@ export async function setVerificationCode(email: string, code: string): Promise<
 
   if (USE_DB) {
     try {
+      // Vérifier que Prisma est disponible avant d'essayer d'utiliser la DB
+      const { prisma } = await import("@/lib/db");
+      if (!prisma) {
+        // Prisma non disponible, utiliser le fallback JSON
+        setVerificationCodeJSON(emailLower, code);
+        return;
+      }
+      
       const { setVerificationCode: setVerificationCodeDB } = await import("@/repositories/usersRepo");
       await setVerificationCodeDB(emailLower, code);
     } catch (error) {

@@ -9,7 +9,9 @@ const resend = process.env.RESEND_API_KEY
   : null;
 
 // Email de l'expéditeur (doit être vérifié dans Resend)
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || "noreply@leboy.com";
+// Pour le développement/staging, utiliser onboarding@resend.dev (domaine de test fourni par Resend)
+// Pour la production, utiliser un domaine vérifié (ex: noreply@leboy.com)
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
 const FROM_NAME = "LeBoy";
 
 // Configuration mode "safe" pour staging
