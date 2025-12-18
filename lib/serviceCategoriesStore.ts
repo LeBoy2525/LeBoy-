@@ -22,18 +22,35 @@ if (!globalStore._icdServiceCategories) {
   
   // Charger les données au démarrage (asynchrone)
   loadFromFile<ServiceCategory>("serviceCategories.json").then((data) => {
+    const isBuildTime = typeof process !== "undefined" && (
+      process.env.NEXT_PHASE === "phase-production-build" ||
+      process.env.NEXT_PHASE === "phase-development-build"
+    );
+    
     if (data && data.length > 0) {
       globalStore._icdServiceCategories = data;
-      console.log(`✅ ${data.length} catégorie(s) de service(s) chargée(s) depuis le fichier`);
+      if (!isBuildTime) {
+        console.log(`✅ ${data.length} catégorie(s) de service(s) chargée(s) depuis le fichier`);
+      }
     } else {
       // Si aucun fichier ou fichier vide, utiliser les catégories par défaut
       globalStore._icdServiceCategories = DEFAULT_SERVICE_CATEGORIES;
       saveServiceCategories(); // Sauvegarder les catégories par défaut
-      console.log(`✅ Catégories de services initialisées avec les valeurs par défaut`);
+      // Ne logger qu'une seule fois au démarrage runtime, pas pendant le build
+      if (!isBuildTime && !globalThis._icdServiceCategoriesInitShown) {
+        console.log(`✅ Catégories de services initialisées avec les valeurs par défaut`);
+        globalThis._icdServiceCategoriesInitShown = true;
+      }
     }
     globalStore._icdServiceCategoriesLoaded = true;
   }).catch((error) => {
-    console.error("Erreur lors du chargement des catégories:", error);
+    const isBuildTime = typeof process !== "undefined" && (
+      process.env.NEXT_PHASE === "phase-production-build" ||
+      process.env.NEXT_PHASE === "phase-development-build"
+    );
+    if (!isBuildTime) {
+      console.error("Erreur lors du chargement des catégories:", error);
+    }
     // En cas d'erreur, utiliser les valeurs par défaut
     globalStore._icdServiceCategories = DEFAULT_SERVICE_CATEGORIES;
     globalStore._icdServiceCategoriesLoaded = true;

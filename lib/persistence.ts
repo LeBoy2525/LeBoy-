@@ -5,9 +5,20 @@
 import { promises as fs } from "fs";
 import path from "path";
 
-// Désactiver le stockage JSON en production
-if (process.env.NODE_ENV === "production") {
-  console.warn("⚠️  Le stockage JSON est désactivé en production. Utilisez PostgreSQL avec Prisma.");
+// Helper pour détecter si on est en build Next.js
+const isBuildTime = typeof process !== "undefined" && (
+  process.env.NEXT_PHASE === "phase-production-build" ||
+  process.env.NEXT_PHASE === "phase-development-build" ||
+  (process.env.NODE_ENV === "production" && typeof window === "undefined" && process.env.NEXT_RUNTIME)
+);
+
+// Désactiver le stockage JSON en production (seulement si pas en build)
+if (process.env.NODE_ENV === "production" && !isBuildTime && typeof window === "undefined") {
+  // Ne logger qu'une seule fois au démarrage runtime, pas pendant le build
+  if (!globalThis._icdJsonStorageWarningShown) {
+    console.warn("⚠️  Le stockage JSON est désactivé en production. Utilisez PostgreSQL avec Prisma.");
+    globalThis._icdJsonStorageWarningShown = true;
+  }
 }
 
 const DATA_DIR = path.join(process.cwd(), "data");

@@ -21,18 +21,35 @@ if (!globalStore._icdCountries) {
   
   // Charger les données au démarrage (asynchrone)
   loadFromFile<Country>("countries.json").then((data) => {
+    const isBuildTime = typeof process !== "undefined" && (
+      process.env.NEXT_PHASE === "phase-production-build" ||
+      process.env.NEXT_PHASE === "phase-development-build"
+    );
+    
     if (data.length > 0) {
       globalStore._icdCountries = data;
-      console.log(`✅ ${data.length} pays chargé(s) depuis le fichier`);
+      if (!isBuildTime) {
+        console.log(`✅ ${data.length} pays chargé(s) depuis le fichier`);
+      }
     } else {
       // Si aucun fichier, initialiser avec les pays par défaut
       globalStore._icdCountries = DEFAULT_COUNTRIES;
       saveCountries(); // Sauvegarder les pays par défaut
-      console.log(`✅ Pays initialisés avec les valeurs par défaut`);
+      // Ne logger qu'une seule fois au démarrage runtime, pas pendant le build
+      if (!isBuildTime && !globalThis._icdCountriesInitShown) {
+        console.log(`✅ Pays initialisés avec les valeurs par défaut`);
+        globalThis._icdCountriesInitShown = true;
+      }
     }
     globalStore._icdCountriesLoaded = true;
   }).catch((error) => {
-    console.error("Erreur lors du chargement des pays:", error);
+    const isBuildTime = typeof process !== "undefined" && (
+      process.env.NEXT_PHASE === "phase-production-build" ||
+      process.env.NEXT_PHASE === "phase-development-build"
+    );
+    if (!isBuildTime) {
+      console.error("Erreur lors du chargement des pays:", error);
+    }
     // En cas d'erreur, utiliser les valeurs par défaut
     globalStore._icdCountries = DEFAULT_COUNTRIES;
     globalStore._icdCountriesLoaded = true;

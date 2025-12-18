@@ -18,22 +18,39 @@ if (!globalStore._leboyCommissionConfigs) {
 
   loadFromFile<CommissionConfig>("commissionConfigs.json")
     .then((data) => {
+      const isBuildTime = typeof process !== "undefined" && (
+        process.env.NEXT_PHASE === "phase-production-build" ||
+        process.env.NEXT_PHASE === "phase-development-build"
+      );
+      
       if (data.length > 0) {
         globalStore._leboyCommissionConfigs = data as CommissionConfig[];
-        console.log(
-          `✅ ${data.length} configuration(s) de commission chargée(s) depuis le fichier`
-        );
+        if (!isBuildTime) {
+          console.log(
+            `✅ ${data.length} configuration(s) de commission chargée(s) depuis le fichier`
+          );
+        }
       } else {
         // Si fichier vide, sauvegarder les valeurs par défaut
         saveCommissionConfigs();
-        console.log(
-          `✅ Configurations de commission initialisées avec les valeurs par défaut`
-        );
+        // Ne logger qu'une seule fois au démarrage runtime, pas pendant le build
+        if (!isBuildTime && !globalThis._icdCommissionInitShown) {
+          console.log(
+            `✅ Configurations de commission initialisées avec les valeurs par défaut`
+          );
+          globalThis._icdCommissionInitShown = true;
+        }
       }
       globalStore._leboyCommissionConfigsLoaded = true;
     })
     .catch((error) => {
-      console.error("Erreur lors du chargement des configurations de commission:", error);
+      const isBuildTime = typeof process !== "undefined" && (
+        process.env.NEXT_PHASE === "phase-production-build" ||
+        process.env.NEXT_PHASE === "phase-development-build"
+      );
+      if (!isBuildTime) {
+        console.error("Erreur lors du chargement des configurations de commission:", error);
+      }
       globalStore._leboyCommissionConfigsLoaded = true;
     });
 }

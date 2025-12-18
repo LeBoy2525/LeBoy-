@@ -8,8 +8,19 @@ import type { StorageProvider } from "./provider";
 
 const BLOB_READ_WRITE_TOKEN = process.env.BLOB_READ_WRITE_TOKEN;
 
-if (!BLOB_READ_WRITE_TOKEN) {
-  console.warn("⚠️ BLOB_READ_WRITE_TOKEN non défini - Vercel Blob ne fonctionnera pas");
+// Helper pour détecter si on est en build Next.js
+const isBuildTime = typeof process !== "undefined" && (
+  process.env.NEXT_PHASE === "phase-production-build" ||
+  process.env.NEXT_PHASE === "phase-development-build"
+);
+
+// Ne logger qu'en runtime, pas pendant le build, et seulement si vraiment nécessaire
+if (!BLOB_READ_WRITE_TOKEN && !isBuildTime && typeof window === "undefined") {
+  const isProduction = process.env.NODE_ENV === "production" || process.env.APP_ENV === "production" || process.env.APP_ENV === "staging";
+  if (isProduction && !globalThis._icdBlobTokenWarningShown) {
+    console.warn("⚠️ BLOB_READ_WRITE_TOKEN non défini - Vercel Blob ne fonctionnera pas en production");
+    globalThis._icdBlobTokenWarningShown = true;
+  }
 }
 
 export class VercelBlobProvider implements StorageProvider {
