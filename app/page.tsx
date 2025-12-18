@@ -387,7 +387,7 @@ export default function HomePage() {
             {/* CTA */}
             <div className="flex gap-[14px] flex-wrap">
               <Link
-                href="/demandes"
+                href="/inscription"
                 className="group relative inline-flex items-center justify-center h-[56px] px-[24px] rounded-full no-underline font-extrabold tracking-[-0.01em] text-[#061524] overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-[0_25px_60px_rgba(214,170,85,0.4)]"
                 style={{
                   background: 'linear-gradient(135deg, #d6aa55 0%, #e8c87a 50%, #d6aa55 100%)',
