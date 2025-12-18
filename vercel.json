@@ -4,10 +4,10 @@
   "framework": "nextjs",
   "regions": ["iad1"],
   "functions": {
-    "app/**/*.ts": {
+    "app/api/**/*.ts": {
       "maxDuration": 30
     },
-    "app/**/*.tsx": {
+    "app/api/**/*.tsx": {
       "maxDuration": 30
     }
   },
