@@ -1,6 +1,6 @@
 // app/api/auth/verify-email/route.ts
 import { NextResponse } from "next/server";
-import { verifyEmail, getUserByEmail, setVerificationCode } from "@/lib/usersStore";
+import { getUserByEmail, setVerificationCode, verifyEmail } from "@/lib/dataAccess";
 import { generateVerificationCode, sendVerificationEmail } from "@/lib/emailService";
 
 export async function POST(req: Request) {
@@ -16,7 +16,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const user = getUserByEmail(email);
+    const user = await getUserByEmail(email);
     if (!user) {
       return NextResponse.json(
         { error: "Utilisateur non trouvé." },
@@ -32,7 +32,7 @@ export async function POST(req: Request) {
     }
 
     // Vérifier le code
-    const isValid = verifyEmail(email, code);
+    const isValid = await verifyEmail(email, code);
 
     if (!isValid) {
       return NextResponse.json(
@@ -70,7 +70,7 @@ export async function PUT(req: Request) {
       );
     }
 
-    const user = getUserByEmail(email);
+    const user = await getUserByEmail(email);
     if (!user) {
       return NextResponse.json(
         { error: "Utilisateur non trouvé." },
@@ -87,7 +87,7 @@ export async function PUT(req: Request) {
 
     // Générer un nouveau code
     const verificationCode = generateVerificationCode();
-    setVerificationCode(email, verificationCode);
+    await setVerificationCode(email, verificationCode);
     
     const emailResult = await sendVerificationEmail(email, verificationCode, user.fullName);
     

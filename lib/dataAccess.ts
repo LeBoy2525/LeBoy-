@@ -268,6 +268,52 @@ export async function setVerificationCode(email: string, code: string): Promise<
   }
 }
 
+/**
+ * Vérifie le code de vérification et active le compte si valide
+ * Bascule automatiquement entre JSON et DB selon USE_DB
+ */
+export async function verifyEmail(email: string, code: string): Promise<boolean> {
+  const emailLower = email.toLowerCase();
+
+  if (USE_DB) {
+    try {
+      const { getUserByEmail: getUserByEmailDB } = await import("@/repositories/usersRepo");
+      const user = await getUserByEmailDB(emailLower);
+      
+      if (!user || !user.verificationCode || !user.verificationCodeExpires) {
+        return false;
+      }
+
+      // Vérifier si le code correspond
+      if (user.verificationCode !== code) {
+        return false;
+      }
+
+      // Vérifier si le code n'a pas expiré
+      const expiresAt = new Date(user.verificationCodeExpires);
+      if (expiresAt < new Date()) {
+        return false;
+      }
+
+      // Activer le compte dans la DB
+      const { updateUser } = await import("@/repositories/usersRepo");
+      await updateUser(user.id, {
+        emailVerified: true,
+        verificationCode: undefined,
+        verificationCodeExpires: undefined,
+      });
+
+      return true;
+    } catch (error) {
+      console.error("Erreur verifyEmail (DB):", error);
+      // Fallback sur JSON en cas d'erreur
+      return verifyEmailJSON(emailLower, code);
+    }
+  } else {
+    return verifyEmailJSON(emailLower, code);
+  }
+}
+
 async function createUserJSON(
   email: string,
   passwordHash: string,
@@ -284,6 +330,11 @@ async function createUserJSON(
 async function setVerificationCodeJSON(email: string, code: string): Promise<void> {
   const { setVerificationCode: setVerificationCodeStore } = await import("./usersStore");
   setVerificationCodeStore(email, code);
+}
+
+async function verifyEmailJSON(email: string, code: string): Promise<boolean> {
+  const { verifyEmail: verifyEmailStore } = await import("./usersStore");
+  return verifyEmailStore(email, code);
 }
 
 /**
