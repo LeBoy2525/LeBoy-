@@ -1,5 +1,9 @@
 # Variables d'environnement pour Vercel
 
+> 📖 **Guide Pas à Pas** : Consultez [GUIDE_VARIABLES_VERCEL.md](./GUIDE_VARIABLES_VERCEL.md) pour un guide détaillé avec instructions étape par étape.
+
+> ⚠️ **IMPORTANT** : Ne mettez **PAS** de guillemets autour des valeurs dans Vercel. Copiez uniquement la valeur elle-même.
+
 ## Variables OBLIGATOIRES
 
 ### Environnement
