@@ -80,7 +80,7 @@ export async function GET(_req: Request, { params }: RouteParams) {
     doc.on("data", (chunk: Buffer) => chunks.push(chunk));
     
     // Attendre la fin de la génération
-    await new Promise<void>((resolve, reject) => {
+    await new Promise<void>(async (resolve, reject) => {
       doc.on("end", resolve);
       doc.on("error", reject);
 
@@ -420,74 +420,84 @@ export async function GET(_req: Request, { params }: RouteParams) {
 
         yPosition += 25;
 
-        // Parcourir les preuves
-        for (let i = 0; i < mission.proofs.length; i++) {
-          const proof = mission.proofs[i];
-          
-          // Vérifier si on a besoin d'une nouvelle page
-          if (yPosition > doc.page.height - 250) {
-            doc.addPage();
-            yPosition = 50;
-          }
+        // Parcourir les preuves (utiliser une IIFE async pour gérer les await)
+        (async () => {
+          for (let i = 0; i < mission.proofs.length; i++) {
+            const proof = mission.proofs[i];
+            
+            // Vérifier si on a besoin d'une nouvelle page
+            if (yPosition > doc.page.height - 250) {
+              doc.addPage();
+              yPosition = 50;
+            }
 
-          // Nom du fichier et type
-          doc
-            .fontSize(11)
-            .fillColor("#0A1B2A")
-            .font("Helvetica-Bold")
-            .text(`${i + 1}. ${proof.fileName}`, 50, yPosition);
+            // Nom du fichier et type
+            doc
+              .fontSize(11)
+              .fillColor("#0A1B2A")
+              .font("Helvetica-Bold")
+              .text(`${i + 1}. ${proof.fileName}`, 50, yPosition);
 
-          yPosition += 15;
+            yPosition += 15;
 
-          // Type de fichier et date
-          doc
-            .fontSize(9)
-            .fillColor("#6B7280")
-            .font("Helvetica")
-            .text(
-              `Type: ${proof.fileType} | Uploadé le: ${new Date(proof.uploadedAt).toLocaleDateString("fr-FR")}`,
-              50,
-              yPosition
-            );
-
-          yPosition += 15;
-
-          // Description si disponible
-          if (proof.description) {
+            // Type de fichier et date
             doc
               .fontSize(9)
               .fillColor("#6B7280")
               .font("Helvetica")
-              .text(proof.description, 50, yPosition, { width: 500 });
-            
-            const descHeight = doc.heightOfString(proof.description, { width: 500 });
-            yPosition += descHeight + 10;
-          }
+              .text(
+                `Type: ${proof.fileType} | Uploadé le: ${new Date(proof.uploadedAt).toLocaleDateString("fr-FR")}`,
+                50,
+                yPosition
+              );
 
-          // Essayer d'intégrer l'image si c'est une image
-          if (proof.fileType.startsWith("image/")) {
-            try {
-              const file = getFileById(proof.fileId);
-              if (file) {
-                // Récupérer le buffer depuis le stockage (Blob ou local)
-                const imageBuffer = (await getFileBuffer(file));
+            yPosition += 15;
 
-                // Vérifier si l'image peut tenir sur la page
-                if (yPosition + 150 > doc.page.height - 50) {
-                  doc.addPage();
-                  yPosition = 50;
+            // Description si disponible
+            if (proof.description) {
+              doc
+                .fontSize(9)
+                .fillColor("#6B7280")
+                .font("Helvetica")
+                .text(proof.description, 50, yPosition, { width: 500 });
+              
+              const descHeight = doc.heightOfString(proof.description, { width: 500 });
+              yPosition += descHeight + 10;
+            }
+
+            // Essayer d'intégrer l'image si c'est une image
+            if (proof.fileType.startsWith("image/")) {
+              try {
+                const file = getFileById(proof.fileId);
+                if (file) {
+                  // Récupérer le buffer depuis le stockage (Blob ou local)
+                  const imageBuffer = await getFileBuffer(file);
+
+                  // Vérifier si l'image peut tenir sur la page
+                  if (yPosition + 150 > doc.page.height - 50) {
+                    doc.addPage();
+                    yPosition = 50;
+                  }
+
+                  // Intégrer l'image (max 200px de largeur)
+                  doc.image(imageBuffer, 50, yPosition, {
+                    width: 200,
+                    height: 150,
+                    fit: [200, 150],
+                    align: "left",
+                  });
+
+                  yPosition += 160;
+                } else {
+                  doc
+                    .fontSize(9)
+                    .fillColor("#999999")
+                    .font("Helvetica-Italic")
+                    .text("(Image non disponible)", 50, yPosition);
+                  yPosition += 15;
                 }
-
-                // Intégrer l'image (max 200px de largeur)
-                doc.image(imageBuffer, 50, yPosition, {
-                  width: 200,
-                  height: 150,
-                  fit: [200, 150],
-                  align: "left",
-                });
-
-                yPosition += 160;
-              } else {
+              } catch (error) {
+                console.error(`Erreur lors de l'intégration de l'image ${proof.fileName}:`, error);
                 doc
                   .fontSize(9)
                   .fillColor("#999999")
@@ -495,32 +505,24 @@ export async function GET(_req: Request, { params }: RouteParams) {
                   .text("(Image non disponible)", 50, yPosition);
                 yPosition += 15;
               }
-            } catch (error) {
-              console.error(`Erreur lors de l'intégration de l'image ${proof.fileName}:`, error);
+            } else {
+              // Pour les autres types de fichiers (PDF, vidéos, etc.), juste une note
               doc
                 .fontSize(9)
                 .fillColor("#999999")
                 .font("Helvetica-Italic")
-                .text("(Image non disponible)", 50, yPosition);
-              yPosition += 15;
+                .text(
+                  `(Fichier ${proof.fileType} - non affiché dans le PDF, disponible en téléchargement sur la plateforme)`,
+                  50,
+                  yPosition,
+                  { width: 500 }
+                );
+              yPosition += 20;
             }
-          } else {
-            // Pour les autres types de fichiers (PDF, vidéos, etc.), juste une note
-            doc
-              .fontSize(9)
-              .fillColor("#999999")
-              .font("Helvetica-Italic")
-              .text(
-                `(Fichier ${proof.fileType} - non affiché dans le PDF, disponible en téléchargement sur la plateforme)`,
-                50,
-                yPosition,
-                { width: 500 }
-              );
-            yPosition += 20;
-          }
 
-          yPosition += 10;
-        }
+            yPosition += 10;
+          }
+        })();
       }
 
       // Pied de page

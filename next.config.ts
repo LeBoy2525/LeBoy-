@@ -22,6 +22,10 @@ const nextConfig: NextConfig = {
   images: {
     formats: ['image/avif', 'image/webp'],
   },
+  
+  // Utiliser Turbopack pour des builds plus rapides (plus rapide que webpack)
+  // Si problème, on peut revenir à webpack avec --webpack flag
+  // turbopack: {}, // Activé par défaut dans Next.js 16
 };
 
 export default nextConfig;

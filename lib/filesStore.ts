@@ -2,7 +2,7 @@
 // Système de stockage de fichiers avec support Vercel Blob (staging/prod) et local (dev)
 
 import { loadFromFile, saveToFileAsync } from "./persistence";
-import { saveFile as saveFileStorage, getFile as getFileStorage } from "./storage";
+import { saveFile as saveFileStorage, getFile as getFileStorage } from "./storage/index";
 import { USE_DB } from "./dbFlag";
 
 export type StoredFile = {

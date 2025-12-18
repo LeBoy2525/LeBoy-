@@ -11,11 +11,10 @@ export {
   getFile as readFile,
   deleteFile,
   fileExists,
-  getFileUrl,
-} from "./storage";
+} from "./storage/index";
 
 // Fonctions de compatibilité pour l'ancienne API
-import { saveFile as saveFileNew, getFileUrl as getFileUrlNew } from "./storage";
+import { saveFile as saveFileNew, getFileUrl as getFileUrlNew } from "./storage/index";
 
 /**
  * @deprecated Utiliser saveFileStorage directement
@@ -38,7 +37,7 @@ export async function saveFile(
 }
 
 /**
- * @deprecated Utiliser getFileUrl directement
+ * @deprecated Utiliser getFileUrl directement depuis ./storage
  */
 export function getFileUrl(filePath: string): string {
   // Si c'est déjà une URL complète (Blob), la retourner telle quelle
