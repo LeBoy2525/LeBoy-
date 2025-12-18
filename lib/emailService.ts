@@ -89,9 +89,11 @@ export function checkEmailConfig(): {
     warnings.push("Format de RESEND_API_KEY suspect (devrait commencer par 're_')");
   }
 
-  const fromEmail = process.env.RESEND_FROM_EMAIL || "noreply@leboy.com";
-  if (fromEmail === "noreply@leboy.com" && !process.env.RESEND_FROM_EMAIL) {
-    warnings.push("FROM_EMAIL utilise la valeur par défaut 'noreply@leboy.com' - vérifiez que ce domaine est vérifié dans Resend");
+  const fromEmail = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
+  if (fromEmail === "onboarding@resend.dev" && !process.env.RESEND_FROM_EMAIL) {
+    warnings.push("FROM_EMAIL utilise le domaine de test 'onboarding@resend.dev' - pour la production, configurez RESEND_FROM_EMAIL avec un domaine vérifié");
+  } else if (fromEmail.includes("@leboy.com") && !process.env.RESEND_FROM_EMAIL) {
+    warnings.push("FROM_EMAIL utilise 'noreply@leboy.com' - vérifiez que le domaine leboy.com est vérifié dans Resend");
   }
 
   const emailMode = process.env.EMAIL_MODE || "normal";
