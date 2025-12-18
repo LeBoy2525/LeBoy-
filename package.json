@@ -23,6 +23,7 @@
     "test:fallback": "node test-fallback-mechanism.js",
     "test:migration:json": "USE_DB=false node test-migration-routes.js",
     "test:migration:db": "USE_DB=true node test-migration-routes.js",
+    "check:email": "tsx scripts/check-email-config.ts",
     "postinstall": "echo 'skip prisma generate on install'",
     "vercel-build": "prisma generate --schema=./prisma/schema.prisma && next build"
   },

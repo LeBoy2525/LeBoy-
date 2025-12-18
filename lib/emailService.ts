@@ -59,27 +59,101 @@ export function generateVerificationCode(): string {
 }
 
 /**
+ * Résultat détaillé de l'envoi d'email
+ */
+export type EmailSendResult = {
+  success: boolean;
+  error?: string;
+  errorCode?: string;
+  emailId?: string;
+  recipient?: string;
+  redirected?: boolean;
+};
+
+/**
+ * Vérifie la configuration email et retourne un diagnostic
+ */
+export function checkEmailConfig(): {
+  configured: boolean;
+  issues: string[];
+  warnings: string[];
+} {
+  const issues: string[] = [];
+  const warnings: string[] = [];
+
+  if (!process.env.RESEND_API_KEY) {
+    issues.push("RESEND_API_KEY n'est pas définie dans les variables d'environnement");
+  } else if (!process.env.RESEND_API_KEY.startsWith("re_")) {
+    warnings.push("Format de RESEND_API_KEY suspect (devrait commencer par 're_')");
+  }
+
+  const fromEmail = process.env.RESEND_FROM_EMAIL || "noreply@leboy.com";
+  if (fromEmail === "noreply@leboy.com" && !process.env.RESEND_FROM_EMAIL) {
+    warnings.push("FROM_EMAIL utilise la valeur par défaut 'noreply@leboy.com' - vérifiez que ce domaine est vérifié dans Resend");
+  }
+
+  const emailMode = process.env.EMAIL_MODE || "normal";
+  if (emailMode === "safe") {
+    if (!process.env.EMAIL_REDIRECT_TO) {
+      issues.push("EMAIL_MODE=safe mais EMAIL_REDIRECT_TO n'est pas défini");
+    } else {
+      warnings.push(`Mode SAFE activé: tous les emails seront redirigés vers ${process.env.EMAIL_REDIRECT_TO}`);
+    }
+  }
+
+  return {
+    configured: issues.length === 0,
+    issues,
+    warnings,
+  };
+}
+
+/**
  * Envoie un email de vérification avec Resend
  */
 export async function sendVerificationEmail(
   email: string,
   code: string,
   fullName: string
-): Promise<boolean> {
+): Promise<EmailSendResult> {
   try {
-    // Si Resend n'est pas configuré, logger le code (mode développement)
-    if (!resend || !process.env.RESEND_API_KEY) {
-      console.log("=".repeat(60));
-      console.log(`📧 EMAIL DE VÉRIFICATION POUR: ${email}`);
-      console.log(`👤 Nom: ${fullName}`);
-      console.log(`🔐 Code de vérification: ${code}`);
-      console.log("=".repeat(60));
-      console.log("⚠️ Resend n'est pas configuré. Ajoutez RESEND_API_KEY dans .env.local");
-      return true; // On retourne true pour ne pas bloquer le processus
+    // Vérifier la configuration Resend
+    const hasResendKey = !!process.env.RESEND_API_KEY;
+    const resendConfigured = !!resend;
+
+    if (!hasResendKey || !resendConfigured) {
+      const errorMsg = "RESEND_API_KEY non configurée dans les variables d'environnement";
+      console.error("=".repeat(80));
+      console.error("❌ ERREUR CONFIGURATION EMAIL");
+      console.error("=".repeat(80));
+      console.error(`📧 Email destinataire: ${email}`);
+      console.error(`👤 Nom: ${fullName}`);
+      console.error(`🔐 Code de vérification: ${code}`);
+      console.error(`⚠️ ${errorMsg}`);
+      console.error("=".repeat(80));
+      console.error("💡 SOLUTION:");
+      console.error("   1. Aller dans Vercel → Settings → Environment Variables");
+      console.error("   2. Ajouter RESEND_API_KEY avec votre clé API Resend");
+      console.error("   3. Redéployer l'application");
+      console.error("=".repeat(80));
+      
+      return {
+        success: false,
+        error: errorMsg,
+        errorCode: "RESEND_NOT_CONFIGURED",
+        recipient: email,
+      };
     }
 
     // Appliquer le mode safe si activé
     const safeEmail = getSafeRecipient(email);
+    const isRedirected = safeEmail !== email.toLowerCase();
+
+    if (isRedirected) {
+      console.log(`[EMAIL SAFE MODE] Email redirigé: ${email} → ${safeEmail}`);
+    }
+
+    console.log(`[EMAIL] Tentative d'envoi à ${safeEmail} depuis ${FROM_EMAIL}`);
 
     const { data, error } = await resend.emails.send({
       from: `${FROM_NAME} <${FROM_EMAIL}>`,
@@ -143,19 +217,59 @@ Si vous avez des questions, contactez-nous à contact@leboy.com
     });
 
     if (error) {
-      console.error("Erreur Resend:", error);
-      // En développement, logger quand même le code
-      console.log(`📧 Code de vérification (fallback): ${code}`);
-      return false;
+      const errorDetails = typeof error === 'object' ? JSON.stringify(error, null, 2) : String(error);
+      console.error("=".repeat(80));
+      console.error("❌ ERREUR ENVOI EMAIL RESEND");
+      console.error("=".repeat(80));
+      console.error(`📧 Destinataire: ${email}${isRedirected ? ` (redirigé vers ${safeEmail})` : ''}`);
+      console.error(`📤 Expéditeur: ${FROM_EMAIL}`);
+      console.error(`🔐 Code: ${code}`);
+      console.error(`❌ Erreur:`, errorDetails);
+      console.error("=".repeat(80));
+      console.error("💡 CAUSES POSSIBLES:");
+      console.error("   1. RESEND_API_KEY invalide ou expirée");
+      console.error("   2. FROM_EMAIL non vérifié dans Resend");
+      console.error("   3. Domaine non vérifié dans Resend");
+      console.error("   4. Limite de quota Resend atteinte");
+      console.error("=".repeat(80));
+      
+      return {
+        success: false,
+        error: `Erreur Resend: ${errorDetails}`,
+        errorCode: "RESEND_ERROR",
+        recipient: safeEmail,
+        redirected: isRedirected,
+      };
     }
 
-    console.log(`✅ Email de vérification envoyé à ${email} (ID: ${data?.id})`);
-    return true;
-  } catch (error) {
-    console.error("Erreur lors de l'envoi de l'email:", error);
-    // En développement, logger le code même en cas d'erreur
-    console.log(`📧 Code de vérification (fallback): ${code}`);
-    return false;
+    console.log(`✅ Email de vérification envoyé avec succès`);
+    console.log(`   📧 Destinataire: ${email}${isRedirected ? ` (redirigé vers ${safeEmail})` : ''}`);
+    console.log(`   📤 Expéditeur: ${FROM_EMAIL}`);
+    console.log(`   🆔 Email ID: ${data?.id}`);
+    
+    return {
+      success: true,
+      emailId: data?.id,
+      recipient: safeEmail,
+      redirected: isRedirected,
+    };
+  } catch (error: any) {
+    const errorMsg = error?.message || String(error);
+    console.error("=".repeat(80));
+    console.error("❌ EXCEPTION LORS DE L'ENVOI D'EMAIL");
+    console.error("=".repeat(80));
+    console.error(`📧 Destinataire: ${email}`);
+    console.error(`🔐 Code: ${code}`);
+    console.error(`❌ Exception:`, errorMsg);
+    console.error(`📚 Stack:`, error?.stack);
+    console.error("=".repeat(80));
+    
+    return {
+      success: false,
+      error: `Exception: ${errorMsg}`,
+      errorCode: "EMAIL_EXCEPTION",
+      recipient: email,
+    };
   }
 }
 

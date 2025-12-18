@@ -89,11 +89,15 @@ export async function PUT(req: Request) {
     const verificationCode = generateVerificationCode();
     setVerificationCode(email, verificationCode);
     
-    const emailSent = await sendVerificationEmail(email, verificationCode, user.fullName);
+    const emailResult = await sendVerificationEmail(email, verificationCode, user.fullName);
     
-    if (!emailSent) {
+    if (!emailResult.success) {
+      console.error("Échec renvoi code de vérification:", emailResult.error);
       return NextResponse.json(
-        { error: "Erreur lors de l'envoi de l'email." },
+        { 
+          error: "Erreur lors de l'envoi de l'email. Veuillez réessayer plus tard.",
+          errorCode: emailResult.errorCode,
+        },
         { status: 500 }
       );
     }
@@ -102,6 +106,7 @@ export async function PUT(req: Request) {
       {
         success: true,
         message: "Un nouveau code de vérification a été envoyé à votre adresse email.",
+        emailSent: true,
       },
       { status: 200 }
     );

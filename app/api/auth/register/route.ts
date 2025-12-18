@@ -67,18 +67,36 @@ export async function POST(req: Request) {
     const verificationCode = generateVerificationCode();
     await setVerificationCode(email, verificationCode);
     
-    const emailSent = await sendVerificationEmail(email, verificationCode, fullName);
+    const emailResult = await sendVerificationEmail(email, verificationCode, fullName);
     
-    if (!emailSent) {
-      console.error("Échec de l'envoi de l'email de vérification");
-      // On continue quand même, le code est sauvegardé et peut être réenvoyé
+    // Si l'email n'a pas pu être envoyé, informer l'utilisateur mais continuer
+    if (!emailResult.success) {
+      console.error("=".repeat(80));
+      console.error("⚠️ ÉCHEC ENVOI EMAIL DE VÉRIFICATION");
+      console.error("=".repeat(80));
+      console.error(`Email: ${email}`);
+      console.error(`Code: ${verificationCode}`);
+      console.error(`Erreur: ${emailResult.error}`);
+      console.error(`Code erreur: ${emailResult.errorCode}`);
+      console.error("=".repeat(80));
+      console.error("💡 Le code est sauvegardé et peut être réenvoyé via la page de vérification");
+      console.error("=".repeat(80));
+    }
+
+    // Construire le message de réponse
+    let message = "Compte créé. Veuillez vérifier votre email pour activer votre compte.";
+    if (!emailResult.success) {
+      // En cas d'échec, informer l'utilisateur mais ne pas bloquer
+      message += " Si vous ne recevez pas l'email, vous pouvez demander un nouveau code sur la page de vérification.";
     }
 
     return NextResponse.json(
       {
         success: true,
-        message: "Compte créé. Veuillez vérifier votre email pour activer votre compte.",
+        message,
         requiresVerification: true,
+        emailSent: emailResult.success,
+        emailError: emailResult.success ? undefined : emailResult.errorCode,
         user: {
           email: user.email,
           fullName: user.fullName,
