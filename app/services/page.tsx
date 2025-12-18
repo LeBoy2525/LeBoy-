@@ -461,7 +461,7 @@ export default function ServicesPage() {
                   <div className="bg-[#F9F9FB] border-t border-[#EEEEEE] px-4 md:px-5 py-3 flex flex-col md:flex-row items-start md:items-center justify-between gap-2 text-[11px] md:text-xs text-[#4B4F58]">
                     <p style={{ textAlign: "justify" }}>{t.serviceNote}</p>
                     <a
-                      href="/demandes"
+                      href="/inscription"
                       className="inline-flex items-center justify-center rounded-md bg-[#D4A657] text-[#0A1B2A] px-4 py-1.5 font-semibold text-[11px] md:text-xs hover:brightness-95 transition"
                     >
                       {t.submitButton}

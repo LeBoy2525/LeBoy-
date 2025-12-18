@@ -695,7 +695,7 @@ export default function HomePage() {
           </p>
           <div className="pt-4">
             <Link
-              href="/connexion"
+              href="/inscription"
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#D4A657] text-[#0B2135] px-8 py-4 text-base font-bold hover:brightness-105 transition-all duration-200 shadow-lg hover:shadow-xl"
             >
               {t.ctaFinalButton}

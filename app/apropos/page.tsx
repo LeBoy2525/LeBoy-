@@ -268,7 +268,7 @@ export default function AproposPage() {
             </div>
             <div className="pt-1">
               <a
-                href="/demandes"
+                href="/inscription"
                 className="inline-flex items-center justify-center rounded-md bg-[#D4A657] text-[#0A1B2A] px-4 py-2 font-semibold text-xs md:text-sm hover:brightness-95 transition"
               >
                 {t.asideButton}
@@ -447,7 +447,7 @@ export default function AproposPage() {
             </p>
             <div className="pt-1 flex flex-wrap gap-3">
               <a
-                href="/demandes"
+                href="/inscription"
                 className="inline-flex items-center justify-center rounded-md bg-[#D4A657] text-[#0A1B2A] px-4 py-2 font-semibold text-xs md:text-sm hover:brightness-95 transition"
               >
                 {t.ctaButton1}
