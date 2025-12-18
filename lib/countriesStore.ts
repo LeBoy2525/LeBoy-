@@ -10,6 +10,7 @@ export type { Country };
 type GlobalStore = {
   _icdCountries?: Country[];
   _icdCountriesLoaded?: boolean;
+  _icdCountriesInitShown?: boolean;
 };
 
 const globalStore = globalThis as typeof globalThis & GlobalStore;
@@ -36,9 +37,9 @@ if (!globalStore._icdCountries) {
       globalStore._icdCountries = DEFAULT_COUNTRIES;
       saveCountries(); // Sauvegarder les pays par défaut
       // Ne logger qu'une seule fois au démarrage runtime, pas pendant le build
-      if (!isBuildTime && !globalThis._icdCountriesInitShown) {
+      if (!isBuildTime && !globalStore._icdCountriesInitShown) {
         console.log(`✅ Pays initialisés avec les valeurs par défaut`);
-        globalThis._icdCountriesInitShown = true;
+        globalStore._icdCountriesInitShown = true;
       }
     }
     globalStore._icdCountriesLoaded = true;

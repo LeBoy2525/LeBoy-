@@ -17,9 +17,10 @@ const isBuildTime = typeof process !== "undefined" && (
 // Ne logger qu'en runtime, pas pendant le build, et seulement si vraiment nécessaire
 if (!BLOB_READ_WRITE_TOKEN && !isBuildTime && typeof window === "undefined") {
   const isProduction = process.env.NODE_ENV === "production" || process.env.APP_ENV === "production" || process.env.APP_ENV === "staging";
-  if (isProduction && !globalThis._icdBlobTokenWarningShown) {
+  const globalStore = globalThis as typeof globalThis & { _icdBlobTokenWarningShown?: boolean };
+  if (isProduction && !globalStore._icdBlobTokenWarningShown) {
     console.warn("⚠️ BLOB_READ_WRITE_TOKEN non défini - Vercel Blob ne fonctionnera pas en production");
-    globalThis._icdBlobTokenWarningShown = true;
+    globalStore._icdBlobTokenWarningShown = true;
   }
 }
 

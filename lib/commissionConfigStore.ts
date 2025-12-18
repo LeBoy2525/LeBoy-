@@ -7,6 +7,7 @@ import { CommissionConfig, DEFAULT_COMMISSION_CONFIGS } from "./commissionConfig
 type GlobalStore = {
   _leboyCommissionConfigs?: CommissionConfig[];
   _leboyCommissionConfigsLoaded?: boolean;
+  _icdCommissionInitShown?: boolean;
 };
 
 const globalStore = globalThis as typeof globalThis & GlobalStore;
@@ -34,11 +35,11 @@ if (!globalStore._leboyCommissionConfigs) {
         // Si fichier vide, sauvegarder les valeurs par défaut
         saveCommissionConfigs();
         // Ne logger qu'une seule fois au démarrage runtime, pas pendant le build
-        if (!isBuildTime && !globalThis._icdCommissionInitShown) {
+        if (!isBuildTime && !globalStore._icdCommissionInitShown) {
           console.log(
             `✅ Configurations de commission initialisées avec les valeurs par défaut`
           );
-          globalThis._icdCommissionInitShown = true;
+          globalStore._icdCommissionInitShown = true;
         }
       }
       globalStore._leboyCommissionConfigsLoaded = true;

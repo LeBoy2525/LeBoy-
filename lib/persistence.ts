@@ -15,9 +15,10 @@ const isBuildTime = typeof process !== "undefined" && (
 // Désactiver le stockage JSON en production (seulement si pas en build)
 if (process.env.NODE_ENV === "production" && !isBuildTime && typeof window === "undefined") {
   // Ne logger qu'une seule fois au démarrage runtime, pas pendant le build
-  if (!globalThis._icdJsonStorageWarningShown) {
+  const globalStore = globalThis as typeof globalThis & { _icdJsonStorageWarningShown?: boolean };
+  if (!globalStore._icdJsonStorageWarningShown) {
     console.warn("⚠️  Le stockage JSON est désactivé en production. Utilisez PostgreSQL avec Prisma.");
-    globalThis._icdJsonStorageWarningShown = true;
+    globalStore._icdJsonStorageWarningShown = true;
   }
 }
 

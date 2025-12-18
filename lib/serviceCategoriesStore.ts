@@ -10,6 +10,7 @@ export type { ServiceCategory, ServiceCategoryId, ServiceSubcategory };
 type GlobalStore = {
   _icdServiceCategories?: ServiceCategory[];
   _icdServiceCategoriesLoaded?: boolean;
+  _icdServiceCategoriesInitShown?: boolean;
 };
 
 const globalStore = globalThis as typeof globalThis & GlobalStore;
@@ -37,9 +38,9 @@ if (!globalStore._icdServiceCategories) {
       globalStore._icdServiceCategories = DEFAULT_SERVICE_CATEGORIES;
       saveServiceCategories(); // Sauvegarder les catégories par défaut
       // Ne logger qu'une seule fois au démarrage runtime, pas pendant le build
-      if (!isBuildTime && !globalThis._icdServiceCategoriesInitShown) {
+      if (!isBuildTime && !globalStore._icdServiceCategoriesInitShown) {
         console.log(`✅ Catégories de services initialisées avec les valeurs par défaut`);
-        globalThis._icdServiceCategoriesInitShown = true;
+        globalStore._icdServiceCategoriesInitShown = true;
       }
     }
     globalStore._icdServiceCategoriesLoaded = true;
