@@ -25,11 +25,20 @@ export async function getUserById(id: string) {
 }
 
 export async function getUserByEmail(email: string) {
-  if (!prisma) throw new Error("Prisma non disponible");
-  // @ts-ignore
-  return prisma.user.findUnique({
-    where: { email: email.toLowerCase() },
-  });
+  if (!prisma) {
+    console.error("[usersRepo] Prisma non disponible pour getUserByEmail");
+    throw new Error("Prisma non disponible");
+  }
+  
+  try {
+    // @ts-ignore
+    return await prisma.user.findUnique({
+      where: { email: email.toLowerCase() },
+    });
+  } catch (error: any) {
+    console.error("[usersRepo] Erreur lors de la recherche d'utilisateur:", error?.message || error);
+    throw error;
+  }
 }
 
 export async function createUser(data: Omit<User, "id">) {

@@ -23,8 +23,20 @@ let prismaInstance: PrismaClient | undefined;
 if (process.env.DATABASE_URL) {
   try {
     prismaInstance = new PrismaClient(prismaConfig);
-  } catch (error) {
-    console.error("❌ Erreur lors de l'initialisation de Prisma:", error);
+    // Tester la connexion immédiatement pour détecter les erreurs tôt
+    // Mais seulement en runtime, pas pendant le build
+    if (!isBuildTime && typeof window === "undefined") {
+      prismaInstance.$connect().catch((connectError: any) => {
+        console.error("❌ Erreur de connexion Prisma:", connectError?.message || connectError);
+        console.error("   → Le système utilisera le fallback JSON");
+        prismaInstance = undefined;
+      });
+    }
+  } catch (error: any) {
+    console.error("❌ Erreur lors de l'initialisation de Prisma:");
+    console.error("   Message:", error?.message || error);
+    console.error("   Code:", error?.code);
+    console.error("   → Le système utilisera le fallback JSON");
     prismaInstance = undefined;
   }
 } else {
