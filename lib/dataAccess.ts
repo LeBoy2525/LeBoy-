@@ -162,15 +162,38 @@ export async function getPrestataireByEmail(email: string): Promise<Prestataire 
 
 async function getUserByEmailJSON(email: string): Promise<User | null> {
   try {
-    // Charger directement depuis le fichier si le store n'est pas encore chargé
+    console.log(`[dataAccess] getUserByEmailJSON appelé pour: "${email}"`);
+    
+    // Essayer d'abord le store en mémoire (plus rapide)
+    try {
+      const { getUserByEmail: getUserByEmailStore } = await import("./usersStore");
+      const user = getUserByEmailStore(email);
+      if (user) {
+        console.log(`[dataAccess] Utilisateur trouvé dans store JSON: ${user.email}`);
+        return user;
+      }
+    } catch (storeError) {
+      console.log(`[dataAccess] Store JSON non disponible, tentative fichier`);
+    }
+    
+    // Fallback: Charger directement depuis le fichier
     const { loadFromFile } = await import("./persistence");
     const users = await loadFromFile<User>("users.json");
     
+    console.log(`[dataAccess] Fichier JSON chargé: ${users?.length || 0} utilisateur(s)`);
+    
     if (!users || users.length === 0) {
+      console.log(`[dataAccess] Aucun utilisateur dans le fichier JSON`);
       return null;
     }
     
     const user = users.find((u) => u && u.email && u.email.toLowerCase() === email);
+    if (user) {
+      console.log(`[dataAccess] Utilisateur trouvé dans fichier JSON: ${user.email}`);
+    } else {
+      console.log(`[dataAccess] Utilisateur "${email}" non trouvé dans ${users.length} utilisateur(s)`);
+      console.log(`[dataAccess] Emails disponibles: ${users.map(u => u.email).join(", ")}`);
+    }
     return user || null;
   } catch (error) {
     console.error("Erreur getUserByEmail (JSON):", error);
@@ -353,11 +376,29 @@ async function createUserJSON(
   fullName: string,
   country?: string
 ): Promise<User> {
-  // Import dynamique pour éviter les problèmes de circularité
-  const { createUser: createUserStore } = await import("./usersStore");
+  console.log(`[dataAccess] createUserJSON appelé pour: "${email}"`);
   
-  // Utiliser la fonction createUser du store qui gère déjà la sauvegarde
-  return createUserStore(email, passwordHash, fullName, country);
+  try {
+    // Import dynamique pour éviter les problèmes de circularité
+    const { createUser: createUserStore } = await import("./usersStore");
+    
+    // Utiliser la fonction createUser du store qui gère déjà la sauvegarde
+    const user = createUserStore(email, passwordHash, fullName, country);
+    console.log(`[dataAccess] Utilisateur créé en JSON avec ID: ${user.id}`);
+    
+    // Vérifier que l'utilisateur peut être retrouvé immédiatement
+    const verifyUser = await getUserByEmailJSON(email);
+    if (verifyUser) {
+      console.log(`[dataAccess] ✅ Vérification: Utilisateur retrouvable après création JSON`);
+    } else {
+      console.error(`[dataAccess] ❌ ERREUR: Utilisateur non retrouvable après création JSON!`);
+    }
+    
+    return user;
+  } catch (error) {
+    console.error(`[dataAccess] Erreur createUserJSON:`, error);
+    throw error;
+  }
 }
 
 async function setVerificationCodeJSON(email: string, code: string): Promise<void> {
