@@ -166,37 +166,56 @@ async function getUserByEmailJSON(email: string): Promise<User | null> {
     
     // Essayer d'abord le store en mémoire (plus rapide)
     try {
-      const { getUserByEmail: getUserByEmailStore } = await import("./usersStore");
-      const user = getUserByEmailStore(email);
-      if (user) {
-        console.log(`[dataAccess] Utilisateur trouvé dans store JSON: ${user.email}`);
-        return user;
+      const { getUserByEmail: getUserByEmailStore, usersStore } = await import("./usersStore");
+      
+      // Vérifier si le store est chargé
+      if (usersStore && usersStore.length > 0) {
+        console.log(`[dataAccess] Store JSON en mémoire contient ${usersStore.length} utilisateur(s)`);
+        const user = getUserByEmailStore(email);
+        if (user) {
+          console.log(`[dataAccess] ✅ Utilisateur trouvé dans store JSON: ${user.email} (ID: ${user.id})`);
+          return user;
+        } else {
+          console.log(`[dataAccess] Utilisateur "${email}" non trouvé dans store en mémoire`);
+          // Afficher les emails disponibles pour debug
+          const emailsInStore = usersStore.map(u => u.email).filter(Boolean);
+          console.log(`[dataAccess] Emails dans store: ${emailsInStore.join(", ")}`);
+        }
+      } else {
+        console.log(`[dataAccess] Store JSON vide ou non chargé`);
       }
-    } catch (storeError) {
-      console.log(`[dataAccess] Store JSON non disponible, tentative fichier`);
+    } catch (storeError: any) {
+      console.log(`[dataAccess] Store JSON non disponible: ${storeError?.message || storeError}`);
     }
     
     // Fallback: Charger directement depuis le fichier
-    const { loadFromFile } = await import("./persistence");
-    const users = await loadFromFile<User>("users.json");
-    
-    console.log(`[dataAccess] Fichier JSON chargé: ${users?.length || 0} utilisateur(s)`);
-    
-    if (!users || users.length === 0) {
-      console.log(`[dataAccess] Aucun utilisateur dans le fichier JSON`);
+    try {
+      const { loadFromFile } = await import("./persistence");
+      const users = await loadFromFile<User>("users.json");
+      
+      console.log(`[dataAccess] Fichier JSON chargé: ${users?.length || 0} utilisateur(s)`);
+      
+      if (!users || users.length === 0) {
+        console.log(`[dataAccess] Aucun utilisateur dans le fichier JSON`);
+        return null;
+      }
+      
+      const user = users.find((u) => u && u.email && u.email.toLowerCase() === email.toLowerCase());
+      if (user) {
+        console.log(`[dataAccess] ✅ Utilisateur trouvé dans fichier JSON: ${user.email} (ID: ${user.id})`);
+        return user;
+      } else {
+        console.log(`[dataAccess] ❌ Utilisateur "${email}" non trouvé dans ${users.length} utilisateur(s)`);
+        const emailsInFile = users.map(u => u.email).filter(Boolean);
+        console.log(`[dataAccess] Emails disponibles dans fichier: ${emailsInFile.join(", ")}`);
+        return null;
+      }
+    } catch (fileError: any) {
+      console.error(`[dataAccess] Erreur lors du chargement du fichier JSON:`, fileError?.message || fileError);
       return null;
     }
-    
-    const user = users.find((u) => u && u.email && u.email.toLowerCase() === email);
-    if (user) {
-      console.log(`[dataAccess] Utilisateur trouvé dans fichier JSON: ${user.email}`);
-    } else {
-      console.log(`[dataAccess] Utilisateur "${email}" non trouvé dans ${users.length} utilisateur(s)`);
-      console.log(`[dataAccess] Emails disponibles: ${users.map(u => u.email).join(", ")}`);
-    }
-    return user || null;
-  } catch (error) {
-    console.error("Erreur getUserByEmail (JSON):", error);
+  } catch (error: any) {
+    console.error(`[dataAccess] Erreur getUserByEmailJSON:`, error?.message || error);
     return null;
   }
 }
