@@ -20,20 +20,31 @@ export async function getUserByEmail(email: string): Promise<User | null> {
   if (!email) return null;
 
   const emailLower = email.toLowerCase();
+  
+  console.log(`[dataAccess] getUserByEmail appelé avec: "${emailLower}"`);
+  console.log(`[dataAccess] USE_DB: ${USE_DB}`);
 
   if (USE_DB) {
     try {
       // Vérifier que Prisma est disponible avant d'essayer d'utiliser la DB
       const { prisma } = await import("@/lib/db");
       if (!prisma) {
+        console.log(`[dataAccess] Prisma non disponible, fallback JSON`);
         // Prisma non disponible, utiliser le fallback JSON
         return getUserByEmailJSON(emailLower);
       }
       
+      console.log(`[dataAccess] Prisma disponible, recherche dans DB`);
       const { getUserByEmail: getUserByEmailDB } = await import("@/repositories/usersRepo");
       const user = await getUserByEmailDB(emailLower);
       
-      if (!user) return null;
+      if (!user) {
+        console.log(`[dataAccess] Utilisateur non trouvé dans DB, fallback JSON`);
+        // Essayer le fallback JSON si pas trouvé dans DB
+        return getUserByEmailJSON(emailLower);
+      }
+      
+      console.log(`[dataAccess] Utilisateur trouvé dans DB: ${user.email}`);
 
       // Convertir le User Prisma vers le format User JSON
       // Note: Les IDs Prisma sont des UUIDs (string), mais le format JSON attend un number
