@@ -31,12 +31,36 @@ export async function getUserByEmail(email: string) {
   }
   
   try {
+    const emailLower = email.toLowerCase();
+    console.log(`[usersRepo] Recherche utilisateur avec email: "${emailLower}"`);
+    
     // @ts-ignore
-    return await prisma.user.findUnique({
-      where: { email: email.toLowerCase() },
+    const user = await prisma.user.findUnique({
+      where: { email: emailLower },
     });
+    
+    if (user) {
+      console.log(`[usersRepo] ✅ Utilisateur trouvé: ${user.email} (ID: ${user.id})`);
+    } else {
+      console.log(`[usersRepo] ❌ Aucun utilisateur trouvé pour: "${emailLower}"`);
+      
+      // Debug: Lister tous les utilisateurs pour voir ce qui existe
+      try {
+        // @ts-ignore
+        const allUsers = await prisma.user.findMany({
+          select: { email: true, id: true },
+          take: 10,
+        });
+        console.log(`[usersRepo] Utilisateurs dans DB (max 10): ${allUsers.map(u => u.email).join(", ")}`);
+      } catch (listError: any) {
+        console.error(`[usersRepo] Erreur lors de la liste des utilisateurs:`, listError?.message || listError);
+      }
+    }
+    
+    return user;
   } catch (error: any) {
     console.error("[usersRepo] Erreur lors de la recherche d'utilisateur:", error?.message || error);
+    console.error("[usersRepo] Stack:", error?.stack);
     throw error;
   }
 }
