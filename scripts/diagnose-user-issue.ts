@@ -6,6 +6,13 @@
 
 import { PrismaClient } from "@prisma/client";
 
+// Vérifier que DATABASE_URL est définie
+if (!process.env.DATABASE_URL) {
+  console.error("❌ DATABASE_URL n'est pas définie dans les variables d'environnement");
+  console.error("   Veuillez définir DATABASE_URL dans votre fichier .env.local");
+  process.exit(1);
+}
+
 const prisma = new PrismaClient({
   log: ["query", "error", "warn"],
 });
