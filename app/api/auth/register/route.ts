@@ -60,12 +60,39 @@ export async function POST(req: Request) {
     // Hasher le mot de passe
     const passwordHash = await bcrypt.hash(password, 10);
 
+    console.log("=".repeat(80));
+    console.log("📝 CRÉATION UTILISATEUR - DEBUG");
+    console.log("=".repeat(80));
+    console.log(`📧 Email normalisé: "${email}"`);
+    console.log(`👤 Nom: "${fullName}"`);
+    console.log(`🌍 Pays: "${country}"`);
+    console.log(`💾 USE_DB: ${process.env.USE_DB}`);
+    console.log(`💾 DATABASE_URL: ${process.env.DATABASE_URL ? "définie" : "non définie"}`);
+
     // Créer l'utilisateur (non vérifié)
     const user = await createUser(email, passwordHash, fullName, country);
+    
+    console.log(`✅ Utilisateur créé avec succès`);
+    console.log(`   ID: ${user.id}`);
+    console.log(`   Email: ${user.email}`);
+    console.log(`   Email vérifié: ${user.emailVerified}`);
 
     // Générer et envoyer le code de vérification
     const verificationCode = generateVerificationCode();
+    console.log(`🔐 Code généré: ${verificationCode}`);
+    
     await setVerificationCode(email, verificationCode);
+    
+    // Vérifier que l'utilisateur peut être retrouvé
+    const verifyUser = await getUserByEmail(email);
+    if (verifyUser) {
+      console.log(`✅ Vérification: Utilisateur retrouvable après création`);
+      console.log(`   Code sauvegardé: ${verifyUser.verificationCode || "NON"}`);
+    } else {
+      console.error(`❌ ERREUR: Utilisateur non retrouvable après création!`);
+      console.error(`   Email recherché: "${email}"`);
+    }
+    console.log("=".repeat(80));
     
     const emailResult = await sendVerificationEmail(email, verificationCode, fullName);
     

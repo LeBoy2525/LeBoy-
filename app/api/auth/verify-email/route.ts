@@ -9,6 +9,13 @@ export async function POST(req: Request) {
     const email = (data.email as string)?.trim()?.toLowerCase() || "";
     const code = (data.code as string)?.trim() || "";
 
+    console.log("=".repeat(80));
+    console.log("🔍 VÉRIFICATION EMAIL - DEBUG");
+    console.log("=".repeat(80));
+    console.log(`📧 Email reçu: "${email}"`);
+    console.log(`🔐 Code reçu: "${code}"`);
+    console.log(`📏 Longueur email: ${email.length}`);
+
     if (!email || !code) {
       return NextResponse.json(
         { error: "Email et code requis." },
@@ -16,13 +23,35 @@ export async function POST(req: Request) {
       );
     }
 
+    console.log(`🔍 Recherche de l'utilisateur avec email: "${email}"`);
     const user = await getUserByEmail(email);
+    
     if (!user) {
+      console.error("❌ Utilisateur non trouvé");
+      console.error(`   Email recherché: "${email}"`);
+      console.error(`   Type: ${typeof email}`);
+      console.error(`   USE_DB: ${process.env.USE_DB}`);
+      console.error(`   DATABASE_URL: ${process.env.DATABASE_URL ? "définie" : "non définie"}`);
+      
+      // Essayer de chercher avec différentes variantes pour debug
+      if (email.includes("@")) {
+        const [localPart, domain] = email.split("@");
+        console.error(`   Tentative alternative 1: ${localPart.toLowerCase()}@${domain.toLowerCase()}`);
+        console.error(`   Tentative alternative 2: ${email.replace(/\s/g, "")}`);
+      }
+      
+      console.log("=".repeat(80));
       return NextResponse.json(
         { error: "Utilisateur non trouvé." },
         { status: 404 }
       );
     }
+
+    console.log(`✅ Utilisateur trouvé: ${user.email}`);
+    console.log(`   ID: ${user.id}`);
+    console.log(`   Email vérifié: ${user.emailVerified}`);
+    console.log(`   Code de vérification: ${user.verificationCode || "non défini"}`);
+    console.log("=".repeat(80));
 
     if (user.emailVerified) {
       return NextResponse.json(
