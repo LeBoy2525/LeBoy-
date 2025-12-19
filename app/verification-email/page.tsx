@@ -50,7 +50,9 @@ function VerificationEmailForm() {
   const t = TEXT[lang];
   const router = useRouter();
   const searchParams = useSearchParams();
-  const email = searchParams.get("email") || "";
+  // Normaliser l'email : décoder l'URL et convertir en minuscules
+  const emailRaw = searchParams.get("email") || "";
+  const email = emailRaw ? decodeURIComponent(emailRaw).toLowerCase().trim() : "";
 
   const [code, setCode] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);

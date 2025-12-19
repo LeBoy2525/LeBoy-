@@ -15,7 +15,7 @@ export async function POST(req: Request) {
   try {
     const data = await req.formData();
     const fullName = (data.get("fullName") as string)?.trim() || "";
-    const email = (data.get("email") as string)?.trim() || "";
+    const email = (data.get("email") as string)?.trim()?.toLowerCase() || "";
     const password = (data.get("password") as string) || "";
     const country = (data.get("country") as string)?.trim() || "";
 
