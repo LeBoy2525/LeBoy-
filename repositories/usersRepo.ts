@@ -147,19 +147,36 @@ export async function updateLastLogin(email: string) {
 
 export async function setVerificationCode(email: string, code: string) {
   if (!prisma) throw new Error("Prisma non disponible");
-  const user = await getUserByEmail(email);
-  if (!user) return null;
+  
+  const emailLower = email.toLowerCase();
+  console.log(`[usersRepo] setVerificationCode appelé pour: "${emailLower}"`);
+  
+  const user = await getUserByEmail(emailLower);
+  if (!user) {
+    console.error(`[usersRepo] ❌ ERREUR: Utilisateur non trouvé pour setVerificationCode: "${emailLower}"`);
+    throw new Error(`Utilisateur non trouvé: ${emailLower}`);
+  }
+  
+  console.log(`[usersRepo] Utilisateur trouvé, mise à jour du code de vérification`);
   
   // Code valide pendant 24 heures
   const expiresAt = new Date();
   expiresAt.setHours(expiresAt.getHours() + 24);
   
-  // @ts-ignore
-  return prisma.user.update({
-    where: { id: user.id },
-    data: {
-      verificationCode: code,
-      verificationCodeExpires: expiresAt,
-    },
-  });
+  try {
+    // @ts-ignore
+    const updated = await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        verificationCode: code,
+        verificationCodeExpires: expiresAt,
+      },
+    });
+    
+    console.log(`[usersRepo] ✅ Code de vérification mis à jour pour: ${updated.email}`);
+    return updated;
+  } catch (error: any) {
+    console.error(`[usersRepo] ❌ Erreur lors de la mise à jour du code:`, error?.message || error);
+    throw error;
+  }
 }
