@@ -67,21 +67,51 @@ export async function getUserByEmail(email: string) {
 
 export async function createUser(data: Omit<User, "id">) {
   if (!prisma) throw new Error("Prisma non disponible");
-  // @ts-ignore
-  return prisma.user.create({
-    data: {
-      email: data.email.toLowerCase(),
-      passwordHash: data.passwordHash,
-      fullName: data.fullName,
-      role: "client", // Toujours "client" pour les utilisateurs créés via /api/auth/register
-      createdAt: new Date(data.createdAt),
-      lastLogin: data.lastLogin ? new Date(data.lastLogin) : null,
-      emailVerified: data.emailVerified || false,
-      verificationCode: data.verificationCode || null,
-      verificationCodeExpires: data.verificationCodeExpires ? new Date(data.verificationCodeExpires) : null,
-      country: data.country || null,
-    },
-  });
+  
+  const emailLower = data.email.toLowerCase();
+  console.log(`[usersRepo] Création utilisateur avec email: "${emailLower}"`);
+  
+  try {
+    // @ts-ignore
+    const user = await prisma.user.create({
+      data: {
+        email: emailLower,
+        passwordHash: data.passwordHash,
+        fullName: data.fullName,
+        role: "client", // Toujours "client" pour les utilisateurs créés via /api/auth/register
+        createdAt: new Date(data.createdAt),
+        lastLogin: data.lastLogin ? new Date(data.lastLogin) : null,
+        emailVerified: data.emailVerified || false,
+        verificationCode: data.verificationCode || null,
+        verificationCodeExpires: data.verificationCodeExpires ? new Date(data.verificationCodeExpires) : null,
+        country: data.country || null,
+      },
+    });
+    
+    console.log(`[usersRepo] ✅ Utilisateur créé avec succès: ${user.email} (ID: ${user.id})`);
+    
+    // Vérifier immédiatement que l'utilisateur peut être retrouvé
+    try {
+      // @ts-ignore
+      const verifyUser = await prisma.user.findUnique({
+        where: { email: emailLower },
+      });
+      if (verifyUser) {
+        console.log(`[usersRepo] ✅ Vérification: Utilisateur retrouvable immédiatement après création`);
+      } else {
+        console.error(`[usersRepo] ❌ ERREUR: Utilisateur non retrouvable immédiatement après création!`);
+      }
+    } catch (verifyError: any) {
+      console.error(`[usersRepo] Erreur lors de la vérification:`, verifyError?.message || verifyError);
+    }
+    
+    return user;
+  } catch (error: any) {
+    console.error(`[usersRepo] ❌ Erreur lors de la création d'utilisateur:`, error?.message || error);
+    console.error(`[usersRepo] Code erreur:`, error?.code);
+    console.error(`[usersRepo] Stack:`, error?.stack);
+    throw error;
+  }
 }
 
 export async function updateUser(id: string, data: Partial<User>) {
