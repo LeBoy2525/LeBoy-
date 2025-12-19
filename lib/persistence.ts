@@ -35,9 +35,9 @@ async function ensureDataDir() {
 
 // Charger les données depuis un fichier JSON
 export async function loadFromFile<T>(filename: string): Promise<T[]> {
-  // Pendant le build ou en production, retourner un tableau vide (les données viennent de la DB)
-  // Next.js définit NODE_ENV à "production" pendant le build
-  if (process.env.NODE_ENV === "production" || typeof window === "undefined" && process.env.NEXT_RUNTIME) {
+  // Pendant le build uniquement, retourner un tableau vide (les données viennent de la DB)
+  // En runtime production, permettre le fallback JSON si Prisma échoue
+  if (isBuildTime) {
     return [];
   }
   
@@ -47,10 +47,13 @@ export async function loadFromFile<T>(filename: string): Promise<T[]> {
     
     try {
       const data = await fs.readFile(filePath, "utf-8");
-      return JSON.parse(data) as T[];
+      const parsed = JSON.parse(data) as T[];
+      console.log(`[persistence] Chargé ${parsed.length} entrée(s) depuis ${filename}`);
+      return parsed;
     } catch (error: any) {
       // Si le fichier n'existe pas, retourner un tableau vide
       if (error.code === "ENOENT") {
+        console.log(`[persistence] Fichier ${filename} n'existe pas encore`);
         return [];
       }
       throw error;
@@ -63,8 +66,9 @@ export async function loadFromFile<T>(filename: string): Promise<T[]> {
 
 // Sauvegarder les données dans un fichier JSON
 export async function saveToFile<T>(filename: string, data: T[]): Promise<void> {
-  // En production ou pendant le build, ne rien faire (les données sont dans la DB)
-  if (process.env.NODE_ENV === "production" || typeof window === "undefined" && process.env.NEXT_RUNTIME) {
+  // Pendant le build uniquement, ne rien faire
+  // En runtime production, permettre le fallback JSON si Prisma échoue
+  if (isBuildTime) {
     return;
   }
   
