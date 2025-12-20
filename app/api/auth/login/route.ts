@@ -66,10 +66,8 @@ export async function POST(req: Request) {
 
     if (role === "admin") {
       // Admin : vérifier les credentials depuis env ou valeurs par défaut
-      // Accepter plusieurs emails admin (ancien et nouveau)
       const ADMIN_EMAILS = [
         process.env.ICD_ADMIN_EMAIL || "contact@leboy.com",
-        "contact.icd-relay@gmail.com", // Ancien email admin (rétrocompatibilité)
       ].map(e => e.toLowerCase());
       
       const ADMIN_PASSWORD = process.env.ICD_ADMIN_PASSWORD || "leboy-admin-2025";

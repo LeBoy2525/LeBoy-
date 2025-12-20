@@ -59,6 +59,10 @@ function isValidPhone(phone: string): boolean {
 export async function POST(req: Request) {
   try {
     const formData = await req.formData();
+    const { cookies } = await import("next/headers");
+    const cookieStore = await cookies();
+    const authCookie = cookieStore.get("icd_auth")?.value;
+    const userEmailCookie = cookieStore.get("icd_user_email")?.value;
 
     // Debug: logger tous les champs reçus
     console.log("[API /api/demandes] Champs reçus:");
@@ -68,7 +72,14 @@ export async function POST(req: Request) {
 
     // Champs venant du formulaire "Soumettre une demande"
     const fullName = ((formData.get("fullName") as string) || "").trim();
-    const email = ((formData.get("email") as string) || "").trim();
+    // Si le client est connecté, utiliser son email de connexion plutôt que celui du formulaire
+    // Sinon, utiliser l'email du formulaire
+    const emailFromForm = ((formData.get("email") as string) || "").trim();
+    const email = (authCookie === "1" && userEmailCookie) 
+      ? userEmailCookie.toLowerCase().trim() 
+      : emailFromForm.toLowerCase().trim();
+    
+    console.log(`[API /api/demandes] Email utilisé: ${email} (connecté: ${authCookie === "1" && userEmailCookie ? "oui" : "non"})`);
     const phone = ((formData.get("phone") as string) || "").trim();
     const serviceType = ((formData.get("serviceType") as string) || "").trim();
     const serviceSubcategory = ((formData.get("serviceSubcategory") as string) || "").trim();
