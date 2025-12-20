@@ -168,6 +168,11 @@ function convertPrismaPrestataireToJSON(prestataire: any): Prestataire {
     deletedBy: prestataire.deletedBy || undefined,
     passwordHash: prestataire.passwordHash || undefined, // ⚠️ IMPORTANT: Inclure passwordHash
   };
+  
+  // Log pour diagnostic si passwordHash manquant
+  if (!prestataire.passwordHash && prestataire.statut === "actif") {
+    console.warn(`[dataAccess] ⚠️ Prestataire actif sans passwordHash: ${prestataire.email} (UUID: ${prestataire.id})`);
+  }
 }
 
 /**

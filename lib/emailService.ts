@@ -437,12 +437,30 @@ function getNotificationHTML(
       `;
       break;
     case "provider-validated":
+      let passwordSection = "";
+      if (data.hasTempPassword && data.tempPassword) {
+        passwordSection = `
+          <div style="background: #FEF3C7; border-left: 4px solid #F59E0B; padding: 16px; margin: 20px 0; border-radius: 6px;">
+            <p style="margin: 0 0 12px 0; font-weight: bold; color: #92400E;">
+              🔑 Mot de passe temporaire
+            </p>
+            <p style="margin: 0 0 8px 0; color: #78350F;">
+              Votre mot de passe temporaire est : <strong style="font-family: monospace; background: #FDE68A; padding: 4px 8px; border-radius: 4px;">${data.tempPassword}</strong>
+            </p>
+            <p style="margin: 8px 0 0 0; color: #78350F; font-size: 13px;">
+              ⚠️ <strong>Important :</strong> Veuillez changer ce mot de passe lors de votre première connexion pour des raisons de sécurité.
+            </p>
+          </div>
+        `;
+      }
+      
       content = `
         <p style="font-size: 18px; color: #10B981; font-weight: bold; margin-bottom: 20px;">
           🎉 Félicitations ! Votre compte prestataire a été validé avec succès.
         </p>
         <p>Votre compte prestataire LeBoy (<strong>${data.providerRef || "N/A"}</strong>) a été activé par notre équipe.</p>
         <p>Vous pouvez maintenant vous connecter à votre espace prestataire et commencer à recevoir des missions.</p>
+        ${passwordSection}
         <p style="margin-top: 30px;">
           <a href="${data.platformUrl || data.loginUrl || "/prestataires/connexion"}" style="background: #D4A657; color: #0B2135; padding: 14px 28px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 16px;">
             Se connecter à mon espace

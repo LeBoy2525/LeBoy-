@@ -114,6 +114,10 @@ export async function updatePrestataire(id: string, data: Partial<Prestataire>) 
   // Note: suspenduAt et rejeteAt ne sont pas dans le type Prestataire JSON, ils sont gérés via statut
   if (data.deletedAt !== undefined) updateData.deletedAt = data.deletedAt ? new Date(data.deletedAt) : null;
   if (data.deletedBy !== undefined) updateData.deletedBy = data.deletedBy;
+  if (data.passwordHash !== undefined) {
+    updateData.passwordHash = data.passwordHash || null;
+    console.log(`[prestatairesRepo] passwordHash sera mis à jour: ${data.passwordHash ? "oui" : "null"}`);
+  }
   
   const updated = await prisma.prestataire.update({
     where: { id },

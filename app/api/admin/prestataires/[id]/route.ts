@@ -117,13 +117,31 @@ export async function PATCH(
 
     // Actions possibles : "valider", "rejeter", "suspendre", "reactiver"
     let statutUpdate: any = {};
+    let tempPassword: string | null = null; // Stocker le mot de passe temporaire pour l'email
     
     if (action === "valider") {
+      // Vérifier si le prestataire a un passwordHash
+      const hasPassword = !!existingPrestataire.passwordHash;
+      console.log(`[API PATCH] Prestataire a passwordHash: ${hasPassword}`);
+      
       statutUpdate = {
         statut: "actif" as const,
         dateValidation: new Date().toISOString(),
         documentsVerifies: true,
       };
+      
+      // Si le prestataire n'a pas de passwordHash, générer un mot de passe temporaire
+      // Le prestataire devra le changer lors de la première connexion
+      if (!hasPassword) {
+        console.log(`[API PATCH] ⚠️ Prestataire sans passwordHash, génération mot de passe temporaire...`);
+        const bcrypt = await import("bcryptjs");
+        // Générer un mot de passe temporaire basé sur l'email et la date
+        tempPassword = `Temp${existingPrestataire.email.split("@")[0]}${new Date().getFullYear()}`;
+        const tempPasswordHash = await bcrypt.hash(tempPassword, 10);
+        statutUpdate.passwordHash = tempPasswordHash;
+        console.log(`[API PATCH] ✅ Mot de passe temporaire généré pour ${existingPrestataire.email}`);
+        console.log(`[API PATCH] 📧 Le prestataire recevra ce mot de passe temporaire dans l'email de validation`);
+      }
     } else if (action === "rejeter") {
       statutUpdate = {
         statut: "rejete" as const,
@@ -168,18 +186,28 @@ export async function PATCH(
         
         console.log(`[API PATCH] 📧 Envoi email de validation à ${updated.email}...`);
         
+        // Préparer les données pour l'email
+        const emailData: any = {
+          providerRef: updated.ref,
+          providerName: updated.nomEntreprise || updated.nomContact,
+          platformUrl,
+          loginUrl,
+        };
+        
+        // Si un mot de passe temporaire a été généré, l'inclure dans l'email
+        if (tempPassword) {
+          emailData.tempPassword = tempPassword;
+          emailData.hasTempPassword = true;
+          console.log(`[API PATCH] 📧 Mot de passe temporaire inclus dans l'email: ${tempPassword}`);
+        }
+        
         const emailSent = await sendNotificationEmail(
           "provider-validated",
           { 
             email: updated.email, 
             name: updated.nomEntreprise || updated.nomContact 
           },
-          {
-            providerRef: updated.ref,
-            providerName: updated.nomEntreprise || updated.nomContact,
-            platformUrl,
-            loginUrl,
-          },
+          emailData,
           "fr"
         );
         
