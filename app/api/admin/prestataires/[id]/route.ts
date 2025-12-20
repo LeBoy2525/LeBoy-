@@ -11,7 +11,10 @@ export async function PATCH(
   req: Request,
   { params }: RouteParams
 ) {
-  console.log(`[API PATCH] /api/admin/prestataires/[id] appelé`);
+  console.log(`========================================`);
+  console.log(`[API PATCH] /api/admin/prestataires/[id] DÉBUT`);
+  console.log(`[API PATCH] Timestamp: ${new Date().toISOString()}`);
+  console.log(`========================================`);
   
   try {
     // Vérifier l'authentification admin
@@ -76,10 +79,27 @@ export async function PATCH(
     console.log(`[API PATCH] Action demandée: "${action}"`);
     
     // Vérifier que le prestataire existe avant de le mettre à jour
+    console.log(`[API PATCH] ========================================`);
     console.log(`[API PATCH] Recherche du prestataire avec ID: ${id}`);
+    console.log(`[API PATCH] Type ID: ${typeof id}, Valeur: ${id}`);
+    console.log(`[API PATCH] ========================================`);
+    
+    // Lister tous les prestataires disponibles pour diagnostic
+    const { getAllPrestataires } = await import("@/lib/dataAccess");
+    const allPrestataires = await getAllPrestataires();
+    console.log(`[API PATCH] 📊 Total prestataires dans la DB: ${allPrestataires.length}`);
+    console.log(`[API PATCH] 📋 IDs disponibles (premiers 5):`, allPrestataires.slice(0, 5).map(p => ({
+      id: p.id,
+      email: p.email,
+      ref: p.ref,
+      statut: p.statut
+    })));
+    
     const existingPrestataire = await getPrestataireById(id);
     if (!existingPrestataire) {
-      console.error(`[API PATCH] ❌ Prestataire non trouvé avec ID: ${id}`);
+      console.error(`[API PATCH] ❌❌❌ PRESTATAIRE NON TROUVÉ ❌❌❌`);
+      console.error(`[API PATCH] ID recherché: ${id}`);
+      console.error(`[API PATCH] IDs disponibles:`, allPrestataires.map(p => p.id).join(", "));
       return NextResponse.json(
         { error: `Prestataire non trouvé avec l'ID ${id}.` },
         { status: 404 }
