@@ -45,8 +45,19 @@ if (databaseUrl) {
     // Pour Prisma 7.x : essayer d'abord Prisma Accelerate si disponible, sinon config minimale
     // Prisma 7.x nécessite soit un adapter, soit accelerateUrl pour PostgreSQL
     
+    // Vérifier d'abord si PRISMA_DATABASE_URL est définie
+    const hasPrismaAccelerateUrl = process.env.PRISMA_DATABASE_URL && process.env.PRISMA_DATABASE_URL.startsWith("prisma+");
+    
+    if (!isBuildTime && typeof window === "undefined") {
+      console.log(`[db] PRISMA_DATABASE_URL: ${process.env.PRISMA_DATABASE_URL ? "définie" : "NON DÉFINIE"}`);
+      if (process.env.PRISMA_DATABASE_URL) {
+        console.log(`[db] PRISMA_DATABASE_URL commence par "prisma+": ${hasPrismaAccelerateUrl}`);
+        console.log(`[db] PRISMA_DATABASE_URL (masquée): ${process.env.PRISMA_DATABASE_URL.substring(0, 40)}...`);
+      }
+    }
+    
     // Option 1 : Utiliser Prisma Accelerate si PRISMA_DATABASE_URL est définie avec une URL Accelerate
-    if (process.env.PRISMA_DATABASE_URL && process.env.PRISMA_DATABASE_URL.startsWith("prisma+")) {
+    if (hasPrismaAccelerateUrl) {
       try {
         if (!isBuildTime && typeof window === "undefined") {
           console.log(`[db] Tentative avec Prisma Accelerate...`);
@@ -69,6 +80,8 @@ if (databaseUrl) {
       try {
         if (!isBuildTime && typeof window === "undefined") {
           console.log(`[db] Tentative avec config minimale (moteur standard)...`);
+          console.log(`[db] ⚠️ ATTENTION: Prisma 7.x nécessite un adapter ou Accelerate`);
+          console.log(`[db] Si erreur "adapter required", définissez PRISMA_DATABASE_URL avec Prisma Accelerate`);
         }
         // Essayer avec config minimale - laisser Prisma choisir le moteur
         prismaInstance = new PrismaClient({
@@ -83,10 +96,14 @@ if (databaseUrl) {
           const isProduction = process.env.NODE_ENV === "production" || process.env.APP_ENV === "production";
           console.error(`[db] ❌ ERREUR CRITIQUE: ${standardError?.message}`);
           console.error(`[db] Prisma 7.x nécessite un adapter PostgreSQL ou Prisma Accelerate`);
+          console.error(`[db] DATABASE_URL détectée mais PRISMA_DATABASE_URL non configurée avec Accelerate`);
           if (isProduction) {
             console.error(`[db] ⚠️ PRODUCTION: Les données seront PERDUES à chaque redéploiement sans Prisma!`);
-            console.error(`[db] Solution: Définir PRISMA_DATABASE_URL avec une URL Prisma Accelerate`);
-            console.error(`[db] Format: prisma+postgres://accelerate.prisma-data.net/?api_key=...`);
+            console.error(`[db] SOLUTION URGENTE:`);
+            console.error(`[db]   1. Allez dans Vercel → Settings → Environment Variables`);
+            console.error(`[db]   2. Vérifiez que PRISMA_DATABASE_URL contient: prisma+postgres://accelerate.prisma-data.net/...`);
+            console.error(`[db]   3. Si elle n'existe pas ou est incorrecte, obtenez une URL Accelerate depuis Prisma Data Platform`);
+            console.error(`[db]   4. Redéployez après avoir configuré PRISMA_DATABASE_URL`);
           } else {
             console.error(`[db] Solutions:`);
             console.error(`[db]   1. Utiliser Prisma Accelerate: définir PRISMA_DATABASE_URL avec prisma+postgres://...`);
