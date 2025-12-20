@@ -1,4 +1,5 @@
-import { prisma } from '../lib/db';
+import { PrismaClient } from '@prisma/client';
+import 'dotenv/config';
 
 /**
  * Fonction helper pour calculer le hash d'un UUID vers un ID numérique
@@ -16,7 +17,37 @@ async function diagnosePrestataireIds() {
   console.log("🔍 DIAGNOSTIC DES IDs DES PRESTATAIRES");
   console.log("================================================================================");
 
+  // Vérifier si DATABASE_URL est définie
+  const DATABASE_URL = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+  const PRISMA_DATABASE_URL = process.env.PRISMA_DATABASE_URL;
+
+  if (!DATABASE_URL && !PRISMA_DATABASE_URL) {
+    console.error("❌ Aucune URL de base de données trouvée.");
+    console.error("   Veuillez définir DATABASE_URL ou PRISMA_DATABASE_URL dans votre .env");
+    console.error("   Ce script nécessite une connexion à la base de données.");
+    return;
+  }
+
+  let prisma: PrismaClient | null = null;
+
   try {
+    // Initialiser Prisma selon la configuration (même logique que lib/db.ts)
+    if (PRISMA_DATABASE_URL && PRISMA_DATABASE_URL.startsWith("prisma+")) {
+      // Prisma Accelerate
+      prisma = new PrismaClient({
+        accelerateUrl: PRISMA_DATABASE_URL,
+      });
+      console.log("✅ Connexion via Prisma Accelerate");
+    } else {
+      // Connexion directe PostgreSQL - Prisma lit DATABASE_URL depuis schema.prisma
+      prisma = new PrismaClient();
+      console.log("✅ Connexion directe PostgreSQL");
+    }
+
+    if (!prisma) {
+      throw new Error("Impossible d'initialiser Prisma");
+    }
+
     const prestataires = await prisma.prestataire.findMany({
       orderBy: { createdAt: 'desc' },
       take: 20, // Limiter aux 20 premiers pour le diagnostic
@@ -54,7 +85,9 @@ async function diagnosePrestataireIds() {
     console.error("   Message:", error?.message);
     console.error("   Stack:", error?.stack);
   } finally {
-    await prisma.$disconnect();
+    if (prisma) {
+      await prisma.$disconnect();
+    }
   }
 }
 
