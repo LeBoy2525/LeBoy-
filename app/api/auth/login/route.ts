@@ -190,32 +190,51 @@ export async function POST(req: Request) {
     } else {
       // Client : utiliser dataAccess qui bascule automatiquement entre JSON et DB
       try {
+        console.log(`[LOGIN CLIENT] Recherche utilisateur: ${emailLower}`);
         const user = await getUserByEmail(emailLower);
-        if (user) {
-          // Vérifier si l'email est vérifié
-          if (!user.emailVerified) {
-            return NextResponse.json(
-              { 
-                error: "Votre email n'a pas été vérifié. Veuillez vérifier votre boîte mail et entrer le code de vérification.",
-                requiresVerification: true,
-                email: emailLower
-              },
-              { status: 403 }
-            );
-          }
+        
+        if (!user) {
+          console.log(`[LOGIN CLIENT] ❌ Utilisateur non trouvé pour ${emailLower}`);
+          return NextResponse.json(
+            { error: "Identifiants incorrects." },
+            { status: 401 }
+          );
+        }
 
-          isValid = await bcrypt.compare(password, user.passwordHash);
-          if (isValid) {
-            await updateLastLogin(emailLower);
-            userInfo = {
-              email: emailLower,
-              role: "client",
-              fullName: user.fullName,
-            };
-          }
+        console.log(`[LOGIN CLIENT] ✅ Utilisateur trouvé: ${user.email}`);
+        console.log(`[LOGIN CLIENT] Email vérifié: ${user.emailVerified}`);
+        console.log(`[LOGIN CLIENT] Has passwordHash: ${!!user.passwordHash}`);
+        
+        // Vérifier si l'email est vérifié
+        if (!user.emailVerified) {
+          console.log(`[LOGIN CLIENT] ❌ Email non vérifié pour ${emailLower}`);
+          return NextResponse.json(
+            { 
+              error: "Votre email n'a pas été vérifié. Veuillez vérifier votre boîte mail et entrer le code de vérification.",
+              requiresVerification: true,
+              email: emailLower
+            },
+            { status: 403 }
+          );
+        }
+
+        console.log(`[LOGIN CLIENT] Comparaison mot de passe...`);
+        isValid = await bcrypt.compare(password, user.passwordHash);
+        console.log(`[LOGIN CLIENT] Mot de passe valide: ${isValid}`);
+        
+        if (isValid) {
+          await updateLastLogin(emailLower);
+          userInfo = {
+            email: emailLower,
+            role: "client",
+            fullName: user.fullName,
+          };
+          console.log(`[LOGIN CLIENT] ✅ Connexion réussie pour ${emailLower}`);
+        } else {
+          console.log(`[LOGIN CLIENT] ❌ Mot de passe incorrect pour ${emailLower}`);
         }
       } catch (error) {
-        console.error("Erreur lors de la récupération de l'utilisateur:", error);
+        console.error("[LOGIN CLIENT] Erreur lors de la récupération de l'utilisateur:", error);
         // Fallback sur JSON en cas d'erreur DB
         if (USE_DB) {
           try {
