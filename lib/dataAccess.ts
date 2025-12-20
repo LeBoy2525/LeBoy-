@@ -117,14 +117,23 @@ export async function getUserByEmail(email: string): Promise<User | null> {
 /**
  * Convertir un Prestataire Prisma vers le format JSON
  */
+/**
+ * Fonction helper pour calculer le hash d'un UUID vers un ID numérique
+ * DOIT être identique à calculateUUIDHash utilisée dans findPrestatairePrismaByNumericId
+ */
+function calculateUUIDHash(uuid: string): number {
+  const hash = uuid.split("").reduce((acc: number, char: string) => {
+    return ((acc << 5) - acc) + char.charCodeAt(0);
+  }, 0);
+  return Math.abs(hash) % 1000000; // Limiter à 6 chiffres
+}
+
 function convertPrismaPrestataireToJSON(prestataire: any): Prestataire {
   // Convertir l'UUID en nombre pour compatibilité
   let idNumber: number;
   if (typeof prestataire.id === "string" && prestataire.id.includes("-")) {
-    const hash = prestataire.id.split("").reduce((acc: number, char: string) => {
-      return ((acc << 5) - acc) + char.charCodeAt(0);
-    }, 0);
-    idNumber = Math.abs(hash) % 1000000; // Limiter à 6 chiffres
+    // Utiliser la fonction helper pour garantir la cohérence
+    idNumber = calculateUUIDHash(prestataire.id);
   } else {
     idNumber = parseInt(String(prestataire.id)) || 0;
   }
@@ -527,18 +536,8 @@ export async function getAllPrestataires(): Promise<Prestataire[]> {
  * Bascule automatiquement entre JSON et DB selon USE_DB
  */
 /**
- * Fonction helper pour calculer le hash d'un UUID vers un ID numérique
- * Cette fonction doit être identique à celle utilisée dans convertPrismaPrestataireToJSON
- */
-function calculateUUIDHash(uuid: string): number {
-  const hash = uuid.split("").reduce((acc: number, char: string) => {
-    return ((acc << 5) - acc) + char.charCodeAt(0);
-  }, 0);
-  return Math.abs(hash) % 1000000;
-}
-
-/**
  * Trouve le prestataire Prisma par son ID numérique (converti depuis UUID)
+ * Utilise calculateUUIDHash définie plus haut pour garantir la cohérence
  */
 async function findPrestatairePrismaByNumericId(id: number): Promise<any | null> {
   const { getAllPrestataires: getAllPrestatairesDB } = await import("@/repositories/prestatairesRepo");
@@ -645,7 +644,20 @@ export async function createPrestataire(
         passwordHash: data.passwordHash,
       } as any);
 
-      return convertPrismaPrestataireToJSON(prestataire);
+      const jsonPrestataire = convertPrismaPrestataireToJSON(prestataire);
+      console.log(`[dataAccess] ✅ Conversion JSON: ID numérique = ${jsonPrestataire.id}, Email = ${jsonPrestataire.email}`);
+      
+      // Vérifier immédiatement que le prestataire peut être retrouvé par son ID numérique
+      const verifyPrestataire = await getPrestataireById(jsonPrestataire.id);
+      if (verifyPrestataire) {
+        console.log(`[dataAccess] ✅ Vérification: Prestataire retrouvable immédiatement après création (ID: ${jsonPrestataire.id})`);
+      } else {
+        console.error(`[dataAccess] ❌ ERREUR: Prestataire non retrouvable immédiatement après création (ID: ${jsonPrestataire.id})!`);
+        console.error(`[dataAccess] UUID original: ${prestataire.id}`);
+        console.error(`[dataAccess] ID numérique calculé: ${jsonPrestataire.id}`);
+      }
+      
+      return jsonPrestataire;
     } catch (error) {
       console.error("Erreur createPrestataire (DB):", error);
       return createPrestataireJSON(data);
