@@ -58,14 +58,45 @@ if (databaseUrl) {
         accelerateUrl: process.env.PRISMA_DATABASE_URL,
       };
     } else {
-      // PostgreSQL standard - Prisma détecte automatiquement via DATABASE_URL dans schema.prisma
-      // Ne pas spécifier d'adapter ni accelerateUrl pour PostgreSQL standard
+      // PostgreSQL standard - Prisma 7.x nécessite une configuration explicite
+      // Pour PostgreSQL standard, ne pas utiliser accelerateUrl mais s'assurer que DATABASE_URL est correcte
       if (!isBuildTime && typeof window === "undefined") {
         console.log(`[db] Utilisation de PostgreSQL standard via DATABASE_URL`);
+        console.log(`[db] DATABASE_URL format: ${databaseUrl.substring(0, 20)}...`);
       }
+      
+      // Pour Prisma 7.x avec PostgreSQL standard, s'assurer que DATABASE_URL est bien définie
+      // et que le client Prisma peut la lire depuis schema.prisma
+      // Ne pas passer de config spéciale - Prisma devrait détecter automatiquement PostgreSQL
+      // Mais si cela échoue, cela signifie que Prisma 7.x nécessite peut-être un adapter
     }
     
-    prismaInstance = new PrismaClient(finalConfig);
+    // Essayer de créer PrismaClient avec la config
+    try {
+      prismaInstance = new PrismaClient(finalConfig);
+      if (!isBuildTime && typeof window === "undefined") {
+        console.log(`[db] ✅ PrismaClient créé avec succès`);
+      }
+    } catch (createError: any) {
+      // Si l'erreur est "adapter or accelerateUrl required", essayer sans config spéciale
+      if (createError?.message?.includes("adapter") || createError?.message?.includes("accelerateUrl")) {
+        console.error(`[db] ⚠️ Erreur création PrismaClient avec config: ${createError?.message}`);
+        console.log(`[db] Tentative avec config minimale...`);
+        try {
+          // Essayer avec config minimale (seulement log)
+          prismaInstance = new PrismaClient({
+            log: prismaConfig.log,
+          });
+          if (!isBuildTime && typeof window === "undefined") {
+            console.log(`[db] ✅ PrismaClient créé avec config minimale`);
+          }
+        } catch (minimalError: any) {
+          throw minimalError; // Re-lancer l'erreur si même la config minimale échoue
+        }
+      } else {
+        throw createError; // Re-lancer l'erreur si ce n'est pas lié à adapter/accelerateUrl
+      }
+    }
     
     // Ne pas tester la connexion immédiatement - laisser Prisma se connecter à la demande
     // Cela évite les erreurs d'initialisation prématurées
