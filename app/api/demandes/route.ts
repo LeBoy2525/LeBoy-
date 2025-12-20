@@ -232,22 +232,44 @@ export async function POST(req: Request) {
   }
 }
 
-// GET optionnel pour debug : liste brute des demandes en mémoire
-// ⚠️ SÉCURITÉ : Cette route expose toutes les demandes - à désactiver en production
+// GET : liste des demandes (accessible uniquement aux admins)
 export async function GET() {
-  // En production, désactiver cette route ou ajouter une authentification
-  if (process.env.NODE_ENV === "production") {
+  try {
+    const { cookies } = await import("next/headers");
+    const { getUserRoleAsync } = await import("@/lib/auth");
+    const cookieStore = await cookies();
+    const userEmail = cookieStore.get("icd_user_email")?.value;
+
+    // Vérifier l'authentification et le rôle admin
+    if (!userEmail) {
+      return NextResponse.json(
+        { error: "Non authentifié." },
+        { status: 401 }
+      );
+    }
+
+    const role = await getUserRoleAsync(userEmail);
+    if (role !== "admin") {
+      return NextResponse.json(
+        { error: "Accès réservé aux administrateurs." },
+        { status: 403 }
+      );
+    }
+
+    // Récupérer toutes les demandes actives (avec fallback automatique JSON/DB)
+    const activeDemandes = await getAllDemandes();
+
+    console.log(`[API /api/demandes GET] ${activeDemandes?.length || 0} demande(s) récupérée(s) pour admin`);
+
     return NextResponse.json(
-      { error: "Route non disponible en production." },
-      { status: 403 }
+      { demandes: activeDemandes ?? [] },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("ERREUR /api/demandes (GET) :", error);
+    return NextResponse.json(
+      { error: "Erreur lors de la récupération des demandes." },
+      { status: 500 }
     );
   }
-
-  // Récupérer toutes les demandes actives (avec fallback automatique JSON/DB)
-  const activeDemandes = await getAllDemandes();
-
-  return NextResponse.json(
-    { demandes: activeDemandes ?? [] },
-    { status: 200 }
-  );
 }
