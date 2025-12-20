@@ -6,10 +6,9 @@ const globalForPrisma = globalThis as unknown as {
 
 // Configuration Prisma avec gestion de DATABASE_URL
 // Prisma 7.x nécessite DATABASE_URL pour fonctionner correctement
-// Si DATABASE_URL commence par "postgresql://", utiliser le mode standard
+// Pour PostgreSQL standard, ne pas spécifier d'adapter ou accelerateUrl
 const prismaConfig: ConstructorParameters<typeof PrismaClient>[0] = {
   log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
-  // Ne pas spécifier d'adapter ou accelerateUrl si on utilise une connexion PostgreSQL standard
 };
 
 // Helper pour détecter si on est en build Next.js
