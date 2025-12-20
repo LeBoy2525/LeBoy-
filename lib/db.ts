@@ -42,17 +42,27 @@ if (databaseUrl) {
     
     // Pour Prisma 7.x :
     // - Si c'est une URL Prisma Accelerate (prisma+postgres://), utiliser accelerateUrl dans la config
-    // - Si c'est une URL PostgreSQL standard, utiliser la config standard
-    // IMPORTANT: Prisma lit DATABASE_URL depuis schema.prisma, mais si PRISMA_DATABASE_URL est définie
-    // avec une URL Accelerate, on doit utiliser accelerateUrl dans la config PrismaClient
+    // - Si c'est une URL PostgreSQL standard (postgresql://), utiliser la config standard sans adapter ni accelerateUrl
+    // IMPORTANT: Prisma lit DATABASE_URL depuis schema.prisma
+    // Si PRISMA_DATABASE_URL est définie avec une URL Accelerate, utiliser accelerateUrl
+    // Sinon, utiliser la config standard (Prisma détecte automatiquement PostgreSQL via DATABASE_URL)
     let finalConfig = { ...prismaConfig };
     
     if (isPrismaAccelerate && process.env.PRISMA_DATABASE_URL) {
       // Si c'est Prisma Accelerate, utiliser accelerateUrl
+      if (!isBuildTime && typeof window === "undefined") {
+        console.log(`[db] Utilisation de Prisma Accelerate via accelerateUrl`);
+      }
       finalConfig = {
         ...prismaConfig,
         accelerateUrl: process.env.PRISMA_DATABASE_URL,
       };
+    } else {
+      // PostgreSQL standard - Prisma détecte automatiquement via DATABASE_URL dans schema.prisma
+      // Ne pas spécifier d'adapter ni accelerateUrl pour PostgreSQL standard
+      if (!isBuildTime && typeof window === "undefined") {
+        console.log(`[db] Utilisation de PostgreSQL standard via DATABASE_URL`);
+      }
     }
     
     prismaInstance = new PrismaClient(finalConfig);
