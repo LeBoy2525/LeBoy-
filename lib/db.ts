@@ -42,67 +42,60 @@ if (databaseUrl) {
       console.log(`   URL (masquée): ${databaseUrl.substring(0, 30)}...`);
     }
     
-    // Pour Prisma 7.x :
-    // - Si c'est une URL Prisma Accelerate (prisma+postgres://), utiliser accelerateUrl dans la config
-    // - Si c'est une URL PostgreSQL standard (postgresql://), utiliser la config standard sans adapter ni accelerateUrl
-    // IMPORTANT: Prisma lit DATABASE_URL depuis schema.prisma
-    // Si PRISMA_DATABASE_URL est définie avec une URL Accelerate, utiliser accelerateUrl
-    // Sinon, utiliser la config standard (Prisma détecte automatiquement PostgreSQL via DATABASE_URL)
-    let finalConfig = { ...prismaConfig };
-    
-    // Prisma 7.x nécessite soit un adapter, soit accelerateUrl
-    // Si PRISMA_DATABASE_URL est définie et contient une URL Accelerate, l'utiliser
-    if (process.env.PRISMA_DATABASE_URL && (isPrismaAccelerate || process.env.PRISMA_DATABASE_URL.startsWith("prisma+"))) {
-      // Si c'est Prisma Accelerate, utiliser accelerateUrl
-      if (!isBuildTime && typeof window === "undefined") {
-        console.log(`[db] Utilisation de Prisma Accelerate via accelerateUrl`);
-      }
-      finalConfig = {
-        ...prismaConfig,
-        accelerateUrl: process.env.PRISMA_DATABASE_URL,
-      };
-    } else if (isPostgres && process.env.DATABASE_URL) {
-      // PostgreSQL standard - Prisma 7.x nécessite un adapter ou accelerateUrl
-      // Si on n'a pas Accelerate, on doit utiliser l'adapter PostgreSQL
-      // Pour l'instant, essayer avec DATABASE_URL et voir si ça fonctionne
-      if (!isBuildTime && typeof window === "undefined") {
-        console.log(`[db] ⚠️ PostgreSQL standard détecté - Prisma 7.x nécessite un adapter ou Accelerate`);
-        console.log(`[db] DATABASE_URL format: ${databaseUrl.substring(0, 20)}...`);
-        console.log(`[db] Si erreur "adapter required", utilisez PRISMA_DATABASE_URL avec Accelerate ou installez @prisma/adapter-pg`);
-      }
-      // Ne pas modifier finalConfig - utiliser la config par défaut
-      // Si cela échoue, l'erreur sera capturée et expliquée
-    }
-    
-    // Essayer de créer PrismaClient avec la config
+    // Pour Prisma 7.x : essayer d'abord Prisma Accelerate si disponible, sinon config minimale
     // Prisma 7.x nécessite soit un adapter, soit accelerateUrl pour PostgreSQL
-    // Si ce n'est pas Accelerate, on doit utiliser l'adapter PostgreSQL standard
-    try {
-      prismaInstance = new PrismaClient(finalConfig);
-      if (!isBuildTime && typeof window === "undefined") {
-        console.log(`[db] ✅ PrismaClient créé avec succès`);
-      }
-    } catch (createError: any) {
-      // Si l'erreur est "adapter or accelerateUrl required", cela signifie que Prisma 7.x
-      // nécessite explicitement un adapter pour PostgreSQL standard
-      if (createError?.message?.includes("adapter") || createError?.message?.includes("accelerateUrl")) {
-        const isProduction = process.env.NODE_ENV === "production" || process.env.APP_ENV === "production";
-        console.error(`[db] ❌ ERREUR CRITIQUE création PrismaClient: ${createError?.message}`);
-        console.error(`[db] Prisma 7.x nécessite un adapter PostgreSQL ou Prisma Accelerate`);
-        if (isProduction) {
-          console.error(`[db] ⚠️ PRODUCTION: Les données seront PERDUES à chaque redéploiement sans Prisma!`);
-          console.error(`[db] Solutions:`);
-          console.error(`[db]   1. Utiliser Prisma Accelerate: définir PRISMA_DATABASE_URL avec prisma+postgres://accelerate.prisma-data.net/...`);
-          console.error(`[db]   2. Installer @prisma/adapter-pg: npm install @prisma/adapter-pg pg`);
-        } else {
-          console.error(`[db] Options:`);
-          console.error(`[db]   1. Utiliser Prisma Accelerate (définir PRISMA_DATABASE_URL avec prisma+postgres://)`);
-          console.error(`[db]   2. Installer @prisma/adapter-pg et l'utiliser`);
-          console.error(`[db] Pour l'instant, le système utilisera le fallback JSON (développement uniquement)`);
+    
+    // Option 1 : Utiliser Prisma Accelerate si PRISMA_DATABASE_URL est définie avec une URL Accelerate
+    if (process.env.PRISMA_DATABASE_URL && process.env.PRISMA_DATABASE_URL.startsWith("prisma+")) {
+      try {
+        if (!isBuildTime && typeof window === "undefined") {
+          console.log(`[db] Tentative avec Prisma Accelerate...`);
         }
-        throw createError; // Re-lancer l'erreur pour que le catch parent la gère
-      } else {
-        throw createError; // Re-lancer l'erreur si ce n'est pas lié à adapter/accelerateUrl
+        prismaInstance = new PrismaClient({
+          log: prismaConfig.log,
+          accelerateUrl: process.env.PRISMA_DATABASE_URL,
+        });
+        if (!isBuildTime && typeof window === "undefined") {
+          console.log(`[db] ✅ PrismaClient créé avec Prisma Accelerate`);
+        }
+      } catch (accelerateError: any) {
+        console.error(`[db] ❌ Erreur avec Prisma Accelerate: ${accelerateError?.message}`);
+        throw accelerateError;
+      }
+    } 
+    // Option 2 : Essayer avec config minimale (sans adapter ni accelerateUrl)
+    // Cela peut fonctionner si Prisma détecte automatiquement le moteur approprié
+    else if (process.env.DATABASE_URL) {
+      try {
+        if (!isBuildTime && typeof window === "undefined") {
+          console.log(`[db] Tentative avec config minimale (moteur standard)...`);
+        }
+        // Essayer avec config minimale - laisser Prisma choisir le moteur
+        prismaInstance = new PrismaClient({
+          log: prismaConfig.log,
+        });
+        if (!isBuildTime && typeof window === "undefined") {
+          console.log(`[db] ✅ PrismaClient créé avec moteur standard`);
+        }
+      } catch (standardError: any) {
+        // Si erreur "adapter or accelerateUrl required", Prisma 7.x nécessite une config explicite
+        if (standardError?.message?.includes("adapter") || standardError?.message?.includes("accelerateUrl")) {
+          const isProduction = process.env.NODE_ENV === "production" || process.env.APP_ENV === "production";
+          console.error(`[db] ❌ ERREUR CRITIQUE: ${standardError?.message}`);
+          console.error(`[db] Prisma 7.x nécessite un adapter PostgreSQL ou Prisma Accelerate`);
+          if (isProduction) {
+            console.error(`[db] ⚠️ PRODUCTION: Les données seront PERDUES à chaque redéploiement sans Prisma!`);
+            console.error(`[db] Solution: Définir PRISMA_DATABASE_URL avec une URL Prisma Accelerate`);
+            console.error(`[db] Format: prisma+postgres://accelerate.prisma-data.net/?api_key=...`);
+          } else {
+            console.error(`[db] Solutions:`);
+            console.error(`[db]   1. Utiliser Prisma Accelerate: définir PRISMA_DATABASE_URL avec prisma+postgres://...`);
+            console.error(`[db]   2. Installer @prisma/adapter-pg: npm install @prisma/adapter-pg pg`);
+          }
+          throw standardError;
+        } else {
+          throw standardError;
+        }
       }
     }
     
