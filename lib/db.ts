@@ -31,13 +31,10 @@ if (process.env.DATABASE_URL) {
       console.log(`[db] DATABASE_URL détectée, format: ${isPostgres ? "PostgreSQL" : "autre"} (${dbUrl.substring(0, 30)}...)`);
     }
     
-    // Pour Prisma 7.x avec PostgreSQL standard, utiliser la configuration par défaut
-    // Ne pas spécifier d'adapter ou accelerateUrl pour les connexions PostgreSQL standard
+    // Pour Prisma 7.x avec PostgreSQL standard, utiliser la configuration minimale
     // Le client généré gère automatiquement la connexion PostgreSQL via DATABASE_URL
-    prismaInstance = new PrismaClient({
-      ...prismaConfig,
-      // Ne pas ajouter d'adapter ou accelerateUrl pour PostgreSQL standard
-    });
+    // IMPORTANT: Ne pas passer d'objet vide ou de config spéciale pour éviter l'erreur "adapter required"
+    prismaInstance = new PrismaClient(prismaConfig);
     
     // Tester la connexion immédiatement pour détecter les erreurs tôt
     // Mais seulement en runtime, pas pendant le build
