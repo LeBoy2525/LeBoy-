@@ -172,7 +172,7 @@ export default function FinancePage() {
           </Link>
         </div>
       </div>
-    </main>
+    </div>
   );
 }
 
