@@ -379,6 +379,10 @@ function getNotificationSubject(type: string, lang: "fr" | "en"): string {
       fr: "Nouvelle proposition reçue - LeBoy",
       en: "New proposal received - LeBoy",
     },
+    "provider-validated": {
+      fr: "Félicitations ! Votre compte prestataire est activé - LeBoy",
+      en: "Congratulations! Your provider account is activated - LeBoy",
+    },
   };
 
   return subjects[type]?.[lang] || "Notification LeBoy";
@@ -429,6 +433,23 @@ function getNotificationHTML(
           <a href="${data.platformUrl}/admin/demandes/${data.demandeId}" style="background: #D4A657; color: #0B2135; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
             Voir la proposition
           </a>
+        </p>
+      `;
+      break;
+    case "provider-validated":
+      content = `
+        <p style="font-size: 18px; color: #10B981; font-weight: bold; margin-bottom: 20px;">
+          🎉 Félicitations ! Votre compte prestataire a été validé avec succès.
+        </p>
+        <p>Votre compte prestataire LeBoy (<strong>${data.providerRef || "N/A"}</strong>) a été activé par notre équipe.</p>
+        <p>Vous pouvez maintenant vous connecter à votre espace prestataire et commencer à recevoir des missions.</p>
+        <p style="margin-top: 30px;">
+          <a href="${data.platformUrl || data.loginUrl || "/prestataires/connexion"}" style="background: #D4A657; color: #0B2135; padding: 14px 28px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 16px;">
+            Se connecter à mon espace
+          </a>
+        </p>
+        <p style="margin-top: 20px; color: #6B7280; font-size: 14px;">
+          Si vous avez des questions, n'hésitez pas à nous contacter à <a href="mailto:contact@leboy.com" style="color: #D4A657;">contact@leboy.com</a>
         </p>
       `;
       break;

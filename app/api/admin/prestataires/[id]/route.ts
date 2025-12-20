@@ -140,9 +140,38 @@ export async function PATCH(
 
     // Si validation, envoyer email de confirmation
     if (action === "valider") {
-      console.log(`📧 Email à envoyer à ${updated.email}: Félicitations, votre compte est activé !`);
-      console.log(`📧 Contenu: Votre compte prestataire LeBoy (${updated.ref}) a été validé avec succès. Vous pouvez maintenant vous connecter à votre espace : https://votre-domaine.com/prestataires/connexion`);
-      console.log(`📧 Lien de connexion: /prestataires/connexion`);
+      try {
+        const { sendNotificationEmail } = await import("@/lib/emailService");
+        const protocol = process.env.NEXT_PUBLIC_APP_URL?.startsWith("https") ? "https" : "http";
+        const platformUrl = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://localhost:3000`;
+        const loginUrl = `${platformUrl}/prestataires/connexion`;
+        
+        console.log(`[API PATCH] 📧 Envoi email de validation à ${updated.email}...`);
+        
+        const emailSent = await sendNotificationEmail(
+          "provider-validated",
+          { 
+            email: updated.email, 
+            name: updated.nomEntreprise || updated.nomContact 
+          },
+          {
+            providerRef: updated.ref,
+            providerName: updated.nomEntreprise || updated.nomContact,
+            platformUrl,
+            loginUrl,
+          },
+          "fr"
+        );
+        
+        if (emailSent) {
+          console.log(`[API PATCH] ✅ Email de validation envoyé avec succès à ${updated.email}`);
+        } else {
+          console.error(`[API PATCH] ⚠️ Échec de l'envoi de l'email de validation à ${updated.email}`);
+        }
+      } catch (error) {
+        console.error(`[API PATCH] ❌ Erreur lors de l'envoi de l'email de validation:`, error);
+        // Ne pas bloquer la validation si l'email échoue
+      }
     }
 
     return NextResponse.json(

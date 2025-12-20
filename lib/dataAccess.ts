@@ -527,10 +527,10 @@ export async function getAllPrestataires(): Promise<Prestataire[]> {
  * Bascule automatiquement entre JSON et DB selon USE_DB
  */
 export async function getPrestataireById(id: number): Promise<Prestataire | null> {
-  console.log(`[dataAccess] getPrestataireById appelé avec ID: ${id}`);
+  console.log(`[dataAccess] getPrestataireById appelé avec ID: ${id} (type: ${typeof id})`);
   
-  if (!id) {
-    console.log(`[dataAccess] ❌ ID vide/null`);
+  if (!id || isNaN(id)) {
+    console.log(`[dataAccess] ❌ ID vide/null/invalide: ${id}`);
     return null;
   }
 
@@ -542,42 +542,41 @@ export async function getPrestataireById(id: number): Promise<Prestataire | null
       
       console.log(`[dataAccess] ${allPrestataires.length} prestataires chargés depuis Prisma`);
       
-      // Convertir l'ID numérique en UUID si nécessaire
-      const prestataire = allPrestataires.find((p: any) => {
-        if (typeof p.id === "string" && p.id.includes("-")) {
-          // C'est un UUID, calculer le hash
-          const hash = p.id.split("").reduce((acc: number, char: string) => {
-            return ((acc << 5) - acc) + char.charCodeAt(0);
-          }, 0);
-          const idNumber = Math.abs(hash) % 1000000;
-          const matches = idNumber === id;
-          if (matches) {
-            console.log(`[dataAccess] ✅ Match trouvé: UUID ${p.id} -> hash ${idNumber} = ID recherché ${id}`);
-          }
-          return matches;
-        }
-        const numericId = parseInt(String(p.id));
-        const matches = numericId === id;
-        if (matches) {
-          console.log(`[dataAccess] ✅ Match trouvé: ID numérique ${p.id} = ID recherché ${id}`);
-        }
-        return matches;
+      // Fonction helper pour calculer le hash d'un UUID
+      const calculateHash = (uuid: string): number => {
+        const hash = uuid.split("").reduce((acc: number, char: string) => {
+          return ((acc << 5) - acc) + char.charCodeAt(0);
+        }, 0);
+        return Math.abs(hash) % 1000000;
+      };
+      
+      // Convertir tous les prestataires en format JSON pour comparer les IDs
+      const prestatairesWithNumericIds = allPrestataires.map((p: any) => {
+        const jsonPrestataire = convertPrismaPrestataireToJSON(p);
+        return { prisma: p, json: jsonPrestataire };
       });
-
-      if (prestataire) {
-        console.log(`[dataAccess] ✅ Prestataire trouvé: ${prestataire.email} (UUID: ${prestataire.id})`);
-        return convertPrismaPrestataireToJSON(prestataire);
+      
+      // Afficher les IDs disponibles pour debug
+      console.log(`[dataAccess] IDs disponibles (premiers 10):`, prestatairesWithNumericIds.slice(0, 10).map((item: any) => ({
+        uuid: item.prisma.id,
+        numericId: item.json.id,
+        email: item.json.email,
+        ref: item.json.ref,
+      })));
+      
+      // Rechercher par ID numérique converti
+      const found = prestatairesWithNumericIds.find((item: any) => item.json.id === id);
+      
+      if (found) {
+        console.log(`[dataAccess] ✅ Prestataire trouvé: ${found.json.email} (UUID: ${found.prisma.id}, ID numérique: ${found.json.id})`);
+        return found.json;
       } else {
-        console.error(`[dataAccess] ❌ Aucun prestataire trouvé avec ID: ${id}`);
-        console.error(`[dataAccess] IDs disponibles (premiers 5):`, allPrestataires.slice(0, 5).map((p: any) => {
-          if (typeof p.id === "string" && p.id.includes("-")) {
-            const hash = p.id.split("").reduce((acc: number, char: string) => {
-              return ((acc << 5) - acc) + char.charCodeAt(0);
-            }, 0);
-            return { uuid: p.id, hash: Math.abs(hash) % 1000000, email: p.email };
-          }
-          return { id: p.id, email: p.email };
-        }));
+        console.error(`[dataAccess] ❌ Aucun prestataire trouvé avec ID numérique: ${id}`);
+        console.error(`[dataAccess] Tous les IDs disponibles:`, prestatairesWithNumericIds.map((item: any) => ({
+          numericId: item.json.id,
+          email: item.json.email,
+          ref: item.json.ref,
+        })));
         return null;
       }
     } catch (error) {
