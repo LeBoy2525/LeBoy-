@@ -353,10 +353,13 @@ export async function setVerificationCode(email: string, code: string): Promise<
       
       const { setVerificationCode: setVerificationCodeDB } = await import("@/repositories/usersRepo");
       await setVerificationCodeDB(emailLower, code);
+      // Invalider le cache pour forcer une nouvelle recherche avec le code mis à jour
+      invalidateCache(emailLower);
     } catch (error) {
       console.error("Erreur setVerificationCode (DB):", error);
       // Fallback sur JSON en cas d'erreur
       setVerificationCodeJSON(emailLower, code);
+      invalidateCache(emailLower);
     }
   } else {
     setVerificationCodeJSON(emailLower, code);
@@ -397,6 +400,9 @@ export async function verifyEmail(email: string, code: string): Promise<boolean>
         verificationCode: undefined,
         verificationCodeExpires: undefined,
       });
+
+      // Invalider le cache pour forcer une nouvelle recherche avec les données mises à jour
+      invalidateCache(emailLower);
 
       return true;
     } catch (error) {
