@@ -3,9 +3,9 @@
 import "dotenv/config";
 import { defineConfig } from "prisma/config";
 
-// DATABASE_URL n'est pas requis pour prisma generate
-// On utilise une valeur factice si elle n'est pas disponible
-const DATABASE_URL = process.env.DATABASE_URL || "postgresql://placeholder@localhost:5432/placeholder";
+// Pour Prisma 7.x, la configuration de la datasource se fait ici
+// Utiliser PRISMA_DATABASE_URL si disponible (Accelerate), sinon DATABASE_URL
+const DATABASE_URL = process.env.PRISMA_DATABASE_URL || process.env.DATABASE_URL || process.env.POSTGRES_URL || "postgresql://placeholder@localhost:5432/placeholder";
 
 export default defineConfig({
   schema: "prisma/schema.prisma",
