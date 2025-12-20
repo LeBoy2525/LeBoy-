@@ -25,7 +25,9 @@ let prismaInstance: PrismaClient | undefined;
 
 // Vérifier quelle variable d'environnement est disponible
 // Prisma lit DATABASE_URL depuis schema.prisma, mais on peut aussi avoir PRISMA_DATABASE_URL
-const databaseUrl = process.env.DATABASE_URL || process.env.PRISMA_DATABASE_URL || process.env.POSTGRES_URL;
+// IMPORTANT: Si PRISMA_DATABASE_URL est définie avec une URL Accelerate, l'utiliser en priorité
+// car Prisma 7.x nécessite soit un adapter, soit accelerateUrl
+const databaseUrl = process.env.PRISMA_DATABASE_URL || process.env.DATABASE_URL || process.env.POSTGRES_URL;
 
 if (databaseUrl) {
   try {
@@ -48,7 +50,9 @@ if (databaseUrl) {
     // Sinon, utiliser la config standard (Prisma détecte automatiquement PostgreSQL via DATABASE_URL)
     let finalConfig = { ...prismaConfig };
     
-    if (isPrismaAccelerate && process.env.PRISMA_DATABASE_URL) {
+    // Prisma 7.x nécessite soit un adapter, soit accelerateUrl
+    // Si PRISMA_DATABASE_URL est définie et contient une URL Accelerate, l'utiliser
+    if (process.env.PRISMA_DATABASE_URL && (isPrismaAccelerate || process.env.PRISMA_DATABASE_URL.startsWith("prisma+"))) {
       // Si c'est Prisma Accelerate, utiliser accelerateUrl
       if (!isBuildTime && typeof window === "undefined") {
         console.log(`[db] Utilisation de Prisma Accelerate via accelerateUrl`);
@@ -57,18 +61,17 @@ if (databaseUrl) {
         ...prismaConfig,
         accelerateUrl: process.env.PRISMA_DATABASE_URL,
       };
-    } else {
-      // PostgreSQL standard - Prisma 7.x nécessite une configuration explicite
-      // Pour PostgreSQL standard, ne pas utiliser accelerateUrl mais s'assurer que DATABASE_URL est correcte
+    } else if (isPostgres && process.env.DATABASE_URL) {
+      // PostgreSQL standard - Prisma 7.x nécessite un adapter ou accelerateUrl
+      // Si on n'a pas Accelerate, on doit utiliser l'adapter PostgreSQL
+      // Pour l'instant, essayer avec DATABASE_URL et voir si ça fonctionne
       if (!isBuildTime && typeof window === "undefined") {
-        console.log(`[db] Utilisation de PostgreSQL standard via DATABASE_URL`);
+        console.log(`[db] ⚠️ PostgreSQL standard détecté - Prisma 7.x nécessite un adapter ou Accelerate`);
         console.log(`[db] DATABASE_URL format: ${databaseUrl.substring(0, 20)}...`);
+        console.log(`[db] Si erreur "adapter required", utilisez PRISMA_DATABASE_URL avec Accelerate ou installez @prisma/adapter-pg`);
       }
-      
-      // Pour Prisma 7.x avec PostgreSQL standard, s'assurer que DATABASE_URL est bien définie
-      // et que le client Prisma peut la lire depuis schema.prisma
-      // Ne pas passer de config spéciale - Prisma devrait détecter automatiquement PostgreSQL
-      // Mais si cela échoue, cela signifie que Prisma 7.x nécessite peut-être un adapter
+      // Ne pas modifier finalConfig - utiliser la config par défaut
+      // Si cela échoue, l'erreur sera capturée et expliquée
     }
     
     // Essayer de créer PrismaClient avec la config
