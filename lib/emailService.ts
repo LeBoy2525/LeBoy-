@@ -462,7 +462,7 @@ function getNotificationHTML(
         <p>Vous pouvez maintenant vous connecter à votre espace prestataire et commencer à recevoir des missions.</p>
         ${passwordSection}
         <p style="margin-top: 30px;">
-          <a href="${data.platformUrl || data.loginUrl || "/prestataires/connexion"}" style="background: #D4A657; color: #0B2135; padding: 14px 28px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 16px;">
+          <a href="${data.loginUrl || (data.platformUrl ? `${data.platformUrl}/prestataires/connexion` : "/prestataires/connexion")}" style="background: #D4A657; color: #0B2135; padding: 14px 28px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 16px;">
             Se connecter à mon espace
           </a>
         </p>

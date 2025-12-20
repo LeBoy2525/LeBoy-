@@ -182,16 +182,20 @@ export async function PATCH(
         const { sendNotificationEmail } = await import("@/lib/emailService");
         const protocol = process.env.NEXT_PUBLIC_APP_URL?.startsWith("https") ? "https" : "http";
         const platformUrl = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://localhost:3000`;
-        const loginUrl = `${platformUrl}/prestataires/connexion`;
+        // S'assurer que loginUrl pointe bien vers la page de connexion prestataire
+        const loginUrl = platformUrl.endsWith("/") 
+          ? `${platformUrl}prestataires/connexion`
+          : `${platformUrl}/prestataires/connexion`;
         
         console.log(`[API PATCH] 📧 Envoi email de validation à ${updated.email}...`);
+        console.log(`[API PATCH] 🔗 Lien de connexion: ${loginUrl}`);
         
         // Préparer les données pour l'email
         const emailData: any = {
           providerRef: updated.ref,
           providerName: updated.nomEntreprise || updated.nomContact,
           platformUrl,
-          loginUrl,
+          loginUrl, // Utiliser loginUrl en priorité pour le lien
         };
         
         // Si un mot de passe temporaire a été généré, l'inclure dans l'email
