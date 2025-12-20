@@ -383,6 +383,10 @@ function getNotificationSubject(type: string, lang: "fr" | "en"): string {
       fr: "Félicitations ! Votre compte prestataire est activé - LeBoy",
       en: "Congratulations! Your provider account is activated - LeBoy",
     },
+    "password-reset": {
+      fr: "Réinitialisation de votre mot de passe - LeBoy",
+      en: "Reset your password - LeBoy",
+    },
   };
 
   return subjects[type]?.[lang] || "Notification LeBoy";

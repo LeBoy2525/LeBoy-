@@ -4,9 +4,9 @@ import {
   validateResetToken,
   markTokenAsUsed,
 } from "@/lib/passwordResetStore";
-import { getUserByEmail, usersStore } from "@/lib/usersStore";
-import { prestatairesStore, updatePrestataire } from "@/lib/prestatairesStore";
-import { getUserRole } from "@/lib/auth";
+import { getUserByEmail } from "@/lib/dataAccess";
+import { updatePrestataire } from "@/lib/dataAccess";
+import { getUserRoleAsync } from "@/lib/auth";
 
 function isValidPassword(password: string): boolean {
   return password.length >= 8;
@@ -41,29 +41,32 @@ export async function POST(req: Request) {
       );
     }
 
+    console.log(`[RESET PASSWORD] Réinitialisation pour: ${email}`);
+
     // Hasher le nouveau mot de passe
     const passwordHash = await bcrypt.hash(newPassword, 10);
 
-    // Mettre à jour selon le rôle
-    const role = getUserRole(email);
+    // Mettre à jour selon le rôle (utiliser les fonctions DB)
+    const role = await getUserRoleAsync(email);
     let updated = false;
 
+    console.log(`[RESET PASSWORD] Rôle détecté: ${role}`);
+
     if (role === "client") {
-      const user = getUserByEmail(email);
+      const user = await getUserByEmail(email);
       if (user) {
-        const index = usersStore.findIndex((u) => u.id === user.id);
-        if (index !== -1) {
-          usersStore[index].passwordHash = passwordHash;
-          updated = true;
-        }
+        const { updateUser } = await import("@/repositories/usersRepo");
+        await updateUser(user.id, { passwordHash });
+        updated = true;
+        console.log(`[RESET PASSWORD] ✅ Mot de passe client mis à jour`);
       }
     } else if (role === "prestataire") {
-      const prestataire = prestatairesStore.find(
-        (p) => p.email.toLowerCase() === email.toLowerCase()
-      );
+      const { getPrestataireByEmail } = await import("@/lib/dataAccess");
+      const prestataire = await getPrestataireByEmail(email);
       if (prestataire) {
-        updatePrestataire(prestataire.id, { passwordHash });
+        await updatePrestataire(prestataire.id, { passwordHash });
         updated = true;
+        console.log(`[RESET PASSWORD] ✅ Mot de passe prestataire mis à jour`);
       }
     } else if (role === "admin") {
       // Pour les admins, on ne peut pas changer le mot de passe via ce système
@@ -77,6 +80,7 @@ export async function POST(req: Request) {
     }
 
     if (!updated) {
+      console.error(`[RESET PASSWORD] ❌ Utilisateur non trouvé pour ${email}`);
       return NextResponse.json(
         { error: "Utilisateur non trouvé." },
         { status: 404 }

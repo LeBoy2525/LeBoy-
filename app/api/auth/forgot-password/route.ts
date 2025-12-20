@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { createResetToken } from "@/lib/passwordResetStore";
-import { getUserByEmail } from "@/lib/usersStore";
-import { prestatairesStore } from "@/lib/prestatairesStore";
-import { getUserRole } from "@/lib/auth";
+import { getUserByEmail } from "@/lib/dataAccess";
+import { getPrestataireByEmail } from "@/lib/dataAccess";
+import { getUserRoleAsync } from "@/lib/auth";
 
 function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -21,21 +21,30 @@ export async function POST(req: Request) {
     }
 
     const emailLower = email.toLowerCase();
-    const role = getUserRole(emailLower);
+    const role = await getUserRoleAsync(emailLower);
+    
+    console.log(`[FORGOT PASSWORD] Rôle détecté pour ${emailLower}: ${role}`);
 
-    // Vérifier que l'utilisateur existe
+    // Vérifier que l'utilisateur existe dans la DB
     let userExists = false;
+    let userName = "";
+    
     if (role === "client") {
-      userExists = !!getUserByEmail(emailLower);
+      const user = await getUserByEmail(emailLower);
+      userExists = !!user;
+      userName = user?.fullName || "";
     } else if (role === "prestataire") {
-      userExists = prestatairesStore.some(
-        (p) => p.email.toLowerCase() === emailLower && p.statut !== "rejete"
-      );
+      const prestataire = await getPrestataireByEmail(emailLower);
+      userExists = !!prestataire && prestataire.statut !== "rejete";
+      userName = prestataire?.nomEntreprise || prestataire?.nomContact || "";
     } else if (role === "admin") {
       // Pour les admins, on peut permettre la réinitialisation
       // mais il faudra une validation supplémentaire
       userExists = true;
+      userName = "Administrateur";
     }
+
+    console.log(`[FORGOT PASSWORD] Utilisateur existe: ${userExists} (${role})`);
 
     if (!userExists) {
       // Pour la sécurité, on retourne toujours un succès
@@ -51,18 +60,49 @@ export async function POST(req: Request) {
 
     // Créer le token
     const token = createResetToken(emailLower);
+    
+    // Construire le lien de réinitialisation
+    const protocol = process.env.NEXT_PUBLIC_APP_URL?.startsWith("https") ? "https" : "http";
+    const platformUrl = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://localhost:3000`;
+    const resetUrl = `${platformUrl}/reset-password?token=${token}`;
+    
+    console.log(`[FORGOT PASSWORD] 🔐 Token créé pour ${emailLower}`);
+    console.log(`[FORGOT PASSWORD] 🔗 Lien: ${resetUrl}`);
 
-    // TODO: Envoyer l'email avec le lien de réinitialisation
-    // Pour l'instant, on log le token (à retirer en production)
-    console.log(`🔐 Token de réinitialisation pour ${emailLower}: ${token}`);
-    console.log(`🔗 Lien: /reset-password?token=${token}`);
+    // Envoyer l'email avec le lien de réinitialisation
+    try {
+      const { sendNotificationEmail } = await import("@/lib/emailService");
+      
+      const emailSent = await sendNotificationEmail(
+        "password-reset",
+        { 
+          email: emailLower, 
+          name: userName || emailLower.split("@")[0]
+        },
+        {
+          resetUrl,
+          platformUrl,
+          userName: userName || emailLower.split("@")[0],
+        },
+        "fr"
+      );
+      
+      if (emailSent) {
+        console.log(`[FORGOT PASSWORD] ✅ Email de réinitialisation envoyé à ${emailLower}`);
+      } else {
+        console.error(`[FORGOT PASSWORD] ⚠️ Échec de l'envoi de l'email à ${emailLower}`);
+      }
+    } catch (emailError) {
+      console.error(`[FORGOT PASSWORD] ❌ Erreur lors de l'envoi de l'email:`, emailError);
+      // Ne pas bloquer la requête si l'email échoue
+    }
 
     return NextResponse.json(
       {
         success: true,
         message: "Si cet email existe, un lien de réinitialisation a été envoyé.",
         // En développement, retourner le token (à retirer en production)
-        ...(process.env.NODE_ENV === "development" && { token }),
+        ...(process.env.NODE_ENV === "development" && { token, resetUrl }),
       },
       { status: 200 }
     );
