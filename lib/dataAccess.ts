@@ -526,6 +526,43 @@ export async function getAllPrestataires(): Promise<Prestataire[]> {
  * Récupère un prestataire par ID
  * Bascule automatiquement entre JSON et DB selon USE_DB
  */
+/**
+ * Fonction helper pour calculer le hash d'un UUID vers un ID numérique
+ * Cette fonction doit être identique à celle utilisée dans convertPrismaPrestataireToJSON
+ */
+function calculateUUIDHash(uuid: string): number {
+  const hash = uuid.split("").reduce((acc: number, char: string) => {
+    return ((acc << 5) - acc) + char.charCodeAt(0);
+  }, 0);
+  return Math.abs(hash) % 1000000;
+}
+
+/**
+ * Trouve le prestataire Prisma par son ID numérique (converti depuis UUID)
+ */
+async function findPrestatairePrismaByNumericId(id: number): Promise<any | null> {
+  const { getAllPrestataires: getAllPrestatairesDB } = await import("@/repositories/prestatairesRepo");
+  const allPrestataires = await getAllPrestatairesDB() as any[];
+  
+  for (const p of allPrestataires) {
+    if (typeof p.id === "string" && p.id.includes("-")) {
+      // C'est un UUID, calculer le hash
+      const numericId = calculateUUIDHash(p.id);
+      if (numericId === id) {
+        return p;
+      }
+    } else {
+      // C'est déjà un ID numérique
+      const numericId = parseInt(String(p.id));
+      if (numericId === id) {
+        return p;
+      }
+    }
+  }
+  
+  return null;
+}
+
 export async function getPrestataireById(id: number): Promise<Prestataire | null> {
   console.log(`[dataAccess] getPrestataireById appelé avec ID: ${id} (type: ${typeof id})`);
   
@@ -537,46 +574,31 @@ export async function getPrestataireById(id: number): Promise<Prestataire | null
   if (USE_DB) {
     try {
       console.log(`[dataAccess] USE_DB=true, recherche dans Prisma...`);
-      const { getAllPrestataires: getAllPrestatairesDB } = await import("@/repositories/prestatairesRepo");
-      const allPrestataires = await getAllPrestatairesDB() as any[];
       
-      console.log(`[dataAccess] ${allPrestataires.length} prestataires chargés depuis Prisma`);
+      // Trouver directement le prestataire Prisma par ID numérique
+      const prestatairePrisma = await findPrestatairePrismaByNumericId(id);
       
-      // Fonction helper pour calculer le hash d'un UUID
-      const calculateHash = (uuid: string): number => {
-        const hash = uuid.split("").reduce((acc: number, char: string) => {
-          return ((acc << 5) - acc) + char.charCodeAt(0);
-        }, 0);
-        return Math.abs(hash) % 1000000;
-      };
-      
-      // Convertir tous les prestataires en format JSON pour comparer les IDs
-      const prestatairesWithNumericIds = allPrestataires.map((p: any) => {
-        const jsonPrestataire = convertPrismaPrestataireToJSON(p);
-        return { prisma: p, json: jsonPrestataire };
-      });
-      
-      // Afficher les IDs disponibles pour debug
-      console.log(`[dataAccess] IDs disponibles (premiers 10):`, prestatairesWithNumericIds.slice(0, 10).map((item: any) => ({
-        uuid: item.prisma.id,
-        numericId: item.json.id,
-        email: item.json.email,
-        ref: item.json.ref,
-      })));
-      
-      // Rechercher par ID numérique converti
-      const found = prestatairesWithNumericIds.find((item: any) => item.json.id === id);
-      
-      if (found) {
-        console.log(`[dataAccess] ✅ Prestataire trouvé: ${found.json.email} (UUID: ${found.prisma.id}, ID numérique: ${found.json.id})`);
-        return found.json;
+      if (prestatairePrisma) {
+        console.log(`[dataAccess] ✅ Prestataire Prisma trouvé: ${prestatairePrisma.email} (UUID: ${prestatairePrisma.id})`);
+        const jsonPrestataire = convertPrismaPrestataireToJSON(prestatairePrisma);
+        console.log(`[dataAccess] ✅ Conversion JSON réussie: ID numérique = ${jsonPrestataire.id}`);
+        return jsonPrestataire;
       } else {
+        // Diagnostic : afficher tous les prestataires avec leurs IDs convertis
+        const { getAllPrestataires: getAllPrestatairesDB } = await import("@/repositories/prestatairesRepo");
+        const allPrestataires = await getAllPrestatairesDB() as any[];
+        
         console.error(`[dataAccess] ❌ Aucun prestataire trouvé avec ID numérique: ${id}`);
-        console.error(`[dataAccess] Tous les IDs disponibles:`, prestatairesWithNumericIds.map((item: any) => ({
-          numericId: item.json.id,
-          email: item.json.email,
-          ref: item.json.ref,
-        })));
+        console.error(`[dataAccess] Diagnostic - IDs disponibles (premiers 10):`);
+        allPrestataires.slice(0, 10).forEach((p: any, idx: number) => {
+          if (typeof p.id === "string" && p.id.includes("-")) {
+            const numericId = calculateUUIDHash(p.id);
+            console.error(`[dataAccess]   ${idx + 1}. UUID: ${p.id.substring(0, 8)}... → ID numérique: ${numericId}, Email: ${p.email}, Ref: ${p.ref}`);
+          } else {
+            console.error(`[dataAccess]   ${idx + 1}. ID: ${p.id}, Email: ${p.email}, Ref: ${p.ref}`);
+          }
+        });
+        
         return null;
       }
     } catch (error) {
@@ -2169,38 +2191,33 @@ export async function updatePrestataire(
   
   if (USE_DB) {
     try {
-      // Trouver le prestataire par ID numérique (converti depuis UUID)
-      const prestataire = await getPrestataireById(id);
-      if (!prestataire) {
-        console.error(`[dataAccess] ❌ Prestataire non trouvé avec ID numérique: ${id}`);
-        return null;
-      }
-      
-      // Trouver l'UUID Prisma correspondant
-      const { getAllPrestataires: getAllPrestatairesDB } = await import("@/repositories/prestatairesRepo");
-      const allPrestataires = await getAllPrestatairesDB() as any[];
-      
-      const prestatairePrisma = allPrestataires.find((p: any) => {
-        if (typeof p.id === "string" && p.id.includes("-")) {
-          const hash = p.id.split("").reduce((acc: number, char: string) => {
-            return ((acc << 5) - acc) + char.charCodeAt(0);
-          }, 0);
-          const idNumber = Math.abs(hash) % 1000000;
-          return idNumber === id;
-        }
-        return parseInt(String(p.id)) === id;
-      });
+      // Trouver directement le prestataire Prisma par ID numérique
+      const prestatairePrisma = await findPrestatairePrismaByNumericId(id);
       
       if (!prestatairePrisma) {
         console.error(`[dataAccess] ❌ Prestataire Prisma non trouvé pour ID numérique: ${id}`);
+        
+        // Diagnostic
+        const { getAllPrestataires: getAllPrestatairesDB } = await import("@/repositories/prestatairesRepo");
+        const allPrestataires = await getAllPrestatairesDB() as any[];
+        console.error(`[dataAccess] Diagnostic - Total prestataires: ${allPrestataires.length}`);
+        allPrestataires.slice(0, 5).forEach((p: any, idx: number) => {
+          if (typeof p.id === "string" && p.id.includes("-")) {
+            const numericId = calculateUUIDHash(p.id);
+            console.error(`[dataAccess]   ${idx + 1}. UUID: ${p.id} → ID numérique: ${numericId}, Email: ${p.email}`);
+          }
+        });
+        
         return null;
       }
       
-      console.log(`[dataAccess] ✅ Prestataire Prisma trouvé: ${prestatairePrisma.id} (UUID)`);
+      console.log(`[dataAccess] ✅ Prestataire Prisma trouvé: ${prestatairePrisma.id} (UUID), Email: ${prestatairePrisma.email}`);
       
       // Mettre à jour via Prisma
       const { updatePrestataire: updatePrestataireDB } = await import("@/repositories/prestatairesRepo");
       const updated = await updatePrestataireDB(prestatairePrisma.id, updates);
+      
+      console.log(`[dataAccess] ✅ Prestataire mis à jour via Prisma: ${updated.email}`);
       
       return convertPrismaPrestataireToJSON(updated);
     } catch (error) {
