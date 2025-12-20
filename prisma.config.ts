@@ -3,9 +3,10 @@
 import "dotenv/config";
 import { defineConfig } from "prisma/config";
 
-// Pour Prisma 7.x, la configuration de la datasource se fait ici
-// Utiliser PRISMA_DATABASE_URL si disponible (Accelerate), sinon DATABASE_URL
-const DATABASE_URL = process.env.PRISMA_DATABASE_URL || process.env.DATABASE_URL || process.env.POSTGRES_URL || "postgresql://placeholder@localhost:5432/placeholder";
+// IMPORTANT: Pour les migrations, utiliser TOUJOURS DATABASE_URL (PostgreSQL direct)
+// Les migrations ne peuvent PAS utiliser PRISMA_DATABASE_URL (Accelerate)
+// Accelerate est uniquement pour les requêtes, pas pour les migrations
+const DATABASE_URL = process.env.DATABASE_URL || process.env.POSTGRES_URL || "postgresql://placeholder@localhost:5432/placeholder";
 
 export default defineConfig({
   schema: "prisma/schema.prisma",
