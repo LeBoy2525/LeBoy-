@@ -24,14 +24,36 @@ export async function POST(req: Request) {
     }
 
     console.log(`🔍 Recherche de l'utilisateur avec email: "${email}"`);
+    console.log(`   USE_DB: ${process.env.USE_DB}`);
+    console.log(`   DATABASE_URL: ${process.env.DATABASE_URL ? "définie" : "non définie"}`);
+    console.log(`   PRISMA_DATABASE_URL: ${process.env.PRISMA_DATABASE_URL ? "définie" : "non définie"}`);
+    
+    // Vérifier si Prisma est disponible
+    try {
+      const { prisma } = await import("@/lib/db");
+      console.log(`   Prisma disponible: ${prisma ? "OUI" : "NON"}`);
+      if (prisma) {
+        // Essayer de lister les utilisateurs pour debug
+        try {
+          const allUsers = await (prisma as any).user.findMany({
+            select: { email: true, id: true },
+            take: 5,
+          });
+          console.log(`   Utilisateurs dans DB (max 5): ${allUsers.map((u: any) => u.email).join(", ") || "aucun"}`);
+        } catch (listError: any) {
+          console.error(`   Erreur lors de la liste des utilisateurs: ${listError?.message || listError}`);
+        }
+      }
+    } catch (prismaError: any) {
+      console.error(`   Erreur import Prisma: ${prismaError?.message || prismaError}`);
+    }
+    
     const user = await getUserByEmail(email);
     
     if (!user) {
       console.error("❌ Utilisateur non trouvé");
       console.error(`   Email recherché: "${email}"`);
       console.error(`   Type: ${typeof email}`);
-      console.error(`   USE_DB: ${process.env.USE_DB}`);
-      console.error(`   DATABASE_URL: ${process.env.DATABASE_URL ? "définie" : "non définie"}`);
       
       // Essayer de chercher avec différentes variantes pour debug
       if (email.includes("@")) {
@@ -42,7 +64,7 @@ export async function POST(req: Request) {
       
       console.log("=".repeat(80));
       return NextResponse.json(
-        { error: "Utilisateur non trouvé." },
+        { error: "Utilisateur non trouvé. Vérifiez que vous avez bien créé votre compte." },
         { status: 404 }
       );
     }
