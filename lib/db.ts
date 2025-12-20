@@ -72,27 +72,24 @@ if (databaseUrl) {
     }
     
     // Essayer de créer PrismaClient avec la config
+    // Prisma 7.x nécessite soit un adapter, soit accelerateUrl pour PostgreSQL
+    // Si ce n'est pas Accelerate, on doit utiliser l'adapter PostgreSQL standard
     try {
       prismaInstance = new PrismaClient(finalConfig);
       if (!isBuildTime && typeof window === "undefined") {
         console.log(`[db] ✅ PrismaClient créé avec succès`);
       }
     } catch (createError: any) {
-      // Si l'erreur est "adapter or accelerateUrl required", essayer sans config spéciale
+      // Si l'erreur est "adapter or accelerateUrl required", cela signifie que Prisma 7.x
+      // nécessite explicitement un adapter pour PostgreSQL standard
       if (createError?.message?.includes("adapter") || createError?.message?.includes("accelerateUrl")) {
-        console.error(`[db] ⚠️ Erreur création PrismaClient avec config: ${createError?.message}`);
-        console.log(`[db] Tentative avec config minimale...`);
-        try {
-          // Essayer avec config minimale (seulement log)
-          prismaInstance = new PrismaClient({
-            log: prismaConfig.log,
-          });
-          if (!isBuildTime && typeof window === "undefined") {
-            console.log(`[db] ✅ PrismaClient créé avec config minimale`);
-          }
-        } catch (minimalError: any) {
-          throw minimalError; // Re-lancer l'erreur si même la config minimale échoue
-        }
+        console.error(`[db] ⚠️ Erreur création PrismaClient: ${createError?.message}`);
+        console.error(`[db] Prisma 7.x nécessite un adapter PostgreSQL ou Prisma Accelerate`);
+        console.error(`[db] Options:`);
+        console.error(`[db]   1. Utiliser Prisma Accelerate (définir PRISMA_DATABASE_URL avec prisma+postgres://)`);
+        console.error(`[db]   2. Installer @prisma/adapter-pg et l'utiliser`);
+        console.error(`[db] Pour l'instant, le système utilisera le fallback JSON`);
+        throw createError; // Re-lancer l'erreur pour que le catch parent la gère
       } else {
         throw createError; // Re-lancer l'erreur si ce n'est pas lié à adapter/accelerateUrl
       }
