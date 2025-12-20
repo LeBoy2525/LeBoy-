@@ -475,6 +475,23 @@ function getNotificationHTML(
         </p>
       `;
       break;
+    case "password-reset":
+      content = `
+        <p>Vous avez demandé la réinitialisation de votre mot de passe.</p>
+        <p>Cliquez sur le bouton ci-dessous pour définir un nouveau mot de passe :</p>
+        <p style="margin-top: 30px;">
+          <a href="${data.resetUrl || (data.platformUrl ? `${data.platformUrl}/reset-password?token=${data.token || ""}` : "/reset-password")}" style="background: #D4A657; color: #0B2135; padding: 14px 28px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 16px;">
+            Réinitialiser mon mot de passe
+          </a>
+        </p>
+        <p style="margin-top: 20px; color: #6B7280; font-size: 14px;">
+          ⚠️ <strong>Important :</strong> Ce lien est valide pendant 1 heure. Si vous n'avez pas demandé cette réinitialisation, ignorez cet email.
+        </p>
+        <p style="margin-top: 20px; color: #6B7280; font-size: 14px;">
+          Si vous avez des questions, n'hésitez pas à nous contacter à <a href="mailto:contact@leboy.com" style="color: #D4A657;">contact@leboy.com</a>
+        </p>
+      `;
+      break;
     default:
       content = `<p>Vous avez reçu une notification de LeBoy.</p>`;
   }
