@@ -17,31 +17,39 @@ const isBuildTime = typeof process !== "undefined" && (
   process.env.NEXT_PHASE === "phase-development-build"
 );
 
-// Initialiser Prisma seulement si DATABASE_URL est défini
+// Initialiser Prisma seulement si DATABASE_URL, PRISMA_DATABASE_URL ou POSTGRES_URL est défini
+// Prisma utilise DATABASE_URL par défaut (défini dans schema.prisma)
+// Mais peut aussi utiliser PRISMA_DATABASE_URL si présent (pour Prisma Accelerate)
 // Sinon, le fallback JSON sera utilisé via USE_DB flag
 let prismaInstance: PrismaClient | undefined;
 
-if (process.env.DATABASE_URL) {
+// Vérifier quelle variable d'environnement est disponible
+// Prisma lit DATABASE_URL depuis schema.prisma, mais on peut aussi avoir PRISMA_DATABASE_URL
+const databaseUrl = process.env.DATABASE_URL || process.env.PRISMA_DATABASE_URL || process.env.POSTGRES_URL;
+
+if (databaseUrl) {
   try {
-    // Vérifier le format de DATABASE_URL
-    const dbUrl = process.env.DATABASE_URL;
-    const isPostgres = dbUrl.startsWith("postgresql://") || dbUrl.startsWith("postgres://");
+    // Vérifier le format de l'URL
+    const isPrismaAccelerate = databaseUrl.startsWith("prisma+postgres://") || databaseUrl.startsWith("prisma+postgresql://");
+    const isPostgres = databaseUrl.startsWith("postgresql://") || databaseUrl.startsWith("postgres://");
     
     if (!isBuildTime && typeof window === "undefined") {
-      console.log(`[db] DATABASE_URL détectée, format: ${isPostgres ? "PostgreSQL" : "autre"} (${dbUrl.substring(0, 30)}...)`);
+      console.log(`[db] URL de base de données détectée:`);
+      console.log(`   Format: ${isPrismaAccelerate ? "Prisma Accelerate" : isPostgres ? "PostgreSQL standard" : "autre"}`);
+      console.log(`   Source: ${process.env.DATABASE_URL ? "DATABASE_URL" : process.env.PRISMA_DATABASE_URL ? "PRISMA_DATABASE_URL" : "POSTGRES_URL"}`);
+      console.log(`   URL (masquée): ${databaseUrl.substring(0, 30)}...`);
     }
     
-    // Pour Prisma 7.x avec PostgreSQL standard, utiliser la configuration minimale
-    // Le client généré gère automatiquement la connexion PostgreSQL via DATABASE_URL
-    // IMPORTANT: Ne pas passer d'objet vide ou de config spéciale pour éviter l'erreur "adapter required"
+    // Pour Prisma 7.x :
+    // - Si c'est une URL Prisma Accelerate (prisma+postgres://), Prisma la détecte automatiquement via DATABASE_URL
+    // - Si c'est une URL PostgreSQL standard, Prisma l'utilise aussi automatiquement
+    // - Ne pas spécifier d'adapter ou accelerateUrl dans la config
+    // IMPORTANT: Prisma lit DATABASE_URL depuis schema.prisma, donc si PRISMA_DATABASE_URL est utilisé,
+    // il faut s'assurer que DATABASE_URL pointe vers la même valeur (ou utiliser PRISMA_DATABASE_URL comme DATABASE_URL)
     prismaInstance = new PrismaClient(prismaConfig);
     
-    // Tester la connexion immédiatement pour détecter les erreurs tôt
-    // Mais seulement en runtime, pas pendant le build
-    if (!isBuildTime && typeof window === "undefined") {
-      // Ne pas tester la connexion immédiatement car cela peut causer des problèmes
-      // La connexion sera testée lors de la première requête
-    }
+    // Ne pas tester la connexion immédiatement - laisser Prisma se connecter à la demande
+    // Cela évite les erreurs d'initialisation prématurées
   } catch (error: any) {
     console.error("❌ Erreur lors de l'initialisation de Prisma:");
     console.error("   Message:", error?.message || error);
@@ -60,14 +68,14 @@ if (process.env.DATABASE_URL) {
     
     if (isProduction || useDB) {
       // En production ou si USE_DB=true, DATABASE_URL est requise
-      console.warn("⚠️ DATABASE_URL non définie alors que USE_DB=true ou en production");
+      console.warn("⚠️ Aucune URL de base de données détectée (DATABASE_URL, PRISMA_DATABASE_URL ou POSTGRES_URL)");
       console.warn("   → Le système utilisera le fallback JSON");
       console.warn("   → Pour utiliser PostgreSQL, configurez DATABASE_URL dans Vercel → Settings → Environment Variables");
     } else {
       // En développement local avec USE_DB=false, c'est normal
       const globalStore = globalThis as typeof globalThis & { _icdDbUrlWarningShown?: boolean };
       if (!globalStore._icdDbUrlWarningShown) {
-        console.log("ℹ️  DATABASE_URL non définie - Utilisation du stockage JSON (normal en développement)");
+        console.log("ℹ️  Aucune URL de base de données - Utilisation du stockage JSON (normal en développement)");
         globalStore._icdDbUrlWarningShown = true;
       }
     }
