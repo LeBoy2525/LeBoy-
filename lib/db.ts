@@ -27,7 +27,9 @@ let prismaInstance: PrismaClient | undefined;
 // Prisma lit DATABASE_URL depuis schema.prisma, mais on peut aussi avoir PRISMA_DATABASE_URL
 // IMPORTANT: Si PRISMA_DATABASE_URL est définie avec une URL Accelerate, l'utiliser en priorité
 // car Prisma 7.x nécessite soit un adapter, soit accelerateUrl
-const databaseUrl = process.env.PRISMA_DATABASE_URL || process.env.DATABASE_URL || process.env.POSTGRES_URL;
+// Vérifier PRISMA_DATABASE_URL en premier pour Prisma Accelerate
+const prismaAccelerateUrl = process.env.PRISMA_DATABASE_URL;
+const databaseUrl = prismaAccelerateUrl || process.env.DATABASE_URL || process.env.POSTGRES_URL;
 
 if (databaseUrl) {
   try {
@@ -45,26 +47,28 @@ if (databaseUrl) {
     // Pour Prisma 7.x : essayer d'abord Prisma Accelerate si disponible, sinon config minimale
     // Prisma 7.x nécessite soit un adapter, soit accelerateUrl pour PostgreSQL
     
-    // Vérifier d'abord si PRISMA_DATABASE_URL est définie
-    const hasPrismaAccelerateUrl = process.env.PRISMA_DATABASE_URL && process.env.PRISMA_DATABASE_URL.startsWith("prisma+");
+    // Vérifier d'abord si PRISMA_DATABASE_URL est définie et commence par "prisma+"
+    const hasPrismaAccelerateUrl = prismaAccelerateUrl && prismaAccelerateUrl.startsWith("prisma+");
     
     if (!isBuildTime && typeof window === "undefined") {
-      console.log(`[db] PRISMA_DATABASE_URL: ${process.env.PRISMA_DATABASE_URL ? "définie" : "NON DÉFINIE"}`);
-      if (process.env.PRISMA_DATABASE_URL) {
+      console.log(`[db] PRISMA_DATABASE_URL: ${prismaAccelerateUrl ? "définie" : "NON DÉFINIE"}`);
+      if (prismaAccelerateUrl) {
         console.log(`[db] PRISMA_DATABASE_URL commence par "prisma+": ${hasPrismaAccelerateUrl}`);
-        console.log(`[db] PRISMA_DATABASE_URL (masquée): ${process.env.PRISMA_DATABASE_URL.substring(0, 40)}...`);
+        console.log(`[db] PRISMA_DATABASE_URL (masquée): ${prismaAccelerateUrl.substring(0, 50)}...`);
+        console.log(`[db] Longueur PRISMA_DATABASE_URL: ${prismaAccelerateUrl.length} caractères`);
       }
+      console.log(`[db] DATABASE_URL: ${process.env.DATABASE_URL ? "définie" : "NON DÉFINIE"}`);
     }
     
     // Option 1 : Utiliser Prisma Accelerate si PRISMA_DATABASE_URL est définie avec une URL Accelerate
-    if (hasPrismaAccelerateUrl) {
+    if (hasPrismaAccelerateUrl && prismaAccelerateUrl) {
       try {
         if (!isBuildTime && typeof window === "undefined") {
           console.log(`[db] Tentative avec Prisma Accelerate...`);
         }
         prismaInstance = new PrismaClient({
           log: prismaConfig.log,
-          accelerateUrl: process.env.PRISMA_DATABASE_URL,
+          accelerateUrl: prismaAccelerateUrl,
         });
         if (!isBuildTime && typeof window === "undefined") {
           console.log(`[db] ✅ PrismaClient créé avec Prisma Accelerate`);
