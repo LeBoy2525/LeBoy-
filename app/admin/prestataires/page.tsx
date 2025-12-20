@@ -16,9 +16,9 @@ import {
   Phone,
   MapPin,
   Trash2,
-  ArrowLeft,
 } from "lucide-react";
 import Link from "next/link";
+import { AdminPageHeader } from "../_components/AdminPageHeader";
 import type { Prestataire, StatutPrestataire } from "@/lib/prestatairesStore";
 import { formatDateWithTimezones } from "@/lib/dateUtils";
 
@@ -157,6 +157,9 @@ export default function AdminPrestatairesPage() {
       return;
     }
 
+    console.log(`[Frontend] handleAction appelé avec ID: ${id}, Action: ${action}`);
+    console.log(`[Frontend] URL: /api/admin/prestataires/${id}`);
+
     try {
       const res = await fetch(`/api/admin/prestataires/${id}`, {
         method: "PATCH",
@@ -164,17 +167,26 @@ export default function AdminPrestatairesPage() {
         body: JSON.stringify({ action }),
       });
 
+      console.log(`[Frontend] Réponse reçue: status ${res.status}`);
+
       if (!res.ok) {
-        throw new Error("Erreur lors de l'action");
+        const errorData = await res.json().catch(() => ({ error: "Erreur inconnue" }));
+        console.error(`[Frontend] ❌ Erreur HTTP ${res.status}:`, errorData);
+        throw new Error(errorData.error || `Erreur ${res.status} lors de l'action`);
       }
+
+      const result = await res.json();
+      console.log(`[Frontend] ✅ Action réussie:`, result);
 
       // Recharger la liste
       const resList = await fetch("/api/prestataires", { cache: "no-store" });
       const data = await resList.json();
       setPrestataires(data.prestataires || []);
-    } catch (err) {
-      console.error("Erreur action:", err);
-      alert("Erreur lors de l'opération");
+      
+      alert(lang === "fr" ? "Opération réussie" : "Operation successful");
+    } catch (err: any) {
+      console.error("[Frontend] ❌ Erreur action:", err);
+      alert(err.message || (lang === "fr" ? "Erreur lors de l'opération" : "Error during operation"));
     }
   };
 
@@ -224,33 +236,13 @@ export default function AdminPrestatairesPage() {
   });
 
   return (
-    <main className="bg-[#F2F2F5] min-h-screen">
-      <div className="bg-white border-b border-[#DDDDDD] sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 md:px-6 py-3">
-          <Link 
-            href="/admin" 
-            className="inline-flex items-center gap-2 text-sm font-semibold text-[#0B2135] hover:text-[#D4A657] transition-all duration-200 group"
-          >
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#D4A657]/10 to-[#D4A657]/5 border border-[#D4A657]/20 flex items-center justify-center group-hover:bg-[#D4A657]/20 group-hover:border-[#D4A657]/40 transition-all duration-200">
-              <ArrowLeft className="w-4 h-4 text-[#D4A657] group-hover:translate-x-[-2px] transition-transform duration-200" />
-            </div>
-            <span>{lang === "fr" ? "Retour au tableau de bord" : "Back to dashboard"}</span>
-          </Link>
-        </div>
-      </div>
-      <div className="max-w-7xl mx-auto px-4 md:px-6 py-8 md:py-10">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="font-heading text-2xl md:text-3xl font-semibold text-[#0A1B2A]">
-                {t.title}
-              </h1>
-              <p className="text-sm md:text-base text-[#4B4F58] mt-1">
-                {t.subtitle}
-              </p>
-            </div>
-          </div>
+    <div className="bg-gray-50 min-h-screen">
+      <AdminPageHeader
+        title={t.title}
+        description={t.subtitle}
+      />
+
+      <div className="px-6 py-6">
 
           {/* Filtres */}
           <div className="bg-white border border-[#DDDDDD] rounded-xl p-4 space-y-4">
@@ -287,7 +279,6 @@ export default function AdminPrestatairesPage() {
               ))}
             </div>
           </div>
-        </div>
 
         {/* Liste */}
         {loading ? (
@@ -455,6 +446,6 @@ export default function AdminPrestatairesPage() {
           </div>
         )}
       </div>
-    </main>
+    </div>
   );
 }

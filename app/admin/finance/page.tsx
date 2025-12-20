@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useLanguage } from "../../components/LanguageProvider";
-import { DollarSign, Receipt, CreditCard, BarChart3, AlertCircle, FileText, ArrowLeft } from "lucide-react";
+import { DollarSign, Receipt, CreditCard, BarChart3, AlertCircle, FileText } from "lucide-react";
 import Link from "next/link";
-import BackToHomeLink from "../../components/BackToHomeLink";
+import { AdminPageHeader } from "../_components/AdminPageHeader";
 
 const TEXT = {
   fr: {
@@ -48,28 +48,13 @@ export default function FinancePage() {
   const t = TEXT[lang];
 
   return (
-    <main className="bg-[#F2F2F5] min-h-screen">
-      <BackToHomeLink />
-      <div className="max-w-6xl mx-auto px-4 md:px-6 py-8 md:py-10">
-        {/* En-tête */}
-        <div className="mb-8">
-          <Link
-            href="/admin"
-            className="inline-flex items-center gap-2 text-sm text-[#4B4F58] hover:text-[#0A1B2A] mb-4"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            {t.backToDashboard}
-          </Link>
-          <div className="space-y-2">
-            <h1 className="font-heading text-2xl md:text-3xl font-semibold text-[#0A1B2A]">
-              {t.title}
-            </h1>
-            <p className="text-sm md:text-base text-[#4B4F58]">
-              {t.subtitle}
-            </p>
-          </div>
-        </div>
+    <div className="bg-gray-50 min-h-screen">
+      <AdminPageHeader
+        title={t.title}
+        description={t.subtitle}
+      />
 
+      <div className="px-6 py-8">
         {/* Grille des sous-rubriques */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           <Link

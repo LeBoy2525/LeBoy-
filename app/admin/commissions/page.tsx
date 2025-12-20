@@ -8,8 +8,8 @@ export const dynamic = 'force-dynamic';
 
 import { useEffect, useState } from "react";
 import { useLanguage } from "../../components/LanguageProvider";
-import { Save, Settings, AlertCircle, Info, ArrowLeft } from "lucide-react";
-import Link from "next/link";
+import { Save, Settings, AlertCircle, Info } from "lucide-react";
+import { AdminPageHeader } from "../_components/AdminPageHeader";
 import type { CommissionConfig } from "@/lib/commissionConfig";
 
 const TEXT = {

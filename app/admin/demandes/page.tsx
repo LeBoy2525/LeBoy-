@@ -13,7 +13,7 @@ import { matchDemandeToPrestataires } from "@/lib/matching";
 import { useRouter } from "next/navigation";
 import { DemandeAssignmentStatus } from "./DemandeAssignmentStatus";
 import { formatDateWithTimezones } from "@/lib/dateUtils";
-import { ArrowLeft } from "lucide-react";
+import { AdminPageHeader } from "../_components/AdminPageHeader";
 
 const TEXT = {
   fr: {
@@ -335,44 +335,26 @@ export default function AdminDemandesPage() {
   });
 
   return (
-    <main className="bg-[#F2F2F5] min-h-screen">
-      <div className="bg-white border-b border-[#DDDDDD] sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 md:px-6 py-3">
-          <Link 
-            href="/admin" 
-            className="inline-flex items-center gap-2 text-sm font-semibold text-[#0B2135] hover:text-[#D4A657] transition-all duration-200 group"
+    <div className="bg-gray-50 min-h-screen">
+      <AdminPageHeader
+        title={t.title}
+        description={t.subtitle}
+        actions={
+          <button
+            onClick={() => setShowCorbeille(!showCorbeille)}
+            className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition ${
+              showCorbeille
+                ? "bg-gray-900 text-white"
+                : "border border-gray-300 text-gray-700 hover:bg-gray-50"
+            }`}
           >
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#D4A657]/10 to-[#D4A657]/5 border border-[#D4A657]/20 flex items-center justify-center group-hover:bg-[#D4A657]/20 group-hover:border-[#D4A657]/40 transition-all duration-200">
-              <ArrowLeft className="w-4 h-4 text-[#D4A657] group-hover:translate-x-[-2px] transition-transform duration-200" />
-            </div>
-            <span>{lang === "fr" ? "Retour au tableau de bord" : "Back to dashboard"}</span>
-          </Link>
-        </div>
-      </div>
-      <div className="max-w-7xl mx-auto px-4 md:px-6 py-8 md:py-10">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="font-heading text-2xl md:text-3xl font-semibold text-[#0A1B2A]">
-              {t.title}
-            </h1>
-            <p className="text-sm md:text-base text-[#4B4F58] mt-1">
-              {t.subtitle}
-            </p>
-          </div>
-          <div className="flex gap-3">
-            <button
-              onClick={() => setShowCorbeille(!showCorbeille)}
-              className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-md transition ${
-                showCorbeille
-                  ? "bg-[#0A1B2A] text-white"
-                  : "border border-[#DDDDDD] text-[#4B4F58] hover:bg-[#F9F9FB]"
-              }`}
-            >
-              <Trash2 className="w-4 h-4" />
-              {t.corbeille}
-            </button>
-          </div>
-        </div>
+            <Trash2 className="w-4 h-4" />
+            {t.corbeille}
+          </button>
+        }
+      />
+
+      <div className="px-6 py-6">
 
         {/* Recherche */}
         <div className="bg-white border border-[#DDDDDD] rounded-xl p-4 mb-6">
@@ -648,7 +630,7 @@ export default function AdminDemandesPage() {
           </div>
         )}
       </div>
-    </main>
+    </div>
   );
 }
 

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useLanguage } from "../components/LanguageProvider";
 import { Building2, FileText, Users, TrendingUp, DollarSign, AlertCircle, Bell, X } from "lucide-react";
 import Link from "next/link";
-import BackToHomeLink from "../components/BackToHomeLink";
+import { AdminPageHeader } from "./_components/AdminPageHeader";
 
 const TEXT = {
   fr: {
@@ -171,20 +171,11 @@ export default function AdminPage() {
   // TODO: Ajouter la vérification d'authentification admin
 
   return (
-    <main className="bg-[#F2F2F5] min-h-screen">
-      <BackToHomeLink />
-      <div className="max-w-6xl mx-auto px-4 md:px-6 py-8 md:py-10">
-        <div className="flex items-center justify-between mb-8">
-          <div className="space-y-2">
-            <h1 className="font-heading text-2xl md:text-3xl font-semibold text-[#0A1B2A]">
-              {t.title}
-            </h1>
-            <p className="text-sm md:text-base text-[#4B4F58]">
-              {t.subtitle}
-            </p>
-          </div>
-          
-          {/* Bouton de notifications */}
+    <div className="bg-gray-50 min-h-screen">
+      <AdminPageHeader
+        title={t.title}
+        description={t.subtitle}
+        actions={
           <div className="relative">
             <button
               onClick={() => setShowNotifications(!showNotifications)}
@@ -259,8 +250,10 @@ export default function AdminPage() {
               </div>
             )}
           </div>
-        </div>
+        }
+      />
 
+      <div className="px-6 py-8">
         {/* Stats */}
         <div className="grid md:grid-cols-3 gap-6 mb-8">
           <div className="bg-white border border-[#DDDDDD] rounded-xl p-6 space-y-2">
@@ -457,7 +450,7 @@ export default function AdminPage() {
           </Link>
         </div>
       </div>
-    </main>
+    </div>
   );
 }
 

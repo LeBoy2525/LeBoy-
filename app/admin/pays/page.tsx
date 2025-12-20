@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useLanguage } from "@/app/components/LanguageProvider";
-import { Globe, CheckCircle2, XCircle, Save, AlertCircle, ArrowLeft } from "lucide-react";
-import Link from "next/link";
+import { Globe, CheckCircle2, XCircle, Save, AlertCircle } from "lucide-react";
+import { AdminPageHeader } from "../_components/AdminPageHeader";
 // Type pour les pays (pas d'import serveur)
 type Country = {
   code: string;

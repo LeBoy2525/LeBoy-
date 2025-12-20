@@ -19,48 +19,110 @@ export async function getPrestataireById(id: string) {
 }
 
 export async function getPrestataireByEmail(email: string) {
-  return prisma.prestataire.findFirst({
+  const emailLower = email.toLowerCase();
+  console.log(`[prestatairesRepo] Recherche prestataire avec email: "${emailLower}"`);
+  
+  const prestataire = await prisma.prestataire.findFirst({
     where: { 
-      email: email.toLowerCase(),
+      email: emailLower,
       deletedAt: null, // Exclure les prestataires supprimés
     },
   });
+  
+  if (prestataire) {
+    console.log(`[prestatairesRepo] ✅ Prestataire trouvé: ${prestataire.email} (ID: ${prestataire.id}, Statut: ${prestataire.statut})`);
+  } else {
+    console.log(`[prestatairesRepo] ❌ Aucun prestataire trouvé pour: "${emailLower}"`);
+    
+    // Diagnostic : vérifier si un prestataire existe avec un email similaire
+    const allPrestataires = await prisma.prestataire.findMany({
+      select: { email: true, statut: true, deletedAt: true },
+      take: 10,
+    });
+    console.log(`[prestatairesRepo] 🔍 Diagnostic: ${allPrestataires.length} prestataires dans la DB`);
+    allPrestataires.forEach((p, idx) => {
+      console.log(`[prestatairesRepo]   ${idx + 1}. ${p.email} (statut: ${p.statut}, deleted: ${p.deletedAt ? "oui" : "non"})`);
+    });
+  }
+  
+  return prestataire;
 }
 
 export async function createPrestataire(data: Omit<Prestataire, "id">) {
-  return prisma.prestataire.create({
+  console.log(`[prestatairesRepo] Création prestataire avec email: ${data.email}`);
+  console.log(`[prestatairesRepo] passwordHash fourni: ${data.passwordHash ? "oui" : "non"}`);
+  
+  const prestataire = await prisma.prestataire.create({
     data: {
       ref: data.ref,
       createdAt: new Date(data.createdAt),
       nomEntreprise: data.nomEntreprise,
       nomContact: data.nomContact,
-      email: data.email,
+      email: data.email.toLowerCase(), // Normaliser l'email en lowercase
       phone: data.phone,
       adresse: data.adresse,
       ville: data.ville,
       specialites: data.specialites || [],
       zonesIntervention: data.zonesIntervention || [],
       statut: data.statut || "en_attente",
+      passwordHash: data.passwordHash || null, // Ajouter passwordHash
       actifAt: data.dateValidation ? new Date(data.dateValidation) : null,
       deletedAt: data.deletedAt ? new Date(data.deletedAt) : null,
       deletedBy: data.deletedBy || null,
     },
   });
+  
+  console.log(`[prestatairesRepo] ✅ Prestataire créé: ${prestataire.email} (ID: ${prestataire.id}, Statut: ${prestataire.statut})`);
+  
+  // Vérifier immédiatement que le prestataire peut être retrouvé
+  const verifyPrestataire = await getPrestataireByEmail(prestataire.email);
+  if (verifyPrestataire) {
+    console.log(`[prestatairesRepo] ✅ Vérification: Prestataire retrouvable immédiatement après création`);
+  } else {
+    console.error(`[prestatairesRepo] ❌ ERREUR: Prestataire non retrouvable immédiatement après création!`);
+  }
+  
+  return prestataire;
 }
 
 export async function updatePrestataire(id: string, data: Partial<Prestataire>) {
+  console.log(`[prestatairesRepo] updatePrestataire appelé avec ID: ${id}`);
+  console.log(`[prestatairesRepo] Données à mettre à jour:`, data);
+  
   const updateData: any = {};
   
-  if (data.statut !== undefined) updateData.statut = data.statut;
+  if (data.statut !== undefined) {
+    updateData.statut = data.statut;
+    // Mettre à jour les dates selon le statut
+    if (data.statut === "actif" && data.dateValidation) {
+      updateData.actifAt = new Date(data.dateValidation);
+    } else if (data.statut === "suspendu") {
+      updateData.suspenduAt = new Date();
+    } else if (data.statut === "rejete") {
+      updateData.rejeteAt = new Date();
+    }
+  }
   if (data.dateValidation !== undefined) updateData.actifAt = data.dateValidation ? new Date(data.dateValidation) : null;
+  if (data.documentsVerifies !== undefined) {
+    // documentsVerifies n'existe pas dans le schéma Prisma, on l'ignore
+    console.log(`[prestatairesRepo] documentsVerifies ignoré (non présent dans schéma Prisma)`);
+  }
+  if (data.disponibilite !== undefined) {
+    // disponibilite n'existe pas dans le schéma Prisma, on l'ignore
+    console.log(`[prestatairesRepo] disponibilite ignoré (non présent dans schéma Prisma)`);
+  }
   // Note: suspenduAt et rejeteAt ne sont pas dans le type Prestataire JSON, ils sont gérés via statut
   if (data.deletedAt !== undefined) updateData.deletedAt = data.deletedAt ? new Date(data.deletedAt) : null;
   if (data.deletedBy !== undefined) updateData.deletedBy = data.deletedBy;
   
-  return prisma.prestataire.update({
+  const updated = await prisma.prestataire.update({
     where: { id },
     data: updateData,
   });
+  
+  console.log(`[prestatairesRepo] ✅ Prestataire mis à jour: ${updated.email} (Statut: ${updated.statut})`);
+  
+  return updated;
 }
 
 export async function softDeletePrestataire(id: string, deletedBy: string) {

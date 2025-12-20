@@ -169,21 +169,29 @@ export async function getPrestataireByEmail(email: string): Promise<Prestataire 
   if (!email) return null;
 
   const emailLower = email.toLowerCase();
+  console.log(`[dataAccess] getPrestataireByEmail appelé avec: "${emailLower}"`);
+  console.log(`[dataAccess] USE_DB: ${USE_DB}`);
 
   if (USE_DB) {
     try {
       const { getPrestataireByEmail: getPrestataireByEmailDB } = await import("@/repositories/prestatairesRepo");
       const prestataire = await getPrestataireByEmailDB(emailLower);
       
-      if (!prestataire) return null;
+      if (!prestataire) {
+        console.log(`[dataAccess] ❌ Aucun prestataire trouvé pour: "${emailLower}"`);
+        return null;
+      }
 
+      console.log(`[dataAccess] ✅ Prestataire trouvé: ${prestataire.email} (statut: ${prestataire.statut})`);
       return convertPrismaPrestataireToJSON(prestataire);
     } catch (error) {
       console.error("Erreur getPrestataireByEmail (DB):", error);
+      console.error("Stack:", (error as Error).stack);
       // Fallback sur JSON en cas d'erreur
       return getPrestataireByEmailJSON(emailLower);
     }
   } else {
+    console.log(`[dataAccess] USE_DB=false, recherche dans JSON`);
     return getPrestataireByEmailJSON(emailLower);
   }
 }
@@ -519,31 +527,66 @@ export async function getAllPrestataires(): Promise<Prestataire[]> {
  * Bascule automatiquement entre JSON et DB selon USE_DB
  */
 export async function getPrestataireById(id: number): Promise<Prestataire | null> {
-  if (!id) return null;
+  console.log(`[dataAccess] getPrestataireById appelé avec ID: ${id}`);
+  
+  if (!id) {
+    console.log(`[dataAccess] ❌ ID vide/null`);
+    return null;
+  }
 
   if (USE_DB) {
     try {
+      console.log(`[dataAccess] USE_DB=true, recherche dans Prisma...`);
       const { getAllPrestataires: getAllPrestatairesDB } = await import("@/repositories/prestatairesRepo");
       const allPrestataires = await getAllPrestatairesDB() as any[];
+      
+      console.log(`[dataAccess] ${allPrestataires.length} prestataires chargés depuis Prisma`);
       
       // Convertir l'ID numérique en UUID si nécessaire
       const prestataire = allPrestataires.find((p: any) => {
         if (typeof p.id === "string" && p.id.includes("-")) {
+          // C'est un UUID, calculer le hash
           const hash = p.id.split("").reduce((acc: number, char: string) => {
             return ((acc << 5) - acc) + char.charCodeAt(0);
           }, 0);
           const idNumber = Math.abs(hash) % 1000000;
-          return idNumber === id;
+          const matches = idNumber === id;
+          if (matches) {
+            console.log(`[dataAccess] ✅ Match trouvé: UUID ${p.id} -> hash ${idNumber} = ID recherché ${id}`);
+          }
+          return matches;
         }
-        return parseInt(String(p.id)) === id;
+        const numericId = parseInt(String(p.id));
+        const matches = numericId === id;
+        if (matches) {
+          console.log(`[dataAccess] ✅ Match trouvé: ID numérique ${p.id} = ID recherché ${id}`);
+        }
+        return matches;
       });
 
-      return prestataire ? convertPrismaPrestataireToJSON(prestataire) : null;
+      if (prestataire) {
+        console.log(`[dataAccess] ✅ Prestataire trouvé: ${prestataire.email} (UUID: ${prestataire.id})`);
+        return convertPrismaPrestataireToJSON(prestataire);
+      } else {
+        console.error(`[dataAccess] ❌ Aucun prestataire trouvé avec ID: ${id}`);
+        console.error(`[dataAccess] IDs disponibles (premiers 5):`, allPrestataires.slice(0, 5).map((p: any) => {
+          if (typeof p.id === "string" && p.id.includes("-")) {
+            const hash = p.id.split("").reduce((acc: number, char: string) => {
+              return ((acc << 5) - acc) + char.charCodeAt(0);
+            }, 0);
+            return { uuid: p.id, hash: Math.abs(hash) % 1000000, email: p.email };
+          }
+          return { id: p.id, email: p.email };
+        }));
+        return null;
+      }
     } catch (error) {
       console.error("Erreur getPrestataireById (DB):", error);
+      console.error("Stack:", (error as Error).stack);
       return getPrestataireByIdJSON(id);
     }
   } else {
+    console.log(`[dataAccess] USE_DB=false, recherche dans JSON`);
     return getPrestataireByIdJSON(id);
   }
 }
@@ -2121,12 +2164,49 @@ export async function updatePrestataire(
   id: number,
   updates: Partial<Prestataire>
 ): Promise<Prestataire | null> {
+  console.log(`[dataAccess] updatePrestataire appelé avec ID numérique: ${id}`);
+  console.log(`[dataAccess] Updates:`, updates);
+  console.log(`[dataAccess] USE_DB: ${USE_DB}`);
+  
   if (USE_DB) {
     try {
-      // Pour l'instant, on utilise le fallback JSON car la conversion ID <-> UUID est complexe
-      return updatePrestataireJSON(id, updates);
+      // Trouver le prestataire par ID numérique (converti depuis UUID)
+      const prestataire = await getPrestataireById(id);
+      if (!prestataire) {
+        console.error(`[dataAccess] ❌ Prestataire non trouvé avec ID numérique: ${id}`);
+        return null;
+      }
+      
+      // Trouver l'UUID Prisma correspondant
+      const { getAllPrestataires: getAllPrestatairesDB } = await import("@/repositories/prestatairesRepo");
+      const allPrestataires = await getAllPrestatairesDB() as any[];
+      
+      const prestatairePrisma = allPrestataires.find((p: any) => {
+        if (typeof p.id === "string" && p.id.includes("-")) {
+          const hash = p.id.split("").reduce((acc: number, char: string) => {
+            return ((acc << 5) - acc) + char.charCodeAt(0);
+          }, 0);
+          const idNumber = Math.abs(hash) % 1000000;
+          return idNumber === id;
+        }
+        return parseInt(String(p.id)) === id;
+      });
+      
+      if (!prestatairePrisma) {
+        console.error(`[dataAccess] ❌ Prestataire Prisma non trouvé pour ID numérique: ${id}`);
+        return null;
+      }
+      
+      console.log(`[dataAccess] ✅ Prestataire Prisma trouvé: ${prestatairePrisma.id} (UUID)`);
+      
+      // Mettre à jour via Prisma
+      const { updatePrestataire: updatePrestataireDB } = await import("@/repositories/prestatairesRepo");
+      const updated = await updatePrestataireDB(prestatairePrisma.id, updates);
+      
+      return convertPrismaPrestataireToJSON(updated);
     } catch (error) {
       console.error("Erreur updatePrestataire (DB):", error);
+      console.error("Stack:", (error as Error).stack);
       return updatePrestataireJSON(id, updates);
     }
   } else {
