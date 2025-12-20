@@ -293,16 +293,30 @@ export async function createUser(
   country?: string
 ): Promise<User> {
   const emailLower = email.toLowerCase();
+  console.log(`[dataAccess] createUser appelé pour: "${emailLower}"`);
+  console.log(`[dataAccess] USE_DB: ${USE_DB}`);
+  console.log(`[dataAccess] DATABASE_URL: ${process.env.DATABASE_URL ? "définie" : "NON DÉFINIE"}`);
+  console.log(`[dataAccess] PRISMA_DATABASE_URL: ${process.env.PRISMA_DATABASE_URL ? "définie" : "NON DÉFINIE"}`);
 
   if (USE_DB) {
     try {
       // Vérifier que Prisma est disponible avant d'essayer d'utiliser la DB
       const { prisma } = await import("@/lib/db");
+      console.log(`[dataAccess] Prisma disponible: ${prisma ? "OUI ✅" : "NON ❌"}`);
+      
       if (!prisma) {
-        // Prisma non disponible, utiliser le fallback JSON
+        console.error(`[dataAccess] ❌ ERREUR CRITIQUE: USE_DB=true mais Prisma n'est pas disponible!`);
+        console.error(`[dataAccess] Les données seront PERDUES à chaque redéploiement!`);
+        console.error(`[dataAccess] Vérifiez les logs d'initialisation Prisma dans lib/db.ts`);
+        // En production, utiliser quand même JSON temporairement pour ne pas bloquer complètement
+        const isProduction = process.env.NODE_ENV === "production" || process.env.APP_ENV === "production";
+        if (isProduction) {
+          console.error(`[dataAccess] ⚠️ PRODUCTION: Utilisation du fallback JSON (TEMPORAIRE - données perdues au redéploiement)`);
+        }
         return createUserJSON(emailLower, passwordHash, fullName, country);
       }
       
+      console.log(`[dataAccess] ✅ Prisma disponible, création dans PostgreSQL...`);
       const { createUser: createUserDB } = await import("@/repositories/usersRepo");
       const user = await createUserDB({
         email: emailLower,
@@ -324,7 +338,7 @@ export async function createUser(
         idNumber = parseInt(String(user.id)) || 0;
       }
 
-      return {
+      const convertedUser = {
         id: idNumber,
         email: user.email,
         passwordHash: user.passwordHash,
@@ -336,6 +350,18 @@ export async function createUser(
         verificationCodeExpires: user.verificationCodeExpires?.toISOString(),
         country: user.country || undefined,
       };
+      
+      console.log(`[dataAccess] ✅ Utilisateur créé dans DB: ${convertedUser.email} (ID: ${convertedUser.id})`);
+      
+      // Vérifier immédiatement que l'utilisateur peut être retrouvé
+      const verifyUser = await getUserByEmail(emailLower);
+      if (verifyUser) {
+        console.log(`[dataAccess] ✅ Vérification: Utilisateur retrouvable immédiatement après création DB`);
+      } else {
+        console.error(`[dataAccess] ❌ ERREUR: Utilisateur non retrouvable immédiatement après création DB!`);
+      }
+      
+      return convertedUser;
     } catch (error) {
       console.error("Erreur createUser (DB):", error);
       // Fallback sur JSON en cas d'erreur
