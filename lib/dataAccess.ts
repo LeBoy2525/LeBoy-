@@ -11,6 +11,7 @@ import type { Prestataire } from "./prestatairesStore";
 import type { DemandeICD } from "./demandesStore";
 import type { Mission, MissionUpdate } from "./types";
 import type { PropositionPrestataire } from "./propositionsStore";
+import { getCachedUser, cacheUser, invalidateCache } from "./userCache";
 
 /**
  * Récupère un utilisateur par email
@@ -21,6 +22,13 @@ export async function getUserByEmail(email: string): Promise<User | null> {
 
   const emailLower = email.toLowerCase();
   
+  // Vérifier d'abord le cache (très rapide)
+  const cachedUser = getCachedUser(emailLower);
+  if (cachedUser) {
+    console.log(`[dataAccess] ✅ Utilisateur trouvé dans le cache: ${cachedUser.email}`);
+    return cachedUser;
+  }
+
   console.log(`[dataAccess] getUserByEmail appelé avec: "${emailLower}"`);
   console.log(`[dataAccess] USE_DB: ${USE_DB}`);
 
@@ -31,7 +39,9 @@ export async function getUserByEmail(email: string): Promise<User | null> {
       if (!prisma) {
         console.log(`[dataAccess] Prisma non disponible, fallback JSON`);
         // Prisma non disponible, utiliser le fallback JSON
-        return getUserByEmailJSON(emailLower);
+        const user = await getUserByEmailJSON(emailLower);
+        if (user) cacheUser(emailLower, user);
+        return user;
       }
       
       console.log(`[dataAccess] Prisma disponible, recherche dans DB`);
@@ -41,7 +51,9 @@ export async function getUserByEmail(email: string): Promise<User | null> {
       if (!user) {
         console.log(`[dataAccess] Utilisateur non trouvé dans DB, fallback JSON`);
         // Essayer le fallback JSON si pas trouvé dans DB
-        return getUserByEmailJSON(emailLower);
+        const jsonUser = await getUserByEmailJSON(emailLower);
+        // Ne pas mettre null en cache pour éviter de cacher les "non trouvés"
+        return jsonUser;
       }
       
       console.log(`[dataAccess] Utilisateur trouvé dans DB: ${user.email}`);
@@ -60,7 +72,7 @@ export async function getUserByEmail(email: string): Promise<User | null> {
         idNumber = parseInt(String(user.id)) || 0;
       }
 
-      return {
+      const convertedUser: User = {
         id: idNumber,
         email: user.email,
         passwordHash: user.passwordHash,
@@ -72,13 +84,21 @@ export async function getUserByEmail(email: string): Promise<User | null> {
         verificationCodeExpires: user.verificationCodeExpires?.toISOString(),
         country: user.country || undefined,
       };
+
+      // Mettre en cache pour les prochaines recherches
+      cacheUser(emailLower, convertedUser);
+      return convertedUser;
     } catch (error) {
       console.error("Erreur getUserByEmail (DB):", error);
       // Fallback sur JSON en cas d'erreur
-      return getUserByEmailJSON(emailLower);
+      const jsonUser = await getUserByEmailJSON(emailLower);
+      if (jsonUser) cacheUser(emailLower, jsonUser);
+      return jsonUser;
     }
   } else {
-    return getUserByEmailJSON(emailLower);
+    const jsonUser = await getUserByEmailJSON(emailLower);
+    if (jsonUser) cacheUser(emailLower, jsonUser);
+    return jsonUser;
   }
 }
 
