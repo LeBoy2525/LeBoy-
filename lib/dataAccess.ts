@@ -37,8 +37,20 @@ export async function getUserByEmail(email: string): Promise<User | null> {
       // Vérifier que Prisma est disponible avant d'essayer d'utiliser la DB
       const { prisma } = await import("@/lib/db");
       if (!prisma) {
-        console.log(`[dataAccess] Prisma non disponible, fallback JSON`);
-        // Prisma non disponible, utiliser le fallback JSON
+        // ⚠️ CRITIQUE: En production, Prisma doit être disponible
+        const isProduction = process.env.NODE_ENV === "production" || process.env.APP_ENV === "production";
+        if (isProduction) {
+          console.error(`[dataAccess] ❌ ERREUR CRITIQUE: USE_DB=true mais Prisma n'est pas disponible en production!`);
+          console.error(`[dataAccess] Les données ne seront PAS persistées et seront perdues au redéploiement!`);
+          console.error(`[dataAccess] DATABASE_URL: ${process.env.DATABASE_URL ? "définie" : "NON DÉFINIE"}`);
+          console.error(`[dataAccess] PRISMA_DATABASE_URL: ${process.env.PRISMA_DATABASE_URL ? "définie" : "NON DÉFINIE"}`);
+          console.error(`[dataAccess] Vérifiez les logs d'initialisation Prisma dans lib/db.ts`);
+          // En production, ne pas utiliser le fallback JSON car les fichiers sont perdus à chaque déploiement
+          // Retourner null pour forcer une erreur visible plutôt que de perdre silencieusement les données
+          return null;
+        }
+        // En développement, permettre le fallback JSON
+        console.log(`[dataAccess] Prisma non disponible, fallback JSON (développement uniquement)`);
         const user = await getUserByEmailJSON(emailLower);
         if (user) cacheUser(emailLower, user);
         return user;
