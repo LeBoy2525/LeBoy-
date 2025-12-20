@@ -6,8 +6,10 @@ const globalForPrisma = globalThis as unknown as {
 
 // Configuration Prisma avec gestion de DATABASE_URL
 // Prisma 7.x nécessite DATABASE_URL pour fonctionner correctement
+// Si DATABASE_URL commence par "postgresql://", utiliser le mode standard
 const prismaConfig: ConstructorParameters<typeof PrismaClient>[0] = {
   log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
+  // Ne pas spécifier d'adapter ou accelerateUrl si on utilise une connexion PostgreSQL standard
 };
 
 // Helper pour détecter si on est en build Next.js
@@ -22,20 +24,33 @@ let prismaInstance: PrismaClient | undefined;
 
 if (process.env.DATABASE_URL) {
   try {
+    // Vérifier le format de DATABASE_URL
+    const dbUrl = process.env.DATABASE_URL;
+    console.log(`[db] DATABASE_URL détectée, format: ${dbUrl.substring(0, 20)}...`);
+    
+    // Pour Prisma 7.x avec PostgreSQL standard, ne pas passer de config spéciale
+    // Le client généré gère automatiquement la connexion PostgreSQL
     prismaInstance = new PrismaClient(prismaConfig);
+    
     // Tester la connexion immédiatement pour détecter les erreurs tôt
     // Mais seulement en runtime, pas pendant le build
     if (!isBuildTime && typeof window === "undefined") {
-      prismaInstance.$connect().catch((connectError: any) => {
-        console.error("❌ Erreur de connexion Prisma:", connectError?.message || connectError);
-        console.error("   → Le système utilisera le fallback JSON");
-        prismaInstance = undefined;
-      });
+      prismaInstance.$connect()
+        .then(() => {
+          console.log("✅ Connexion Prisma réussie");
+        })
+        .catch((connectError: any) => {
+          console.error("❌ Erreur de connexion Prisma:", connectError?.message || connectError);
+          console.error("   Code:", connectError?.code);
+          console.error("   → Le système utilisera le fallback JSON");
+          prismaInstance = undefined;
+        });
     }
   } catch (error: any) {
     console.error("❌ Erreur lors de l'initialisation de Prisma:");
     console.error("   Message:", error?.message || error);
     console.error("   Code:", error?.code);
+    console.error("   Stack:", error?.stack);
     console.error("   → Le système utilisera le fallback JSON");
     prismaInstance = undefined;
   }
