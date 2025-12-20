@@ -26,6 +26,7 @@
     "check:email": "tsx scripts/check-email-config.ts",
     "check:tables": "tsx scripts/check-tables.ts",
     "diagnose:user": "tsx scripts/diagnose-user-issue.ts",
+    "diagnose:prestataires": "tsx scripts/diagnose-prestataire-ids.ts",
     "postinstall": "echo 'skip prisma generate on install'",
     "vercel-build": "prisma generate --schema=./prisma/schema.prisma && prisma migrate deploy --schema=./prisma/schema.prisma && next build",
     "postbuild": "prisma generate"
