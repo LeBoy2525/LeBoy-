@@ -1333,35 +1333,36 @@ export async function getAllMissions(): Promise<Mission[]> {
  * Bascule automatiquement entre JSON et DB selon USE_DB
  */
 export async function getMissionById(id: number): Promise<Mission | null> {
-  if (USE_DB) {
-    try {
-      const { getMissionById: getMissionByIdDB } = await import("@/repositories/missionsRepo");
-      // Pour Prisma, on doit trouver la mission par son UUID
-      // On va devoir chercher toutes les missions et filtrer par ID converti
-      // Ou utiliser une autre méthode selon le schéma
-      const { getAllMissions } = await import("@/repositories/missionsRepo");
-      const allMissions = await getAllMissions() as any[];
-      const mission = allMissions.find((m: any) => {
-        let idNumber: number;
-        if (typeof m.id === "string" && m.id.includes("-")) {
-          const hash = m.id.split("").reduce((acc: number, char: string) => {
-            return ((acc << 5) - acc) + char.charCodeAt(0);
-          }, 0);
-          idNumber = Math.abs(hash) % 1000000;
-        } else {
-          idNumber = parseInt(String(m.id)) || 0;
-        }
-        return idNumber === id;
-      });
-      
-      return mission ? convertPrismaMissionToJSON(mission) : null;
-    } catch (error) {
-      console.error("Erreur getMissionById (DB):", error);
-      return getMissionByIdJSON(id);
-    }
-  } else {
+  // TEMPORAIRE: Désactiver Prisma pour les missions jusqu'à ce que le schéma soit corrigé
+  // if (USE_DB) {
+  //   try {
+  //     const { getMissionById: getMissionByIdDB } = await import("@/repositories/missionsRepo");
+  //     // Pour Prisma, on doit trouver la mission par son UUID
+  //     // On va devoir chercher toutes les missions et filtrer par ID converti
+  //     // Ou utiliser une autre méthode selon le schéma
+  //     const { getAllMissions } = await import("@/repositories/missionsRepo");
+  //     const allMissions = await getAllMissions() as any[];
+  //     const mission = allMissions.find((m: any) => {
+  //       let idNumber: number;
+  //       if (typeof m.id === "string" && m.id.includes("-")) {
+  //         const hash = m.id.split("").reduce((acc: number, char: string) => {
+  //           return ((acc << 5) - acc) + char.charCodeAt(0);
+  //         }, 0);
+  //         idNumber = Math.abs(hash) % 1000000;
+  //       } else {
+  //         idNumber = parseInt(String(m.id)) || 0;
+  //       }
+  //       return idNumber === id;
+  //     });
+  //     
+  //     return mission ? convertPrismaMissionToJSON(mission) : null;
+  //   } catch (error) {
+  //     console.error("Erreur getMissionById (DB):", error);
+  //     return getMissionByIdJSON(id);
+  //   }
+  // } else {
     return getMissionByIdJSON(id);
-  }
+  // }
 }
 
 /**
