@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import type { Mission } from "@/lib/types";
 import { withRetry } from "@/lib/db-retry";
+import { logPrismaError } from "@/lib/prisma-error-logger";
 
 // Helper pour vérifier que Prisma est disponible
 function ensurePrisma() {

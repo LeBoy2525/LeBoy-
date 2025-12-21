@@ -3,6 +3,9 @@
  * Utile pour les environnements serverless où les connexions peuvent être instables
  */
 
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
+import { logPrismaError } from "./prisma-error-logger";
+
 export interface RetryOptions {
   maxRetries?: number;
   retryDelay?: number;
@@ -51,6 +54,14 @@ export async function withRetry<T>(
       return await operation();
     } catch (error: any) {
       lastError = error;
+
+      // Si c'est une erreur Prisma (P2022, P2002, etc.), logger avec détails complets
+      if (error instanceof PrismaClientKnownRequestError) {
+        logPrismaError("db-retry", error, {
+          attempt: attempt + 1,
+          maxRetries: opts.maxRetries + 1,
+        });
+      }
 
       // Si ce n'est pas une erreur retryable, on arrête immédiatement
       if (!isRetryableError(error)) {

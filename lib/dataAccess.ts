@@ -12,6 +12,7 @@ import type { DemandeICD } from "./demandesStore";
 import type { Mission, MissionUpdate } from "./types";
 import type { PropositionPrestataire } from "./propositionsStore";
 import { getCachedUser, cacheUser, invalidateCache } from "./userCache";
+import { logPrismaError } from "./prisma-error-logger";
 
 /**
  * Récupère un utilisateur par email
@@ -1328,7 +1329,7 @@ export async function getMissionsByClient(email: string): Promise<Mission[]> {
       
       return missions.map(convertPrismaMissionToJSON);
     } catch (error) {
-      console.error("Erreur getMissionsByClient (DB):", error);
+      logPrismaError("getMissionsByClient", error, { context: "DB" });
       return getMissionsByClientJSON(email);
     }
   } else {
@@ -1369,7 +1370,7 @@ export async function getMissionsByPrestataire(prestataireId: number): Promise<M
       
       return convertedMissions;
     } catch (error) {
-      console.error("Erreur getMissionsByPrestataire (DB):", error);
+      logPrismaError("getMissionsByPrestataire", error, { context: "DB" });
       return getMissionsByPrestataireJSON(prestataireId);
     }
   } else {
@@ -1400,7 +1401,7 @@ export async function getMissionsByDemandeId(demandeId: number): Promise<Mission
       
       return missions.map(convertPrismaMissionToJSON);
     } catch (error) {
-      console.error("Erreur getMissionsByDemandeId (DB):", error);
+      logPrismaError("getMissionsByDemandeId", error, { context: "DB" });
       return getMissionsByDemandeIdJSON(demandeId);
     }
   } else {
@@ -1419,7 +1420,7 @@ export async function getAllMissions(): Promise<Mission[]> {
       const missions = await getAllMissionsDB() as any[];
       return missions.map(convertPrismaMissionToJSON);
     } catch (error) {
-      console.error("Erreur getAllMissions (DB):", error);
+      logPrismaError("getAllMissions", error, { context: "DB" });
       const { missionsStore } = await import("./missionsStore");
       return missionsStore || [];
     }
@@ -1455,7 +1456,7 @@ export async function getMissionById(id: number): Promise<Mission | null> {
       
       return mission ? convertPrismaMissionToJSON(mission) : null;
     } catch (error) {
-      console.error("Erreur getMissionById (DB):", error);
+      logPrismaError("getMissionById", error, { context: "DB" });
       return getMissionByIdJSON(id);
     }
   } else {
@@ -1640,7 +1641,7 @@ export async function createMission(
 
       return convertPrismaMissionToJSON(mission);
     } catch (error) {
-      console.error("Erreur createMission (DB):", error);
+      logPrismaError("createMission", error, { context: "DB" });
       return createMissionJSON(data);
     }
   } else {
@@ -1868,7 +1869,7 @@ export async function updateMissionInternalState(
 
       return result;
     } catch (error) {
-      console.error("Erreur updateMissionInternalState (DB):", error);
+      logPrismaError("updateMissionInternalState", error, { context: "DB" });
       return updateMissionInternalStateJSON(id, newInternalState, authorEmail);
     }
   } else {
