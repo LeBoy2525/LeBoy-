@@ -9,10 +9,11 @@ export async function getAllMissions() {
     orderBy: {
       createdAt: "desc",
     },
-    include: {
-      demande: true,
-      prestataire: true,
-    },
+    // Temporairement retirer les includes pour éviter l'erreur de colonne manquante
+    // include: {
+    //   demande: true,
+    //   prestataire: true,
+    // },
   });
 }
 
