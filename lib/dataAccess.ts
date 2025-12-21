@@ -1471,12 +1471,14 @@ export async function createMission(
       // Helper pour convertir undefined en null pour Prisma
       const undefToNull = <T>(val: T | undefined): T | null => (val === undefined ? null : val);
       
+      console.log(`[createMission] 📝 Création mission avec demandeId UUID: ${demandeDB.id}, prestataireId UUID: ${prestataireIdUUID || "null"}`);
+      
       const mission = await createMissionDB({
         ref,
         createdAt,
-        demandeId: demandeDB.id, // Utiliser l'UUID de la demande, pas l'ID numérique
+        demandeId: demandeDB.id as any, // Utiliser l'UUID de la demande (cast pour compatibilité type Mission)
         clientEmail: data.clientEmail,
-        prestataireId: prestataireIdUUID,
+        prestataireId: prestataireIdUUID as any, // Utiliser l'UUID du prestataire (cast pour compatibilité type Mission)
         prestataireRef: undefToNull(data.prestataireRef),
         internalState,
         status,

@@ -83,12 +83,21 @@ export async function getMissionsByDemandeId(demandeId: string) {
 }
 
 export async function createMission(data: Omit<Mission, "id">) {
+  // Les données reçues ont déjà des UUIDs pour demandeId et prestataireId (depuis lib/dataAccess.ts)
+  // Mais le type Mission définit ces champs comme numbers, donc on doit les traiter comme strings
+  const demandeIdStr = typeof data.demandeId === "string" ? data.demandeId : String(data.demandeId);
+  const prestataireIdStr = data.prestataireId 
+    ? (typeof data.prestataireId === "string" ? data.prestataireId : String(data.prestataireId))
+    : null;
+  
+  console.log(`[missionsRepo] createMission appelé avec demandeId: ${demandeIdStr}, prestataireId: ${prestataireIdStr}`);
+  
   return prisma.mission.create({
     data: {
       ref: data.ref,
-      demandeId: String(data.demandeId),
+      demandeId: demandeIdStr,
       clientEmail: data.clientEmail,
-      prestataireId: data.prestataireId ? String(data.prestataireId) : null,
+      prestataireId: prestataireIdStr,
       prestataireRef: data.prestataireRef || null,
       internalState: data.internalState,
       status: data.status,
