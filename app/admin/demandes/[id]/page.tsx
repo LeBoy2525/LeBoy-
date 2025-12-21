@@ -402,7 +402,7 @@ export default function AdminDemandeDetailPage() {
       
       if (res.ok) {
         setMatches(data.matches || []);
-        // Note: otherPrestataires sera géré dans la modal si nécessaire
+        setOtherPrestataires(data.otherPrestataires || []);
         console.log("✅ Matches reçus:", data.matches?.length || 0);
         console.log("✅ Autres prestataires reçus:", data.otherPrestataires?.length || 0);
       } else {
@@ -1334,6 +1334,136 @@ export default function AdminDemandeDetailPage() {
                   </div>
                 )}
               </div>
+
+              {/* Section Autres prestataires */}
+              {otherPrestataires.length > 0 && (
+                <div className="pt-6 border-t border-[#E2E2E8]">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-heading font-semibold text-[#0A1B2A]">
+                      {lang === "fr" ? "Autres prestataires" : "Other providers"} {otherPrestataires.length > 0 && `(${otherPrestataires.length})`}
+                    </h3>
+                    {selectedPrestataires.length > 0 && (
+                      <span className="text-sm text-[#D4A657] font-semibold">
+                        {lang === "fr" 
+                          ? `${selectedPrestataires.length} sélectionné(s)` 
+                          : `${selectedPrestataires.length} selected`}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-[#6B7280] mb-4">
+                    {lang === "fr" 
+                      ? "Prestataires disponibles qui ne correspondent pas directement à la catégorie recherchée."
+                      : "Available providers that don't directly match the requested category."}
+                  </p>
+                  <div className="space-y-3">
+                    {otherPrestataires.map((match) => {
+                      const prestataireId =
+                        typeof match.prestataire.id === "string"
+                          ? parseInt(match.prestataire.id)
+                          : match.prestataire.id;
+
+                      return (
+                        <div
+                          key={prestataireId}
+                          className={`flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer transition ${
+                            selectedPrestataires.includes(prestataireId)
+                              ? "border-[#C8A55F] bg-[#FFF9EC]"
+                              : "border-[#DDDDDD] hover:border-[#C8A55F] hover:bg-[#F9F9FB]"
+                          }`}
+                          onClick={(e) => {
+                            const target = e.target as HTMLElement;
+                            const inputTarget = target as HTMLInputElement;
+                            if ((target.tagName === 'INPUT' && inputTarget.type === 'checkbox') || target.closest('input[type="checkbox"]')) {
+                              return;
+                            }
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setSelectedPrestataires((prev) => {
+                              if (!prev.includes(prestataireId)) {
+                                return [...prev, prestataireId];
+                              }
+                              return prev;
+                            });
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            name={`prestataire-${prestataireId}`}
+                            id={`prestataire-checkbox-other-${prestataireId}`}
+                            value={prestataireId}
+                            checked={selectedPrestataires.includes(prestataireId)}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              const isChecked = e.target.checked;
+                              setSelectedPrestataires((prev) => {
+                                if (isChecked) {
+                                  if (!prev.includes(prestataireId)) {
+                                    return [...prev, prestataireId];
+                                  }
+                                  return prev;
+                                } else {
+                                  return prev.filter((id) => id !== prestataireId);
+                                }
+                              });
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                            }}
+                            onMouseDown={(e) => {
+                              e.stopPropagation();
+                            }}
+                            className="mt-1 w-5 h-5 text-[#C8A657] border-2 border-[#DDDDDD] focus:ring-[#C8A657] focus:ring-2 cursor-pointer flex-shrink-0 rounded accent-[#C8A657]"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <p className="font-semibold text-[#0A1B2A]">
+                                {match.prestataire.nomEntreprise || "Nom non disponible"}
+                              </p>
+                              {match.prestataire.statut === "actif" && (
+                                <span className="px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800 rounded">
+                                  {lang === "fr" ? "Actif" : "Active"}
+                                </span>
+                              )}
+                              {match.prestataire.statut === "en_attente" && (
+                                <span className="px-2 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-800 rounded">
+                                  {lang === "fr" ? "En attente" : "Pending"}
+                                </span>
+                              )}
+                            </div>
+                            {match.prestataire.nomContact && (
+                              <p className="text-sm text-[#6B7280] mb-1">
+                                {match.prestataire.nomContact}
+                              </p>
+                            )}
+                            {match.prestataire.email && (
+                              <p className="text-xs text-[#6B7280] mb-1">
+                                {match.prestataire.email}
+                              </p>
+                            )}
+                            {match.prestataire.specialites && match.prestataire.specialites.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-2">
+                                {match.prestataire.specialites.map((spec: string, idx: number) => (
+                                  <span
+                                    key={idx}
+                                    className="px-2 py-0.5 text-xs bg-gray-100 text-gray-700 rounded"
+                                  >
+                                    {spec}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          {selectedPrestataires.includes(prestataireId) && (
+                            <div className="flex-shrink-0">
+                              <CheckCircle2 className="w-5 h-5 text-[#C8A657]" />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Section de sélection des fichiers */}
               {demandeFiles.length > 0 && (
