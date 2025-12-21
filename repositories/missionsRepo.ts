@@ -71,7 +71,7 @@ export async function getMissionsByDemandeId(demandeId: string) {
     orderBy: {
       createdAt: "desc",
     },
-    // Temporairement retirer les includes pour éviter l'erreur de colonne manquante
+    // Les includes sont désactivés temporairement jusqu'à ce que les relations soient correctement configurées
     // include: {
     //   demande: true,
     //   prestataire: true,
