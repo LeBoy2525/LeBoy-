@@ -26,7 +26,11 @@ export function DemandeAssignmentStatus({
 
   useEffect(() => {
     async function fetchData() {
+      setLoading(true);
+      
       if (missions.length === 0) {
+        setPrestataire(null);
+        setPropositions([]);
         setLoading(false);
         return;
       }
@@ -62,6 +66,20 @@ export function DemandeAssignmentStatus({
                 console.error("Erreur récupération prestataire:", err);
               }
             }
+          } else {
+            // Si pas de proposition acceptée mais qu'il y a des missions, charger le premier prestataire assigné
+            const firstMission = missions.find(m => m.prestataireId);
+            if (firstMission && firstMission.prestataireId) {
+              try {
+                const res = await fetch(`/api/prestataires/${firstMission.prestataireId}`, { cache: "no-store" });
+                if (res.ok) {
+                  const data = await res.json();
+                  setPrestataire(data.prestataire);
+                }
+              } catch (err) {
+                console.error("Erreur récupération prestataire:", err);
+              }
+            }
           }
         }
       } catch (err) {
@@ -72,7 +90,7 @@ export function DemandeAssignmentStatus({
     }
 
     fetchData();
-  }, [missions, demande.id]);
+  }, [demande.id, missions]);, [missions, demande.id]);
 
   if (loading) {
     return (

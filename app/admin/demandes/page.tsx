@@ -229,25 +229,32 @@ export default function AdminDemandesPage() {
         setShowAssignModal(false);
         setSelectedDemande(null);
         alert(lang === "fr" ? "Mission créée avec succès !" : "Mission created successfully!");
-        // Recharger les demandes et leurs missions
-        const resDemandes = await fetch("/api/demandes", { cache: "no-store" });
-        const dataDemandes = await resDemandes.json();
-        setDemandes(dataDemandes.demandes || []);
         
-        // Recharger les missions pour chaque demande
-        const missionsMap = new Map<number, any[]>();
-        for (const demande of dataDemandes.demandes || []) {
-          try {
-            const missionsRes = await fetch(`/api/admin/demandes/${demande.id}/missions`, { cache: "no-store" });
-            if (missionsRes.ok) {
-              const missionsData = await missionsRes.json();
-              missionsMap.set(demande.id, missionsData.missions || []);
-            }
-          } catch (err) {
-            console.error(`Erreur chargement missions pour demande ${demande.id}:`, err);
+        // Recharger les missions pour la demande spécifique qui vient d'être assignée
+        try {
+          const missionsRes = await fetch(`/api/admin/demandes/${selectedDemande.id}/missions`, { cache: "no-store" });
+          if (missionsRes.ok) {
+            const missionsData = await missionsRes.json();
+            // Mettre à jour le Map avec les nouvelles missions pour cette demande
+            setDemandesMissions(prev => {
+              const newMap = new Map(prev);
+              newMap.set(selectedDemande.id, missionsData.missions || []);
+              return newMap;
+            });
+            console.log(`✅ Missions rechargées pour demande ${selectedDemande.id}:`, missionsData.missions?.length || 0);
           }
+        } catch (err) {
+          console.error(`Erreur chargement missions pour demande ${selectedDemande.id}:`, err);
         }
-        setDemandesMissions(missionsMap);
+        
+        // Recharger aussi toutes les demandes pour s'assurer que tout est à jour
+        try {
+          const resDemandes = await fetch("/api/demandes", { cache: "no-store" });
+          const dataDemandes = await resDemandes.json();
+          setDemandes(dataDemandes.demandes || []);
+        } catch (err) {
+          console.error("Erreur rechargement demandes:", err);
+        }
       } else {
         // Gérer l'erreur de doublon
         if (res.status === 409) {
