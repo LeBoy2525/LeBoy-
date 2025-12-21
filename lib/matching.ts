@@ -16,10 +16,15 @@ export type MatchScore = {
 
 /**
  * Trouve les meilleurs prestataires pour une demande donnée
+ * @param demande - La demande à matcher
+ * @param prestatairesList - Liste des prestataires (optionnel, utilise prestatairesStore par défaut)
  */
 export function matchDemandeToPrestataires(
-  demande: DemandeICD
+  demande: DemandeICD,
+  prestatairesList?: Prestataire[]
 ): MatchScore[] {
+  // Utiliser la liste fournie ou fallback sur prestatairesStore
+  const prestatairesToUse = prestatairesList || prestatairesStore;
   const matches: MatchScore[] = [];
 
   console.log("🔍 Matching pour demande:", {
@@ -72,7 +77,7 @@ export function matchDemandeToPrestataires(
   };
   
   // D'abord, essayer de trouver par spécialité ET statut actif (avec mapping rétrocompatibilité)
-  let candidates = prestatairesStore.filter((p) => 
+  let candidates = prestatairesToUse.filter((p) => 
     p.statut === "actif" && !p.deletedAt && hasSpecialite(p, specialite)
   );
   console.log("🔍 Candidats après filtrage spécialité (actifs):", candidates.length);
@@ -80,24 +85,24 @@ export function matchDemandeToPrestataires(
   // Si aucun candidat par spécialité, prendre tous les prestataires actifs (toutes spécialités)
   if (candidates.length === 0) {
     console.log("⚠️ Aucun prestataire actif avec cette spécialité, recherche tous les prestataires actifs");
-    candidates = getPrestatairesActifs();
+    candidates = prestatairesToUse.filter(p => p.statut === "actif" && !p.deletedAt);
     console.log("🔍 Tous les prestataires actifs:", candidates.length);
   }
 
   // Si toujours aucun, inclure aussi les prestataires en attente (pour l'admin)
   if (candidates.length === 0) {
-    console.log("⚠️ Aucun prestataire actif trouvé, vérification du store...");
-    console.log("📊 Total prestataires dans le store:", prestatairesStore.length);
+    console.log("⚠️ Aucun prestataire actif trouvé, vérification de la liste...");
+    console.log("📊 Total prestataires dans la liste:", prestatairesToUse.length);
     console.log("📊 Prestataires par statut:", {
-      en_attente: prestatairesStore.filter(p => p.statut === "en_attente").length,
-      actif: prestatairesStore.filter(p => p.statut === "actif").length,
-      suspendu: prestatairesStore.filter(p => p.statut === "suspendu").length,
-      rejete: prestatairesStore.filter(p => p.statut === "rejete").length,
+      en_attente: prestatairesToUse.filter(p => p.statut === "en_attente").length,
+      actif: prestatairesToUse.filter(p => p.statut === "actif").length,
+      suspendu: prestatairesToUse.filter(p => p.statut === "suspendu").length,
+      rejete: prestatairesToUse.filter(p => p.statut === "rejete").length,
     });
     
     // Pour l'admin, permettre de voir tous les prestataires non rejetés
     // (même en attente ou suspendus, mais avec un score plus bas)
-    const allNonRejected = prestatairesStore.filter(p => p.statut !== "rejete");
+    const allNonRejected = prestatairesToUse.filter(p => p.statut !== "rejete" && !p.deletedAt);
     if (allNonRejected.length > 0) {
       console.log("⚠️ Utilisation de tous les prestataires non rejetés pour l'admin");
       candidates = allNonRejected;
@@ -105,7 +110,7 @@ export function matchDemandeToPrestataires(
   } else {
     // Si on a des candidats actifs, ajouter aussi les prestataires en attente avec la bonne spécialité
     // pour donner plus de choix à l'admin
-    const enAttenteAvecSpecialite = prestatairesStore.filter(
+    const enAttenteAvecSpecialite = prestatairesToUse.filter(
       p => p.statut === "en_attente" && !p.deletedAt && hasSpecialite(p, specialite)
     );
     if (enAttenteAvecSpecialite.length > 0) {

@@ -71,7 +71,18 @@ export async function POST(req: Request) {
 
     // Envoyer l'email avec le lien de réinitialisation
     try {
-      const { sendNotificationEmail } = await import("@/lib/emailService");
+      const { sendNotificationEmail, checkEmailConfig } = await import("@/lib/emailService");
+      
+      // Vérifier la configuration email
+      const emailConfig = checkEmailConfig();
+      console.log(`[FORGOT PASSWORD] Configuration email:`, emailConfig);
+      
+      if (!emailConfig.configured) {
+        console.error(`[FORGOT PASSWORD] ❌ Configuration email invalide:`, emailConfig.issues);
+      }
+      
+      console.log(`[FORGOT PASSWORD] 📧 Tentative d'envoi email à ${emailLower}...`);
+      console.log(`[FORGOT PASSWORD] 📧 Reset URL: ${resetUrl}`);
       
       const emailSent = await sendNotificationEmail(
         "password-reset",
@@ -82,18 +93,20 @@ export async function POST(req: Request) {
         {
           resetUrl,
           platformUrl,
+          token, // Inclure le token au cas où resetUrl ne serait pas construit correctement
           userName: userName || emailLower.split("@")[0],
         },
         "fr"
       );
       
       if (emailSent) {
-        console.log(`[FORGOT PASSWORD] ✅ Email de réinitialisation envoyé à ${emailLower}`);
+        console.log(`[FORGOT PASSWORD] ✅ Email de réinitialisation envoyé avec succès à ${emailLower}`);
       } else {
-        console.error(`[FORGOT PASSWORD] ⚠️ Échec de l'envoi de l'email à ${emailLower}`);
+        console.error(`[FORGOT PASSWORD] ⚠️ Échec de l'envoi de l'email à ${emailLower} (sendNotificationEmail retourné false)`);
       }
-    } catch (emailError) {
+    } catch (emailError: any) {
       console.error(`[FORGOT PASSWORD] ❌ Erreur lors de l'envoi de l'email:`, emailError);
+      console.error(`[FORGOT PASSWORD] Stack:`, emailError?.stack);
       // Ne pas bloquer la requête si l'email échoue
     }
 

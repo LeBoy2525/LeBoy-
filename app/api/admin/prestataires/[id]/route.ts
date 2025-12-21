@@ -152,10 +152,14 @@ export async function PATCH(
         disponibilite: "indisponible" as const,
       };
     } else if (action === "reactiver") {
+      // Réactiver un prestataire suspendu
+      // Note: disponibilite n'existe pas dans Prisma, seul le statut compte
       statutUpdate = {
         statut: "actif" as const,
-        disponibilite: "disponible" as const,
+        // Réinitialiser suspenduAt si nécessaire
+        suspenduAt: null,
       };
+      console.log(`[API PATCH] Réactivation du prestataire ${existingPrestataire.email}`);
     } else {
       return NextResponse.json(
         { error: "Action invalide." },

@@ -94,13 +94,24 @@ export async function updatePrestataire(id: string, data: Partial<Prestataire>) 
   if (data.statut !== undefined) {
     updateData.statut = data.statut;
     // Mettre à jour les dates selon le statut
-    if (data.statut === "actif" && data.dateValidation) {
-      updateData.actifAt = new Date(data.dateValidation);
+    if (data.statut === "actif") {
+      if (data.dateValidation) {
+        updateData.actifAt = new Date(data.dateValidation);
+      } else if (!updateData.actifAt) {
+        // Si on réactive et qu'il n'y a pas de date de validation, utiliser maintenant
+        updateData.actifAt = new Date();
+      }
+      // Réinitialiser suspenduAt lors de la réactivation
+      updateData.suspenduAt = null;
     } else if (data.statut === "suspendu") {
       updateData.suspenduAt = new Date();
     } else if (data.statut === "rejete") {
       updateData.rejeteAt = new Date();
     }
+  }
+  // Gérer suspenduAt explicitement si fourni
+  if (data.suspenduAt !== undefined) {
+    updateData.suspenduAt = data.suspenduAt === null ? null : (data.suspenduAt instanceof Date ? data.suspenduAt : new Date(data.suspenduAt));
   }
   if (data.dateValidation !== undefined) updateData.actifAt = data.dateValidation ? new Date(data.dateValidation) : null;
   if (data.documentsVerifies !== undefined) {

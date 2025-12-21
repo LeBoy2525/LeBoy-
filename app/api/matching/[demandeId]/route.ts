@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getDemandeById } from "@/lib/dataAccess";
+import { getDemandeById, getAllPrestataires } from "@/lib/dataAccess";
 import { matchDemandeToPrestataires } from "@/lib/matching";
 
 type RouteParams = {
@@ -28,7 +28,13 @@ export async function GET(
       );
     }
 
-    const matches = matchDemandeToPrestataires(demande);
+    // Récupérer tous les prestataires depuis la DB
+    const allPrestataires = await getAllPrestataires();
+    console.log(`[API MATCHING] Prestataires récupérés depuis DB: ${allPrestataires.length}`);
+    console.log(`[API MATCHING] Prestataires actifs: ${allPrestataires.filter(p => p.statut === "actif").length}`);
+    
+    // Passer les prestataires à la fonction de matching
+    const matches = matchDemandeToPrestataires(demande, allPrestataires);
 
     console.log("🔍 API Matching - Résultats:", {
       demandeId: demande.id,
