@@ -3,10 +3,10 @@
 import "dotenv/config";
 import { defineConfig } from "prisma/config";
 
-// IMPORTANT: Pour les migrations, utiliser TOUJOURS DATABASE_URL (PostgreSQL direct)
-// Les migrations ne peuvent PAS utiliser PRISMA_DATABASE_URL (Accelerate)
-// Accelerate est uniquement pour les requêtes, pas pour les migrations
-const DATABASE_URL = process.env.DATABASE_URL || process.env.POSTGRES_URL || "postgresql://placeholder@localhost:5432/placeholder";
+// IMPORTANT: Pour les migrations, utiliser POSTGRES_URL_NON_POOLING (connexion directe)
+// Les migrations nécessitent une connexion directe, pas de pooling
+// POSTGRES_PRISMA_URL est pour le runtime (avec pooling)
+const DIRECT_URL = process.env.POSTGRES_URL_NON_POOLING || process.env.DATABASE_URL || process.env.POSTGRES_URL || "postgresql://placeholder@localhost:5432/placeholder";
 
 export default defineConfig({
   schema: "prisma/schema.prisma",
@@ -14,6 +14,6 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    url: DATABASE_URL,
+    url: DIRECT_URL,
   },
 });

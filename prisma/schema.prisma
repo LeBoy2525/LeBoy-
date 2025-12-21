@@ -4,8 +4,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  // url est maintenant défini dans prisma.config.ts pour Prisma 7.x
+  provider  = "postgresql"
+  url       = env("POSTGRES_PRISMA_URL")      // Connection pooling (recommandé pour runtime)
+  directUrl = env("POSTGRES_URL_NON_POOLING") // Connexion directe (migrations/CLI)
 }
 
 // ============================================

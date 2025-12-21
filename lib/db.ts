@@ -24,12 +24,13 @@ const isBuildTime = typeof process !== "undefined" && (
 let prismaInstance: PrismaClient | undefined;
 
 // Vérifier quelle variable d'environnement est disponible
-// Prisma lit DATABASE_URL depuis schema.prisma, mais on peut aussi avoir PRISMA_DATABASE_URL
-// IMPORTANT: Si PRISMA_DATABASE_URL est définie avec une URL Accelerate, l'utiliser en priorité
-// car Prisma 7.x nécessite soit un adapter, soit accelerateUrl
-// Vérifier PRISMA_DATABASE_URL en premier pour Prisma Accelerate
+// Prisma lit POSTGRES_PRISMA_URL depuis schema.prisma (avec pooling pour runtime)
+// Pour Vercel Postgres, utiliser POSTGRES_PRISMA_URL (pooling) pour le runtime
+// POSTGRES_URL_NON_POOLING est utilisé uniquement pour les migrations (via prisma.config.ts)
+// Fallback vers PRISMA_DATABASE_URL (Accelerate) ou DATABASE_URL pour compatibilité
 const prismaAccelerateUrl = process.env.PRISMA_DATABASE_URL;
-const databaseUrl = prismaAccelerateUrl || process.env.DATABASE_URL || process.env.POSTGRES_URL;
+const postgresPrismaUrl = process.env.POSTGRES_PRISMA_URL;
+const databaseUrl = postgresPrismaUrl || prismaAccelerateUrl || process.env.DATABASE_URL || process.env.POSTGRES_URL;
 
 if (databaseUrl) {
   try {
@@ -40,7 +41,8 @@ if (databaseUrl) {
     if (!isBuildTime && typeof window === "undefined") {
       console.log(`[db] URL de base de données détectée:`);
       console.log(`   Format: ${isPrismaAccelerate ? "Prisma Accelerate" : isPostgres ? "PostgreSQL standard" : "autre"}`);
-      console.log(`   Source: ${process.env.DATABASE_URL ? "DATABASE_URL" : process.env.PRISMA_DATABASE_URL ? "PRISMA_DATABASE_URL" : "POSTGRES_URL"}`);
+      const source = postgresPrismaUrl ? "POSTGRES_PRISMA_URL" : prismaAccelerateUrl ? "PRISMA_DATABASE_URL" : process.env.DATABASE_URL ? "DATABASE_URL" : "POSTGRES_URL";
+      console.log(`   Source: ${source}`);
       console.log(`   URL (masquée): ${databaseUrl.substring(0, 30)}...`);
     }
     
@@ -51,6 +53,7 @@ if (databaseUrl) {
     const hasPrismaAccelerateUrl = prismaAccelerateUrl && prismaAccelerateUrl.startsWith("prisma+");
     
     if (!isBuildTime && typeof window === "undefined") {
+      console.log(`[db] POSTGRES_PRISMA_URL: ${postgresPrismaUrl ? "définie" : "NON DÉFINIE"}`);
       console.log(`[db] PRISMA_DATABASE_URL: ${prismaAccelerateUrl ? "définie" : "NON DÉFINIE"}`);
       if (prismaAccelerateUrl) {
         console.log(`[db] PRISMA_DATABASE_URL commence par "prisma+": ${hasPrismaAccelerateUrl}`);
@@ -60,8 +63,25 @@ if (databaseUrl) {
       console.log(`[db] DATABASE_URL: ${process.env.DATABASE_URL ? "définie" : "NON DÉFINIE"}`);
     }
     
-    // Option 1 : Utiliser Prisma Accelerate si PRISMA_DATABASE_URL est définie avec une URL Accelerate
-    if (hasPrismaAccelerateUrl && prismaAccelerateUrl) {
+    // Option 1 : Utiliser POSTGRES_PRISMA_URL (pooling) si disponible (recommandé pour Vercel Postgres)
+    if (postgresPrismaUrl && isPostgres) {
+      try {
+        if (!isBuildTime && typeof window === "undefined") {
+          console.log(`[db] Tentative avec POSTGRES_PRISMA_URL (pooling)...`);
+        }
+        prismaInstance = new PrismaClient({
+          log: prismaConfig.log,
+        });
+        if (!isBuildTime && typeof window === "undefined") {
+          console.log(`[db] ✅ PrismaClient créé avec POSTGRES_PRISMA_URL (pooling)`);
+        }
+      } catch (poolingError: any) {
+        console.error(`[db] ❌ Erreur avec POSTGRES_PRISMA_URL: ${poolingError?.message}`);
+        throw poolingError;
+      }
+    }
+    // Option 2 : Utiliser Prisma Accelerate si PRISMA_DATABASE_URL est définie avec une URL Accelerate
+    else if (hasPrismaAccelerateUrl && prismaAccelerateUrl) {
       try {
         if (!isBuildTime && typeof window === "undefined") {
           console.log(`[db] Tentative avec Prisma Accelerate...`);
@@ -78,9 +98,9 @@ if (databaseUrl) {
         throw accelerateError;
       }
     } 
-    // Option 2 : Essayer avec config minimale (sans adapter ni accelerateUrl)
+    // Option 3 : Essayer avec config minimale (sans adapter ni accelerateUrl)
     // Cela peut fonctionner si Prisma détecte automatiquement le moteur approprié
-    else if (process.env.DATABASE_URL) {
+    else if (process.env.DATABASE_URL || process.env.POSTGRES_URL) {
       try {
         if (!isBuildTime && typeof window === "undefined") {
           console.log(`[db] Tentative avec config minimale (moteur standard)...`);
@@ -154,10 +174,13 @@ if (databaseUrl) {
   }
 }
 
+// Singleton PrismaClient pour éviter les multi-connexions en serverless
+// En production, toujours utiliser le singleton global pour éviter les connexions multiples
 export const prisma =
   globalForPrisma.prisma ?? prismaInstance;
 
-if (process.env.NODE_ENV !== "production" && prismaInstance) {
+// Toujours stocker dans globalThis pour éviter les multi-connexions en serverless
+if (prismaInstance) {
   globalForPrisma.prisma = prismaInstance;
 }
 

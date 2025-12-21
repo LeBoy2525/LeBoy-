@@ -28,7 +28,7 @@
     "diagnose:user": "tsx scripts/diagnose-user-issue.ts",
     "diagnose:prestataires": "tsx scripts/diagnose-prestataire-ids.ts",
     "postinstall": "echo 'skip prisma generate on install'",
-    "vercel-build": "prisma generate --schema=./prisma/schema.prisma && prisma migrate deploy --schema=./prisma/schema.prisma && next build",
+    "vercel-build": "prisma generate && prisma migrate deploy && next build",
     "postbuild": "prisma generate"
   },
   "dependencies": {
