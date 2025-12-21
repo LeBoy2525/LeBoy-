@@ -19,10 +19,11 @@ export async function getAllMissions() {
 export async function getMissionById(id: string) {
   return prisma.mission.findUnique({
     where: { id },
-    include: {
-      demande: true,
-      prestataire: true,
-    },
+    // Temporairement retirer les includes pour éviter l'erreur de colonne manquante
+    // include: {
+    //   demande: true,
+    //   prestataire: true,
+    // },
   });
 }
 
@@ -35,10 +36,11 @@ export async function getMissionsByClient(email: string) {
     orderBy: {
       createdAt: "desc",
     },
-    include: {
-      demande: true,
-      prestataire: true,
-    },
+    // Temporairement retirer les includes pour éviter l'erreur de colonne manquante
+    // include: {
+    //   demande: true,
+    //   prestataire: true,
+    // },
   });
 }
 
@@ -51,10 +53,11 @@ export async function getMissionsByPrestataire(prestataireId: string) {
     orderBy: {
       createdAt: "desc",
     },
-    include: {
-      demande: true,
-      prestataire: true,
-    },
+    // Temporairement retirer les includes pour éviter l'erreur de colonne manquante
+    // include: {
+    //   demande: true,
+    //   prestataire: true,
+    // },
   });
 }
 
@@ -67,10 +70,11 @@ export async function getMissionsByDemandeId(demandeId: string) {
     orderBy: {
       createdAt: "desc",
     },
-    include: {
-      demande: true,
-      prestataire: true,
-    },
+    // Temporairement retirer les includes pour éviter l'erreur de colonne manquante
+    // include: {
+    //   demande: true,
+    //   prestataire: true,
+    // },
   });
 }
 
