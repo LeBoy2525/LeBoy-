@@ -34,7 +34,17 @@ export async function GET() {
 
     console.log(`[API] Récupération demandes pour ${email}: ${demandes.length} demande(s) trouvée(s)`);
 
-    return NextResponse.json({ demandes }, { status: 200 });
+    return NextResponse.json(
+      { demandes }, 
+      { 
+        status: 200,
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+          "Pragma": "no-cache",
+          "Expires": "0",
+        },
+      }
+    );
   } catch (error) {
     console.error("ERREUR /api/espace-client/demandes (GET) :", error);
     return NextResponse.json(

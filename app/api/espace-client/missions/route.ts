@@ -68,7 +68,17 @@ export async function GET() {
       // Le client ne doit voir sa mission qu'une fois que l'admin a sélectionné le prestataire gagnant
     }
 
-    return NextResponse.json({ missions: filteredMissions }, { status: 200 });
+    return NextResponse.json(
+      { missions: filteredMissions }, 
+      { 
+        status: 200,
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+          "Pragma": "no-cache",
+          "Expires": "0",
+        },
+      }
+    );
   } catch (error) {
     console.error("Erreur /api/espace-client/missions:", error);
     return NextResponse.json(

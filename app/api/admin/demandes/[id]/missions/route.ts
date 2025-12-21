@@ -51,7 +51,17 @@ export async function GET(_req: Request, { params }: RouteParams) {
       console.log(`[API MISSIONS] Prestataires: ${missionsLinked.map(m => m.prestataireId).join(", ")}`);
     }
 
-    return NextResponse.json({ missions: missionsLinked }, { status: 200 });
+    return NextResponse.json(
+      { missions: missionsLinked }, 
+      { 
+        status: 200,
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+          "Pragma": "no-cache",
+          "Expires": "0",
+        },
+      }
+    );
   } catch (error) {
     console.error("Erreur /api/admin/demandes/[id]/missions:", error);
     return NextResponse.json(
