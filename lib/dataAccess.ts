@@ -1626,49 +1626,63 @@ export async function updateMissionInternalState(
       
       if (!result) return null;
 
-      // Sauvegarder dans Prisma
-      const { updateMission: updateMissionDB, getAllMissions: getAllMissionsDB } = await import("@/repositories/missionsRepo");
-      const allMissions = await getAllMissionsDB() as any[];
-      const missionDB = allMissions.find((m: any) => {
-        let idNumber: number;
-        if (typeof m.id === "string" && m.id.includes("-")) {
-          const hash = m.id.split("").reduce((acc: number, char: string) => {
-            return ((acc << 5) - acc) + char.charCodeAt(0);
-          }, 0);
-          idNumber = Math.abs(hash) % 1000000;
-        } else {
-          idNumber = parseInt(String(m.id)) || 0;
+      // Sauvegarder dans Prisma - utiliser getMissionById au lieu de getAllMissions pour éviter l'erreur
+      try {
+        const { updateMission: updateMissionDB } = await import("@/repositories/missionsRepo");
+        const { getMissionById: getMissionByIdDB } = await import("@/repositories/missionsRepo");
+        
+        // Trouver la mission par son UUID en cherchant toutes les missions avec demandeId
+        // Utiliser getMissionsByDemandeId qui est plus spécifique
+        const { getMissionsByDemandeId: getMissionsByDemandeIdDB } = await import("@/repositories/missionsRepo");
+        const mission = await getMissionById(id);
+        if (!mission) return result;
+        
+        // Trouver la mission dans Prisma en utilisant demandeId et prestataireId
+        const missionsForDemande = await getMissionsByDemandeIdDB(String(mission.demandeId)) as any[];
+        const missionDB = missionsForDemande.find((m: any) => {
+          let idNumber: number;
+          if (typeof m.id === "string" && m.id.includes("-")) {
+            const hash = m.id.split("").reduce((acc: number, char: string) => {
+              return ((acc << 5) - acc) + char.charCodeAt(0);
+            }, 0);
+            idNumber = Math.abs(hash) % 1000000;
+          } else {
+            idNumber = parseInt(String(m.id)) || 0;
+          }
+          return idNumber === id;
+        });
+
+        if (missionDB) {
+          // Convertir la mission mise à jour vers le format Prisma
+          const updateData: any = {
+            internalState: result.internalState,
+            status: result.status,
+            currentProgress: result.currentProgress,
+            updates: result.updates ? JSON.parse(JSON.stringify(result.updates)) : [],
+            progress: result.progress ? JSON.parse(JSON.stringify(result.progress)) : [],
+            dateAssignation: result.dateAssignation ? new Date(result.dateAssignation) : null,
+            dateAcceptation: result.dateAcceptation ? new Date(result.dateAcceptation) : null,
+            datePriseEnCharge: result.datePriseEnCharge ? new Date(result.datePriseEnCharge) : null,
+            dateDebut: result.dateDebut ? new Date(result.dateDebut) : null,
+            dateFin: result.dateFin ? new Date(result.dateFin) : null,
+            paiementEffectue: result.paiementEffectue,
+            paiementEffectueAt: result.paiementEffectueAt ? new Date(result.paiementEffectueAt) : null,
+            avanceVersee: result.avanceVersee,
+            avanceVerseeAt: result.avanceVerseeAt ? new Date(result.avanceVerseeAt) : null,
+            soldeVersee: result.soldeVersee,
+            soldeVerseeAt: result.soldeVerseeAt ? new Date(result.soldeVerseeAt) : null,
+            proofSubmissionDate: result.proofSubmissionDate ? new Date(result.proofSubmissionDate) : null,
+            proofValidatedByAdmin: result.proofValidatedByAdmin,
+            proofValidatedAt: result.proofValidatedAt ? new Date(result.proofValidatedAt) : null,
+            proofValidatedForClient: result.proofValidatedForClient,
+            proofValidatedForClientAt: result.proofValidatedForClientAt ? new Date(result.proofValidatedForClientAt) : null,
+          };
+
+          await updateMissionDB(missionDB.id, updateData);
         }
-        return idNumber === id;
-      });
-
-      if (missionDB) {
-        // Convertir la mission mise à jour vers le format Prisma
-        const updateData: any = {
-          internalState: result.internalState,
-          status: result.status,
-          currentProgress: result.currentProgress,
-          updates: result.updates || [],
-          progress: result.progress || [],
-          dateAssignation: result.dateAssignation ? new Date(result.dateAssignation) : null,
-          dateAcceptation: result.dateAcceptation ? new Date(result.dateAcceptation) : null,
-          datePriseEnCharge: result.datePriseEnCharge ? new Date(result.datePriseEnCharge) : null,
-          dateDebut: result.dateDebut ? new Date(result.dateDebut) : null,
-          dateFin: result.dateFin ? new Date(result.dateFin) : null,
-          paiementEffectue: result.paiementEffectue,
-          paiementEffectueAt: result.paiementEffectueAt ? new Date(result.paiementEffectueAt) : null,
-          avanceVersee: result.avanceVersee,
-          avanceVerseeAt: result.avanceVerseeAt ? new Date(result.avanceVerseeAt) : null,
-          soldeVersee: result.soldeVersee,
-          soldeVerseeAt: result.soldeVerseeAt ? new Date(result.soldeVerseeAt) : null,
-          proofSubmissionDate: result.proofSubmissionDate ? new Date(result.proofSubmissionDate) : null,
-          proofValidatedByAdmin: result.proofValidatedByAdmin,
-          proofValidatedAt: result.proofValidatedAt ? new Date(result.proofValidatedAt) : null,
-          proofValidatedForClient: result.proofValidatedForClient,
-          proofValidatedForClientAt: result.proofValidatedForClientAt ? new Date(result.proofValidatedForClientAt) : null,
-        };
-
-        await updateMissionDB(missionDB.id, updateData);
+      } catch (prismaError) {
+        // Si la mise à jour Prisma échoue, continuer avec le résultat JSON
+        console.error("Erreur mise à jour Prisma dans updateMissionInternalState:", prismaError);
       }
 
       return result;
@@ -1691,38 +1705,47 @@ export async function addMissionUpdate(
 ): Promise<MissionUpdate | null> {
   if (USE_DB) {
     try {
-      const { updateMission: updateMissionDB, getAllMissions: getAllMissionsDB } = await import("@/repositories/missionsRepo");
+      const { updateMission: updateMissionDB } = await import("@/repositories/missionsRepo");
+      const mission = await getMissionById(missionId);
       
-      // Trouver la mission
-      const allMissions = await getAllMissionsDB() as any[];
-      const missionDB = allMissions.find((m: any) => {
-        let idNumber: number;
-        if (typeof m.id === "string" && m.id.includes("-")) {
-          const hash = m.id.split("").reduce((acc: number, char: string) => {
-            return ((acc << 5) - acc) + char.charCodeAt(0);
-          }, 0);
-          idNumber = Math.abs(hash) % 1000000;
-        } else {
-          idNumber = parseInt(String(m.id)) || 0;
+      if (!mission) return null;
+
+      // Utiliser la logique JSON pour ajouter la mise à jour
+      const result = await addMissionUpdateJSON(missionId, update);
+      
+      if (!result) return null;
+
+      // Trouver la mission dans Prisma en utilisant demandeId
+      try {
+        const { getMissionsByDemandeId: getMissionsByDemandeIdDB } = await import("@/repositories/missionsRepo");
+        const missionsForDemande = await getMissionsByDemandeIdDB(String(mission.demandeId)) as any[];
+        const missionDB = missionsForDemande.find((m: any) => {
+          let idNumber: number;
+          if (typeof m.id === "string" && m.id.includes("-")) {
+            const hash = m.id.split("").reduce((acc: number, char: string) => {
+              return ((acc << 5) - acc) + char.charCodeAt(0);
+            }, 0);
+            idNumber = Math.abs(hash) % 1000000;
+          } else {
+            idNumber = parseInt(String(m.id)) || 0;
+          }
+          return idNumber === missionId;
+        });
+
+        if (missionDB) {
+          const updatedMission = await getMissionById(missionId);
+          if (updatedMission) {
+            await updateMissionDB(missionDB.id, { 
+              updates: updatedMission.updates ? JSON.parse(JSON.stringify(updatedMission.updates)) : []
+            } as any);
+          }
         }
-        return idNumber === missionId;
-      });
+      } catch (prismaError) {
+        console.error("Erreur mise à jour Prisma dans addMissionUpdate:", prismaError);
+        // Continuer avec le résultat JSON même si Prisma échoue
+      }
 
-      if (!missionDB) return null;
-
-      const updates = missionDB.updates || [];
-      const now = new Date().toISOString();
-      const newUpdate = {
-        id: updates.length + 1,
-        missionId,
-        ...update,
-        createdAt: now,
-      };
-      updates.push(newUpdate);
-
-      await updateMissionDB(missionDB.id, { updates } as any);
-
-      return newUpdate;
+      return result;
     } catch (error) {
       console.error("Erreur addMissionUpdate (DB):", error);
       return addMissionUpdateJSON(missionId, update);
