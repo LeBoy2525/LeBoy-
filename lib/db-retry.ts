@@ -3,7 +3,8 @@
  * Utile pour les environnements serverless où les connexions peuvent être instables
  */
 
-import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
+import "server-only";
+import { Prisma } from "@prisma/client";
 import { logPrismaError } from "./prisma-error-logger";
 
 export interface RetryOptions {
@@ -56,7 +57,7 @@ export async function withRetry<T>(
       lastError = error;
 
       // Si c'est une erreur Prisma (P2022, P2002, etc.), logger avec détails complets
-      if (error instanceof PrismaClientKnownRequestError) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
         logPrismaError("db-retry", error, {
           attempt: attempt + 1,
           maxRetries: opts.maxRetries + 1,

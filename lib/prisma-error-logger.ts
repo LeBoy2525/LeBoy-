@@ -3,7 +3,8 @@
  * Particulièrement utile pour identifier les colonnes manquantes (P2022)
  */
 
-import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
+import "server-only";
+import { Prisma } from "@prisma/client";
 
 export interface PrismaErrorDetails {
   code?: string;
@@ -21,7 +22,7 @@ export function extractPrismaErrorDetails(error: any): PrismaErrorDetails {
     message: error?.message || String(error || ""),
   };
 
-  if (error instanceof PrismaClientKnownRequestError) {
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
     details.code = error.code;
     details.meta = error.meta;
 
