@@ -1715,7 +1715,40 @@ export async function createMission(
         deleted: data.deleted || false,
         deletedAt: undefToNull(data.deletedAt),
         deletedBy: undefToNull(data.deletedBy),
-      } as any);
+      } as any});
+          
+          // Succès, sortir de la boucle
+          break;
+        } catch (error: any) {
+          createAttempts++;
+          
+          // Si c'est une erreur P2002 (contrainte unique), générer une nouvelle ref et retryer
+          if (error?.code === 'P2002' && createAttempts < 5) {
+            console.warn(`[createMission] ⚠️ Contrainte unique sur ${currentRef} lors de la création, génération nouvelle ref...`);
+            // Générer une nouvelle référence en incrémentant
+            const refMatch = currentRef.match(/^M-(\d{4})-(\d+)$/);
+            if (refMatch) {
+              const refYear = parseInt(refMatch[1]);
+              const refNum = parseInt(refMatch[2]);
+              currentRef = `M-${refYear}-${String(refNum + 1).padStart(3, "0")}`;
+              console.log(`[createMission] 🔄 Nouvelle ref générée: ${currentRef}`);
+            } else {
+              // Fallback: utiliser timestamp
+              currentRef = `M-${year}-${String(Date.now() % 1000).padStart(3, "0")}`;
+            }
+            // Attendre un peu avant de retryer
+            await new Promise(resolve => setTimeout(resolve, 100 * createAttempts));
+            continue;
+          }
+          
+          // Autre erreur ou trop de tentatives, propager l'erreur
+          throw error;
+        }
+      }
+      
+      if (!mission) {
+        throw new Error(`Impossible de créer la mission après ${createAttempts} tentatives`);
+      }
 
       return convertPrismaMissionToJSON(mission);
     } catch (error) {

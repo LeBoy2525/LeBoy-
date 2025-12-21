@@ -155,6 +155,48 @@ export async function POST(req: Request) {
     
     // Attendre un peu pour s'assurer que la DB est à jour (pour Prisma)
     await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // Envoyer les emails avec délai pour éviter rate limit Resend (2 req/s max)
+    // Espacer les envois de 500ms entre chaque email
+    for (let i = 0; i < missionsCreees.length; i++) {
+      const mission = missionsCreees[i];
+      const prestataireIdNum = prestataireIds[i];
+      
+      // Trouver le prestataire correspondant
+      const prestataire = await getPrestataireById(prestataireIdNum);
+      if (!prestataire) continue;
+      
+      // Attendre 500ms * index pour espacer les envois (2 par seconde max)
+      if (i > 0) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+      
+      // Envoyer l'email (en arrière-plan, ne pas bloquer)
+      (async () => {
+        try {
+          const { sendNotificationEmail } = await import("@/lib/emailService");
+          const protocol = process.env.NEXT_PUBLIC_APP_URL?.startsWith("https") ? "https" : "http";
+          const platformUrl = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://localhost:3000`;
+          
+          await sendNotificationEmail(
+            "mission-assigned",
+            { email: prestataire.email, name: prestataire.nomEntreprise || prestataire.nomContact },
+            {
+              missionRef: mission.ref,
+              serviceType: mission.serviceType,
+              lieu: mission.lieu || "Non spécifié",
+              platformUrl,
+              missionId: mission.id,
+              dateLimite: dateLimiteProposition.toISOString(),
+            },
+            "fr"
+          );
+        } catch (error) {
+          console.error(`Erreur envoi email notification prestataire ${prestataireIdNum}:`, error);
+          // Ne pas bloquer la création de la mission si l'email échoue
+        }
+      })();
+    }
 
     if (missionsCreees.length === 0) {
       return NextResponse.json(
