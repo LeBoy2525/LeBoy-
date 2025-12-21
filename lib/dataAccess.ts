@@ -1585,6 +1585,7 @@ export async function createMission(
       }
       
       // Générer et vérifier la référence avec retry
+      // IMPORTANT: Gérer les erreurs P2002 (contrainte unique) en retryant avec une nouvelle ref
       do {
         ref = `M-${year}-${String(nextId).padStart(3, "0")}`;
         
@@ -1598,14 +1599,25 @@ export async function createMission(
           if (!existing) {
             break; // Référence disponible
           }
-        } catch (error) {
-          // Si erreur (ex: limite Accelerate), essayer quand même avec retry
-          console.warn(`[createMission] ⚠️ Erreur lors de la vérification de ref ${ref}, continuation:`, error);
+          
+          // Référence existe, essayer la suivante
+          console.log(`[createMission] ⚠️ Référence ${ref} existe déjà, essai suivant...`);
+          nextId++;
+          attempts++;
+        } catch (error: any) {
+          // Si erreur P2002 (contrainte unique), c'est une condition de course
+          // Essayer la référence suivante
+          if (error?.code === 'P2002') {
+            console.warn(`[createMission] ⚠️ Contrainte unique sur ${ref} (race condition), essai suivant...`);
+            nextId++;
+            attempts++;
+          } else {
+            // Autre erreur (ex: limite Accelerate), essayer quand même avec retry
+            console.warn(`[createMission] ⚠️ Erreur lors de la vérification de ref ${ref}, continuation:`, error);
+            nextId++;
+            attempts++;
+          }
         }
-        
-        // Référence existe ou erreur, essayer la suivante
-        nextId++;
-        attempts++;
         
         if (attempts > 50) {
           throw new Error(`Impossible de générer une référence unique après ${attempts} tentatives`);
@@ -1626,8 +1638,16 @@ export async function createMission(
       
       console.log(`[createMission] 📝 Création mission avec demandeId UUID: ${demandeDB.id}, prestataireId UUID: ${prestataireIdUUID || "null"}`);
       
-      const mission = await createMissionDB({
-        ref,
+      // Créer la mission avec retry en cas d'erreur P2002 (contrainte unique)
+      // Même si on a vérifié la ref, il peut y avoir une condition de course
+      let mission;
+      let createAttempts = 0;
+      let currentRef = ref;
+      
+      while (createAttempts < 5) {
+        try {
+          mission = await createMissionDB({
+        ref: currentRef,
         createdAt,
         demandeId: demandeDB.id as any, // Utiliser l'UUID de la demande (cast pour compatibilité type Mission)
         clientEmail: data.clientEmail,
