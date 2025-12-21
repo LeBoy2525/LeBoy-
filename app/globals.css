@@ -177,6 +177,22 @@ h3 {
   }
 }
 
+/* Animation pour la notification de mise à jour */
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out forwards;
+}
+
 /* === Section layout (uniformise toute la page) === */
 .section {
   padding: clamp(56px, 6vw, 92px) 0;

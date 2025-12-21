@@ -10,6 +10,7 @@ import LanguageSwitch from "./components/LanguageSwitch";
 import HeaderSearch from "./components/HeaderSearch";
 import HeaderLogo from "./components/HeaderLogo";
 import ErrorBoundary from "./components/ErrorBoundary";
+import { VersionChecker } from "./components/VersionChecker";
 
 // Vérifier si on est en staging (côté serveur uniquement)
 const APP_ENV = process.env.APP_ENV || "local";
@@ -167,6 +168,9 @@ export default function RootLayout({
               </div>
             </footer>
           </div>
+          
+          {/* Notification de mise à jour */}
+          <VersionChecker />
         </LanguageProvider>
       </body>
     </html>
