@@ -1471,9 +1471,9 @@ export default function AdminDemandeDetailPage() {
                         </div>
                       );
                     })}
-                  </div>
-                </div>
-              )}
+                    </div>
+                  )}
+              </div>
 
               {/* Section de sélection des fichiers */}
               {demandeFiles.length > 0 && (
