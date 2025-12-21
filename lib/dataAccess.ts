@@ -1542,61 +1542,12 @@ export async function createMission(
         console.log(`[createMission] ℹ️ Aucun prestataireId fourni dans les données`);
       }
       
-      // Générer ref et createdAt comme le fait createMission JSON
-      // IMPORTANT: Utiliser une approche compatible avec Prisma Accelerate
-      // Éviter queryRaw qui peut dépasser les limites de ressources
-      const year = new Date().getFullYear();
-      
+      // IMPORTANT: Utiliser la génération atomique de ref via compteur DB
+      // Plus besoin de retry loop ni de recherche de max ref - la génération est atomique
       const { prisma } = await import("@/lib/db");
       if (!prisma) {
         throw new Error("Prisma n'est pas disponible");
       }
-      
-      // Générer la référence avec retry en cas de collision
-      // On commence par un numéro élevé pour éviter les collisions
-      let attempts = 0;
-      let ref: string;
-      let nextId = 1;
-      
-      // Essayer de trouver le numéro le plus élevé en cherchant les dernières références
-      // Limiter à 100 pour éviter de surcharger Accelerate
-      try {
-        const recentMissions = await prisma.mission.findMany({
-          where: {
-            ref: {
-              startsWith: `M-${year}-`,
-            },
-          },
-          select: {
-            ref: true,
-          },
-          orderBy: {
-            createdAt: "desc",
-          },
-          take: 100, // Limiter pour éviter de surcharger
-        });
-        
-        // Trouver le numéro le plus élevé
-        const refPattern = new RegExp(`^M-${year}-(\\d+)$`);
-        let maxRefNumber = 0;
-        for (const mission of recentMissions) {
-          const match = mission.ref?.match(refPattern);
-          if (match) {
-            const refNum = parseInt(match[1], 10);
-            if (refNum > maxRefNumber) {
-              maxRefNumber = refNum;
-            }
-          }
-        }
-        nextId = maxRefNumber + 1;
-      } catch (error) {
-        console.warn(`[createMission] ⚠️ Impossible de récupérer les refs existantes, utilisation de retry uniquement:`, error);
-        // En cas d'erreur, on utilisera le retry pour trouver une ref disponible
-      }
-      
-      // Générer la référence initiale
-      // IMPORTANT: Ne pas vérifier avec findUnique avant création car cela peut causer des conditions de course
-      // On laisse le retry dans createMissionDB gérer les erreurs P2002
       ref = `M-${year}-${String(nextId).padStart(3, "0")}`;
       
       const createdAt = new Date().toISOString();
