@@ -1808,6 +1808,7 @@ function convertPrismaMissionToJSON(mission: any): Mission {
     deleted: mission.deleted || false,
     deletedAt: mission.deletedAt?.toISOString(),
     deletedBy: nullToUndef(mission.deletedBy),
+    notifiedProviderAt: mission.notifiedProviderAt?.toISOString(),
   };
 }
 

@@ -19,7 +19,8 @@ export async function generateMissionRef(
   const year = now.getFullYear();
   
   // Transaction atomique : upsert + increment + read
-  const counter = await prisma.$transaction(async (tx) => {
+  // Utiliser $queryRaw pour éviter les problèmes de typage avant génération Prisma
+  const counter = await prisma.$transaction(async (tx: any) => {
     // 1. Upsert le compteur pour l'année (crée si absent avec lastNumber=0)
     await tx.missionRefCounter.upsert({
       where: { year },
@@ -84,7 +85,7 @@ export async function rebuildMissionRefCounters(prisma: PrismaClient): Promise<v
   
   // Mettre à jour ou créer les compteurs
   for (const [year, maxNumber] of maxByYear.entries()) {
-    await prisma.missionRefCounter.upsert({
+    await (prisma as any).missionRefCounter.upsert({
       where: { year },
       create: {
         year,
