@@ -1594,45 +1594,10 @@ export async function createMission(
         // En cas d'erreur, on utilisera le retry pour trouver une ref disponible
       }
       
-      // Générer et vérifier la référence avec retry
-      // IMPORTANT: Gérer les erreurs P2002 (contrainte unique) en retryant avec une nouvelle ref
-      do {
-        ref = `M-${year}-${String(nextId).padStart(3, "0")}`;
-        
-        // Vérifier si cette référence existe déjà
-        try {
-          const existing = await prisma.mission.findUnique({
-            where: { ref },
-            select: { id: true },
-          });
-          
-          if (!existing) {
-            break; // Référence disponible
-          }
-          
-          // Référence existe, essayer la suivante
-          console.log(`[createMission] ⚠️ Référence ${ref} existe déjà, essai suivant...`);
-          nextId++;
-          attempts++;
-        } catch (error: any) {
-          // Si erreur P2002 (contrainte unique), c'est une condition de course
-          // Essayer la référence suivante
-          if (error?.code === 'P2002') {
-            console.warn(`[createMission] ⚠️ Contrainte unique sur ${ref} (race condition), essai suivant...`);
-            nextId++;
-            attempts++;
-          } else {
-            // Autre erreur (ex: limite Accelerate), essayer quand même avec retry
-            console.warn(`[createMission] ⚠️ Erreur lors de la vérification de ref ${ref}, continuation:`, error);
-            nextId++;
-            attempts++;
-          }
-        }
-        
-        if (attempts > 50) {
-          throw new Error(`Impossible de générer une référence unique après ${attempts} tentatives`);
-        }
-      } while (true);
+      // Générer la référence initiale
+      // IMPORTANT: Ne pas vérifier avec findUnique avant création car cela peut causer des conditions de course
+      // On laisse le retry dans createMissionDB gérer les erreurs P2002
+      ref = `M-${year}-${String(nextId).padStart(3, "0")}`;
       
       const createdAt = new Date().toISOString();
       
@@ -1653,8 +1618,9 @@ export async function createMission(
       let mission;
       let createAttempts = 0;
       let currentRef = ref;
+      const maxAttempts = 10; // Augmenter le nombre de tentatives pour gérer les conditions de course
       
-      while (createAttempts < 5) {
+      while (createAttempts < maxAttempts) {
         try {
           mission = await createMissionDB({
                 ref: currentRef,
@@ -1733,25 +1699,32 @@ export async function createMission(
           createAttempts++;
           
           // Si c'est une erreur P2002 (contrainte unique), générer une nouvelle ref et retryer
-          if (error?.code === 'P2002' && createAttempts < 5) {
-            console.warn(`[createMission] ⚠️ Contrainte unique sur ${currentRef} lors de la création, génération nouvelle ref...`);
+          if (error?.code === 'P2002' && createAttempts < maxAttempts) {
+            console.warn(`[createMission] ⚠️ Contrainte unique sur ${currentRef} lors de la création (tentative ${createAttempts}/${maxAttempts}), génération nouvelle ref...`);
             // Générer une nouvelle référence en incrémentant
             const refMatch = currentRef.match(/^M-(\d{4})-(\d+)$/);
             if (refMatch) {
               const refYear = parseInt(refMatch[1]);
               const refNum = parseInt(refMatch[2]);
-              currentRef = `M-${refYear}-${String(refNum + 1).padStart(3, "0")}`;
+              // Incrémenter et utiliser un offset basé sur le nombre de tentatives pour éviter les collisions
+              const newRefNum = refNum + createAttempts;
+              currentRef = `M-${refYear}-${String(newRefNum).padStart(3, "0")}`;
               console.log(`[createMission] 🔄 Nouvelle ref générée: ${currentRef}`);
             } else {
-              // Fallback: utiliser timestamp
-              currentRef = `M-${year}-${String(Date.now() % 1000).padStart(3, "0")}`;
+              // Fallback: utiliser timestamp + tentative
+              const timestamp = Date.now() % 10000; // 4 derniers chiffres
+              currentRef = `M-${year}-${String(timestamp + createAttempts).padStart(3, "0")}`;
             }
-            // Attendre un peu avant de retryer
+            // Attendre un peu avant de retryer pour laisser le temps à la DB de se synchroniser
+            // Délai progressif : 100ms, 200ms, 300ms, etc.
             await new Promise(resolve => setTimeout(resolve, 100 * createAttempts));
             continue;
           }
           
           // Autre erreur ou trop de tentatives, propager l'erreur
+          if (createAttempts >= maxAttempts) {
+            console.error(`[createMission] ❌ Impossible de créer la mission après ${maxAttempts} tentatives`);
+          }
           throw error;
         }
       }

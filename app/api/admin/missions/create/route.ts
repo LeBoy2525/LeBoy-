@@ -130,15 +130,19 @@ export async function POST(req: Request) {
     // Attendre un peu pour s'assurer que la DB est à jour (pour Prisma)
     await new Promise(resolve => setTimeout(resolve, 100));
     
-    // Envoyer les emails avec délai pour éviter rate limit Resend (2 req/s max)
-    // Espacer les envois de 600ms entre chaque email (plus sûr que 500ms)
+    // Envoyer les emails avec délai pour éviter rate limit Resend (2 req/s max = 1 req toutes les 500ms)
+    // Espacer les envois de 600ms entre chaque email pour être sûr de respecter la limite
     // Envoyer les emails séquentiellement avec délai
     for (let i = 0; i < missionsCreees.length; i++) {
       const { mission, prestataireId } = missionsCreees[i];
       
-      // Attendre 600ms avant chaque envoi (sauf le premier) pour respecter la limite de 2 req/s
+      // Attendre 600ms avant chaque envoi (y compris le premier pour éviter le rate limit)
+      // Cela garantit qu'on ne dépasse jamais 2 req/s
       if (i > 0) {
         await new Promise(resolve => setTimeout(resolve, 600));
+      } else {
+        // Pour le premier email, attendre quand même 100ms pour éviter le rate limit
+        await new Promise(resolve => setTimeout(resolve, 100));
       }
       
       try {
