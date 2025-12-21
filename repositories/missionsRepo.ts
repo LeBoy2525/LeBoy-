@@ -1,8 +1,17 @@
 import { prisma } from "@/lib/db";
 import type { Mission } from "@/lib/types";
 
+// Helper pour vérifier que Prisma est disponible
+function ensurePrisma() {
+  if (!prisma) {
+    throw new Error("Prisma n'est pas initialisé. Vérifiez les variables d'environnement DATABASE_URL ou PRISMA_DATABASE_URL.");
+  }
+  return prisma;
+}
+
 export async function getAllMissions() {
-  return prisma.mission.findMany({
+  const db = ensurePrisma();
+  return db.mission.findMany({
     where: {
       deleted: false,
     },
@@ -18,7 +27,8 @@ export async function getAllMissions() {
 }
 
 export async function getMissionById(id: string) {
-  return prisma.mission.findUnique({
+  const db = ensurePrisma();
+  return db.mission.findUnique({
     where: { id },
     // Temporairement retirer les includes pour éviter l'erreur de colonne manquante
     // include: {
@@ -29,7 +39,8 @@ export async function getMissionById(id: string) {
 }
 
 export async function getMissionsByClient(email: string) {
-  return prisma.mission.findMany({
+  const db = ensurePrisma();
+  return db.mission.findMany({
     where: {
       clientEmail: email.toLowerCase(),
       deleted: false,
@@ -47,7 +58,8 @@ export async function getMissionsByClient(email: string) {
 
 export async function getMissionsByPrestataire(prestataireId: string) {
   console.log(`[missionsRepo] getMissionsByPrestataire appelé avec UUID: ${prestataireId}`);
-  const missions = await prisma.mission.findMany({
+  const db = ensurePrisma();
+  const missions = await db.mission.findMany({
     where: {
       prestataireId,
       deleted: false,
@@ -66,7 +78,8 @@ export async function getMissionsByPrestataire(prestataireId: string) {
 }
 
 export async function getMissionsByDemandeId(demandeId: string) {
-  return prisma.mission.findMany({
+  const db = ensurePrisma();
+  return db.mission.findMany({
     where: {
       demandeId,
       deleted: false,
@@ -92,7 +105,8 @@ export async function createMission(data: Omit<Mission, "id">) {
   
   console.log(`[missionsRepo] createMission appelé avec demandeId: ${demandeIdStr}, prestataireId: ${prestataireIdStr}`);
   
-  return prisma.mission.create({
+  const db = ensurePrisma();
+  return db.mission.create({
     data: {
       ref: data.ref,
       demandeId: demandeIdStr,
@@ -192,14 +206,16 @@ export async function updateMission(id: string, data: Partial<Mission>) {
   if (data.phases !== undefined) updateData.phases = data.phases ? JSON.parse(JSON.stringify(data.phases)) : null;
   if (data.proofs !== undefined) updateData.proofs = data.proofs ? JSON.parse(JSON.stringify(data.proofs)) : null;
   
-  return prisma.mission.update({
+  const db = ensurePrisma();
+  return db.mission.update({
     where: { id },
     data: updateData,
   });
 }
 
 export async function archiveMission(id: string, archivedBy: string) {
-  return prisma.mission.update({
+  const db = ensurePrisma();
+  return db.mission.update({
     where: { id },
     data: {
       archived: true,
@@ -210,7 +226,8 @@ export async function archiveMission(id: string, archivedBy: string) {
 }
 
 export async function deleteMission(id: string, deletedBy: string) {
-  return prisma.mission.update({
+  const db = ensurePrisma();
+  return db.mission.update({
     where: { id },
     data: {
       deleted: true,
