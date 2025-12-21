@@ -115,41 +115,46 @@ export async function POST(req: Request) {
         }
 
         // Set initial internal state: ASSIGNED_TO_PROVIDER (mandat assigné, en attente d'estimation)
-        updateMissionInternalState(mission.id, "ASSIGNED_TO_PROVIDER", userEmail || "admin@icd.ca");
+        await updateMissionInternalState(mission.id, "ASSIGNED_TO_PROVIDER", userEmail || "admin@icd.ca");
         
         missionsCreees.push(mission);
 
-        // Envoyer notification email au prestataire
-        try {
-          const { sendNotificationEmail } = await import("@/lib/emailService");
-          const protocol = process.env.NEXT_PUBLIC_APP_URL?.startsWith("https") ? "https" : "http";
-          const platformUrl = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://localhost:3000`;
-          
-          await sendNotificationEmail(
-            "mission-assigned",
-            { email: prestataire.email, name: prestataire.nomEntreprise || prestataire.nomContact },
-            {
-              missionRef: mission.ref,
-              serviceType: mission.serviceType,
-              lieu: mission.lieu || "Non spécifié",
-              platformUrl,
-              missionId: mission.id,
-              dateLimite: dateLimiteProposition.toISOString(),
-            },
-            "fr"
-          );
-        } catch (error) {
-          console.error(`Erreur envoi email notification prestataire ${prestataireIdNum}:`, error);
-          // Ne pas bloquer la création de la mission si l'email échoue
-        }
+        // Envoyer notification email au prestataire (en arrière-plan, ne pas bloquer)
+        (async () => {
+          try {
+            const { sendNotificationEmail } = await import("@/lib/emailService");
+            const protocol = process.env.NEXT_PUBLIC_APP_URL?.startsWith("https") ? "https" : "http";
+            const platformUrl = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://localhost:3000`;
+            
+            await sendNotificationEmail(
+              "mission-assigned",
+              { email: prestataire.email, name: prestataire.nomEntreprise || prestataire.nomContact },
+              {
+                missionRef: mission.ref,
+                serviceType: mission.serviceType,
+                lieu: mission.lieu || "Non spécifié",
+                platformUrl,
+                missionId: mission.id,
+                dateLimite: dateLimiteProposition.toISOString(),
+              },
+              "fr"
+            );
+          } catch (error) {
+            console.error(`Erreur envoi email notification prestataire ${prestataireIdNum}:`, error);
+            // Ne pas bloquer la création de la mission si l'email échoue
+          }
+        })();
       } catch (error) {
         console.error(`Erreur création mission pour prestataire ${prestataireIdNum}:`, error);
         errors.push(`Erreur lors de la création de la mission pour le prestataire ID ${prestataireIdNum}.`);
       }
     }
 
-    // Sauvegarder les modifications
-    saveMissions();
+    // Sauvegarder les modifications et attendre la sauvegarde
+    await saveMissions();
+    
+    // Attendre un peu pour s'assurer que la DB est à jour (pour Prisma)
+    await new Promise(resolve => setTimeout(resolve, 100));
 
     if (missionsCreees.length === 0) {
       return NextResponse.json(

@@ -117,20 +117,33 @@ export default function AdminDemandesPage() {
           const data = await res.json();
           setDemandes(data.demandes || []);
           
-          // Récupérer les missions pour chaque demande
+          // Récupérer les missions pour chaque demande en parallèle pour améliorer les performances
           const missionsMap = new Map<number, any[]>();
-          for (const demande of data.demandes || []) {
+          const missionsPromises = (data.demandes || []).map(async (demande: any) => {
             try {
-              const missionsRes = await fetch(`/api/admin/demandes/${demande.id}/missions`, { cache: "no-store" });
+              const missionsRes = await fetch(`/api/admin/demandes/${demande.id}/missions`, { 
+                cache: "no-store",
+                headers: { "Cache-Control": "no-cache" }
+              });
               if (missionsRes.ok) {
                 const missionsData = await missionsRes.json();
-                missionsMap.set(demande.id, missionsData.missions || []);
-                console.log(`✅ Missions chargées pour demande ${demande.id}:`, missionsData.missions?.length || 0);
+                return { demandeId: demande.id, missions: missionsData.missions || [] };
               }
             } catch (err) {
               console.error(`Erreur chargement missions pour demande ${demande.id}:`, err);
             }
-          }
+            return { demandeId: demande.id, missions: [] };
+          });
+          
+          // Attendre toutes les requêtes en parallèle
+          const missionsResults = await Promise.all(missionsPromises);
+          missionsResults.forEach(({ demandeId, missions }) => {
+            missionsMap.set(demandeId, missions);
+            if (missions.length > 0) {
+              console.log(`✅ Missions chargées pour demande ${demandeId}: ${missions.length}`);
+            }
+          });
+          
           setDemandesMissions(missionsMap);
           console.log(`✅ Total missions chargées: ${missionsMap.size} demandes avec missions`);
         }
@@ -270,13 +283,31 @@ export default function AdminDemandesPage() {
       const data = await res.json();
 
       if (res.ok) {
-        setShowAssignModal(false);
         const demandeIdToReload = selectedDemande.id;
+        const createdMissions = data.missions || [];
+        
+        setShowAssignModal(false);
         setSelectedDemande(null);
+        
+        // Mettre à jour immédiatement avec les missions retournées par l'API
+        if (createdMissions.length > 0) {
+          setDemandesMissions(prev => {
+            const newMap = new Map(prev);
+            // Récupérer les missions existantes pour cette demande
+            const existingMissions = newMap.get(demandeIdToReload) || [];
+            // Fusionner avec les nouvelles missions (éviter les doublons)
+            const existingIds = new Set(existingMissions.map((m: any) => m.id));
+            const newMissions = createdMissions.filter((m: any) => !existingIds.has(m.id));
+            const allMissions = [...existingMissions, ...newMissions];
+            newMap.set(demandeIdToReload, allMissions);
+            console.log(`✅ Missions mises à jour immédiatement pour demande ${demandeIdToReload}: ${allMissions.length} missions (${newMissions.length} nouvelles)`);
+            return newMap;
+          });
+        }
+        
         alert(lang === "fr" ? "Mission créée avec succès !" : "Mission created successfully!");
         
-        // Recharger les missions pour la demande spécifique qui vient d'être assignée
-        // Attendre un peu pour s'assurer que la mission est bien créée en DB
+        // Recharger depuis la DB pour s'assurer de la synchronisation (en arrière-plan)
         setTimeout(async () => {
           try {
             const missionsRes = await fetch(`/api/admin/demandes/${demandeIdToReload}/missions`, { 
@@ -286,23 +317,18 @@ export default function AdminDemandesPage() {
             if (missionsRes.ok) {
               const missionsData = await missionsRes.json();
               const missionsList = missionsData.missions || [];
-              // Mettre à jour le Map avec les nouvelles missions pour cette demande
+              // Mettre à jour le Map avec les données de la DB
               setDemandesMissions(prev => {
                 const newMap = new Map(prev);
                 newMap.set(demandeIdToReload, missionsList);
-                console.log(`✅ Missions mises à jour pour demande ${demandeIdToReload}: ${missionsList.length} missions`);
-                if (missionsList.length > 0) {
-                  console.log(`   Prestataires: ${missionsList.map((m: any) => m.prestataireId).join(", ")}`);
-                }
+                console.log(`✅ Missions synchronisées depuis DB pour demande ${demandeIdToReload}: ${missionsList.length} missions`);
                 return newMap;
               });
-            } else {
-              console.error(`❌ Erreur API missions pour demande ${demandeIdToReload}:`, missionsRes.status);
             }
           } catch (err) {
-            console.error(`Erreur chargement missions pour demande ${demandeIdToReload}:`, err);
+            console.error(`Erreur synchronisation missions pour demande ${demandeIdToReload}:`, err);
           }
-        }, 500); // Attendre 500ms pour laisser le temps à la DB de s'actualiser
+        }, 300); // Réduire le délai à 300ms
         
         // Recharger aussi toutes les demandes pour s'assurer que tout est à jour
         try {
