@@ -711,14 +711,31 @@ export async function createDemande(
       const { createDemande: createDemandeDB, getAllDemandes: getAllDemandesDB } = await import("@/repositories/demandesRepo");
       
       // Générer ref et createdAt comme le fait addDemande JSON
-      // IMPORTANT: Trouver la dernière référence existante pour éviter les doublons
+      // IMPORTANT: Vérifier directement dans la DB pour éviter les doublons
+      // getAllDemandesDB() peut filtrer les demandes supprimées, donc on doit vérifier toutes les refs
       const year = new Date().getFullYear();
-      const allDemandes = await getAllDemandesDB();
+      
+      // Vérifier directement dans Prisma toutes les références existantes (même supprimées)
+      const { prisma } = await import("@/lib/db");
+      if (!prisma) {
+        throw new Error("Prisma n'est pas disponible");
+      }
+      
+      const allDemandesWithRefs = await prisma.demande.findMany({
+        where: {
+          ref: {
+            startsWith: `D-${year}-`,
+          },
+        },
+        select: {
+          ref: true,
+        },
+      });
       
       // Trouver le numéro le plus élevé pour cette année
       let maxRefNumber = 0;
       const refPattern = new RegExp(`^D-${year}-(\\d+)$`);
-      for (const demande of allDemandes) {
+      for (const demande of allDemandesWithRefs) {
         const match = demande.ref?.match(refPattern);
         if (match) {
           const refNum = parseInt(match[1], 10);
@@ -732,7 +749,7 @@ export async function createDemande(
       const ref = `D-${year}-${String(nextId).padStart(3, "0")}`;
       const createdAt = new Date().toISOString();
       
-      console.log(`[createDemande] 📝 Génération ref: ${ref} (maxRefNumber trouvé: ${maxRefNumber}, nextId: ${nextId})`);
+      console.log(`[createDemande] 📝 Génération ref: ${ref} (maxRefNumber trouvé: ${maxRefNumber}, nextId: ${nextId}, total refs trouvées: ${allDemandesWithRefs.length})`);
       
       const demande = await createDemandeDB({
         ref,
@@ -1473,14 +1490,31 @@ export async function createMission(
       }
       
       // Générer ref et createdAt comme le fait createMission JSON
-      // IMPORTANT: Trouver la dernière référence existante pour éviter les doublons
+      // IMPORTANT: Vérifier directement dans la DB pour éviter les doublons
+      // getAllMissionsDB() filtre les missions supprimées, donc on doit vérifier toutes les refs
       const year = new Date().getFullYear();
-      const allMissions = await getAllMissionsDB() as any[];
+      
+      // Vérifier directement dans Prisma toutes les références existantes (même supprimées)
+      const { prisma } = await import("@/lib/db");
+      if (!prisma) {
+        throw new Error("Prisma n'est pas disponible");
+      }
+      
+      const allMissionsWithRefs = await prisma.mission.findMany({
+        where: {
+          ref: {
+            startsWith: `M-${year}-`,
+          },
+        },
+        select: {
+          ref: true,
+        },
+      });
       
       // Trouver le numéro le plus élevé pour cette année
       let maxRefNumber = 0;
       const refPattern = new RegExp(`^M-${year}-(\\d+)$`);
-      for (const mission of allMissions) {
+      for (const mission of allMissionsWithRefs) {
         const match = mission.ref?.match(refPattern);
         if (match) {
           const refNum = parseInt(match[1], 10);
@@ -1494,7 +1528,7 @@ export async function createMission(
       const ref = `M-${year}-${String(nextId).padStart(3, "0")}`;
       const createdAt = new Date().toISOString();
       
-      console.log(`[createMission] 📝 Génération ref: ${ref} (maxRefNumber trouvé: ${maxRefNumber}, nextId: ${nextId})`);
+      console.log(`[createMission] 📝 Génération ref: ${ref} (maxRefNumber trouvé: ${maxRefNumber}, nextId: ${nextId}, total refs trouvées: ${allMissionsWithRefs.length})`);
       
       // État interne initial
       const { mapInternalStateToStatus, getProgressFromInternalState } = await import("./types");

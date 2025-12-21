@@ -22,9 +22,16 @@ export async function getDemandeById(id: string) {
 
 export async function getDemandeByRef(ref: string) {
   // @ts-ignore
-  return (prisma as any).demande.findUnique({
-    where: { ref },
+  // Recherche insensible à la casse car l'URL peut être en minuscules
+  const demandes = await (prisma as any).demande.findMany({
+    where: {
+      ref: {
+        equals: ref,
+        mode: 'insensitive',
+      },
+    },
   });
+  return demandes[0] || null;
 }
 
 export async function createDemande(data: Omit<DemandeICD, "id">) {
