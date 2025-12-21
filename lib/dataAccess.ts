@@ -1380,12 +1380,60 @@ export async function missionExistsForDemandeAndPrestataire(demandeId: number, p
  * Crée une nouvelle mission
  * Bascule automatiquement entre JSON et DB selon USE_DB
  */
+// Helper pour trouver l'UUID d'une demande à partir de son ID numérique
+async function findDemandePrismaByNumericId(id: number): Promise<any | null> {
+  try {
+    const { getAllDemandes: getAllDemandesDB } = await import("@/repositories/demandesRepo");
+    const allDemandes = await getAllDemandesDB() as any[];
+    
+    const demande = allDemandes.find((d: any) => {
+      if (typeof d.id === "string" && d.id.includes("-")) {
+        // UUID: convertir en nombre pour comparer
+        const hash = d.id.split("").reduce((acc: number, char: string) => {
+          return ((acc << 5) - acc) + char.charCodeAt(0);
+        }, 0);
+        const idNumber = Math.abs(hash) % 1000000;
+        return idNumber === id;
+      } else {
+        // ID numérique direct
+        return parseInt(String(d.id)) === id;
+      }
+    });
+    
+    return demande || null;
+  } catch (error) {
+    console.error("Erreur findDemandePrismaByNumericId:", error);
+    return null;
+  }
+}
+
 export async function createMission(
   data: Omit<Mission, "id" | "ref" | "createdAt" | "internalState" | "status" | "updates" | "sharedFiles">
 ): Promise<Mission> {
   if (USE_DB) {
     try {
       const { createMission: createMissionDB, getAllMissions: getAllMissionsDB } = await import("@/repositories/missionsRepo");
+      
+      // Trouver l'UUID de la demande à partir de son ID numérique
+      const demandeDB = await findDemandePrismaByNumericId(data.demandeId);
+      if (!demandeDB) {
+        console.error(`[createMission] ❌ Demande non trouvée avec ID numérique: ${data.demandeId}`);
+        throw new Error(`Demande non trouvée avec ID: ${data.demandeId}`);
+      }
+      
+      console.log(`[createMission] ✅ Demande trouvée: ID numérique=${data.demandeId}, UUID=${demandeDB.id}`);
+      
+      // Trouver l'UUID du prestataire si fourni
+      let prestataireIdUUID: string | null = null;
+      if (data.prestataireId) {
+        const prestataireDB = await findPrestatairePrismaByNumericId(data.prestataireId);
+        if (prestataireDB) {
+          prestataireIdUUID = prestataireDB.id;
+          console.log(`[createMission] ✅ Prestataire trouvé: ID numérique=${data.prestataireId}, UUID=${prestataireDB.id}`);
+        } else {
+          console.warn(`[createMission] ⚠️ Prestataire non trouvé avec ID numérique: ${data.prestataireId}`);
+        }
+      }
       
       // Générer ref et createdAt comme le fait createMission JSON
       const year = new Date().getFullYear();
@@ -1405,9 +1453,9 @@ export async function createMission(
       const mission = await createMissionDB({
         ref,
         createdAt,
-        demandeId: String(data.demandeId),
+        demandeId: demandeDB.id, // Utiliser l'UUID de la demande, pas l'ID numérique
         clientEmail: data.clientEmail,
-        prestataireId: data.prestataireId ? String(data.prestataireId) : null,
+        prestataireId: prestataireIdUUID,
         prestataireRef: undefToNull(data.prestataireRef),
         internalState,
         status,
