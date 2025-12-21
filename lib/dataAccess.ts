@@ -1715,7 +1715,7 @@ export async function createMission(
         deleted: data.deleted || false,
         deletedAt: undefToNull(data.deletedAt),
         deletedBy: undefToNull(data.deletedBy),
-      } as any});
+      } as any);
           
           // Succès, sortir de la boucle
           break;
