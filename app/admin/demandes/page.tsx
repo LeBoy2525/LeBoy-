@@ -1065,7 +1065,6 @@ function AssignModal({
                 })}
                 </div>
               )}
-            </div>
           </div>
 
           {/* Section de sélection des fichiers */}
