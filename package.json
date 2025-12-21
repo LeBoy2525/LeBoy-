@@ -25,6 +25,7 @@
     "test:migration:db": "USE_DB=true node test-migration-routes.js",
     "check:email": "tsx scripts/check-email-config.ts",
     "check:tables": "tsx scripts/check-tables.ts",
+    "check:data": "tsx scripts/check-data-exists.ts",
     "diagnose:user": "tsx scripts/diagnose-user-issue.ts",
     "diagnose:prestataires": "tsx scripts/diagnose-prestataire-ids.ts",
     "postinstall": "echo 'skip prisma generate on install'",

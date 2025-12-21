@@ -3,9 +3,10 @@
 import "dotenv/config";
 import { defineConfig } from "prisma/config";
 
-// IMPORTANT: Pour les migrations, utiliser POSTGRES_URL_NON_POOLING (connexion directe)
-// Les migrations nécessitent une connexion directe, pas de pooling
-// POSTGRES_PRISMA_URL est pour le runtime (avec pooling)
+// IMPORTANT: Pour les migrations, utiliser une connexion directe (pas de pooling, pas d'Accelerate)
+// Les migrations nécessitent une connexion directe à PostgreSQL
+// Pour Prisma Accelerate: utiliser DATABASE_URL ou POSTGRES_URL (URL directe)
+// Pour Vercel Postgres: utiliser POSTGRES_URL_NON_POOLING (URL directe)
 const DIRECT_URL = process.env.POSTGRES_URL_NON_POOLING || process.env.DATABASE_URL || process.env.POSTGRES_URL || "postgresql://placeholder@localhost:5432/placeholder";
 const POOLING_URL = process.env.POSTGRES_PRISMA_URL || DIRECT_URL;
 
@@ -15,8 +16,7 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    url: DIRECT_URL,        // Pour les migrations (connexion directe)
-    directUrl: DIRECT_URL,  // Connexion directe pour migrations
+    url: DIRECT_URL,  // Pour les migrations (connexion directe requise)
   },
   // Note: POSTGRES_PRISMA_URL sera utilisé dans lib/db.ts pour le runtime PrismaClient
 });
