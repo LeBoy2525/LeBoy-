@@ -36,11 +36,30 @@ export async function GET(
     // Passer les prestataires à la fonction de matching
     const matches = matchDemandeToPrestataires(demande, allPrestataires);
 
+    // Séparer les prestataires suggérés (avec score > 0) des autres
+    const suggestedMatches = matches.filter(m => m.score > 0);
+    const suggestedIds = new Set(suggestedMatches.map(m => m.prestataire.id));
+    
+    // Les autres prestataires sont ceux qui ne sont pas dans les suggestions
+    // et qui sont actifs ou en attente (non rejetés)
+    const otherPrestataires = allPrestataires
+      .filter(p => 
+        !suggestedIds.has(p.id) && 
+        p.statut !== "rejete" && 
+        !p.deletedAt
+      )
+      .map(p => ({
+        prestataire: p,
+        score: 0,
+        reasons: ["Autre prestataire disponible"],
+      }));
+
     console.log("🔍 API Matching - Résultats:", {
       demandeId: demande.id,
       serviceType: demande.serviceType,
-      matchesCount: matches.length,
-      matches: matches.map(m => ({
+      suggestedMatchesCount: suggestedMatches.length,
+      otherPrestatairesCount: otherPrestataires.length,
+      suggestedMatches: suggestedMatches.map(m => ({
         id: m.prestataire.id,
         nom: m.prestataire.nomEntreprise,
         statut: m.prestataire.statut,
@@ -56,7 +75,8 @@ export async function GET(
           serviceType: demande.serviceType,
           lieu: demande.lieu,
         },
-        matches,
+        matches: suggestedMatches,
+        otherPrestataires: otherPrestataires,
       },
       { status: 200 }
     );

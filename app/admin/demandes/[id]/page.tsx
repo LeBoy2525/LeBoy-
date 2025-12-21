@@ -158,6 +158,7 @@ export default function AdminDemandeDetailPage() {
   const [loading, setLoading] = useState(true);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [matches, setMatches] = useState<any[]>([]);
+  const [otherPrestataires, setOtherPrestataires] = useState<any[]>([]);
   const [selectedPrestataires, setSelectedPrestataires] = useState<number[]>([]);
   const [demandeFiles, setDemandeFiles] = useState<any[]>([]);
   const [shareFiles, setShareFiles] = useState(false);
@@ -385,6 +386,7 @@ export default function AdminDemandeDetailPage() {
     
     setSelectedPrestataires([]);
     setMatches([]);
+    setOtherPrestataires([]);
     setShareFiles(false);
     setShareMode("all");
     setSelectedFiles([]);
@@ -400,7 +402,9 @@ export default function AdminDemandeDetailPage() {
       
       if (res.ok) {
         setMatches(data.matches || []);
+        // Note: otherPrestataires sera géré dans la modal si nécessaire
         console.log("✅ Matches reçus:", data.matches?.length || 0);
+        console.log("✅ Autres prestataires reçus:", data.otherPrestataires?.length || 0);
       } else {
         console.error("❌ Erreur API matching:", data.error);
         alert(data.error || "Erreur lors de la recherche de prestataires");
