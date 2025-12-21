@@ -145,24 +145,38 @@ export default function AdminDemandesPage() {
   }, []);
 
   // Recharger les missions quand la page redevient visible (retour depuis une autre page)
+  // Utiliser un flag pour éviter les rechargements multiples simultanés
   useEffect(() => {
+    let isReloading = false;
+    
     const handleVisibilityChange = () => {
-      if (!document.hidden && demandes.length > 0) {
+      if (!document.hidden && demandes.length > 0 && !isReloading) {
+        isReloading = true;
         console.log("🔄 Page visible, rechargement des missions...");
         async function reloadMissions() {
-          const missionsMap = new Map<number, any[]>();
-          for (const demande of demandes) {
-            try {
-              const missionsRes = await fetch(`/api/admin/demandes/${demande.id}/missions`, { cache: "no-store" });
-              if (missionsRes.ok) {
-                const missionsData = await missionsRes.json();
-                missionsMap.set(demande.id, missionsData.missions || []);
+          try {
+            const missionsMap = new Map<number, any[]>();
+            for (const demande of demandes) {
+              try {
+                const missionsRes = await fetch(`/api/admin/demandes/${demande.id}/missions`, { 
+                  cache: "no-store",
+                  headers: { "Cache-Control": "no-cache" }
+                });
+                if (missionsRes.ok) {
+                  const missionsData = await missionsRes.json();
+                  const missionsList = missionsData.missions || [];
+                  missionsMap.set(demande.id, missionsList);
+                  console.log(`✅ Missions rechargées pour demande ${demande.id}: ${missionsList.length}`);
+                }
+              } catch (err) {
+                console.error(`Erreur rechargement missions pour demande ${demande.id}:`, err);
               }
-            } catch (err) {
-              console.error(`Erreur rechargement missions pour demande ${demande.id}:`, err);
             }
+            setDemandesMissions(missionsMap);
+            console.log(`✅ Total missions rechargées: ${missionsMap.size} demandes`);
+          } finally {
+            isReloading = false;
           }
-          setDemandesMissions(missionsMap);
         }
         reloadMissions();
       }
@@ -257,25 +271,38 @@ export default function AdminDemandesPage() {
 
       if (res.ok) {
         setShowAssignModal(false);
+        const demandeIdToReload = selectedDemande.id;
         setSelectedDemande(null);
         alert(lang === "fr" ? "Mission créée avec succès !" : "Mission created successfully!");
         
         // Recharger les missions pour la demande spécifique qui vient d'être assignée
-        try {
-          const missionsRes = await fetch(`/api/admin/demandes/${selectedDemande.id}/missions`, { cache: "no-store" });
-          if (missionsRes.ok) {
-            const missionsData = await missionsRes.json();
-            // Mettre à jour le Map avec les nouvelles missions pour cette demande
-            setDemandesMissions(prev => {
-              const newMap = new Map(prev);
-              newMap.set(selectedDemande.id, missionsData.missions || []);
-              return newMap;
+        // Attendre un peu pour s'assurer que la mission est bien créée en DB
+        setTimeout(async () => {
+          try {
+            const missionsRes = await fetch(`/api/admin/demandes/${demandeIdToReload}/missions`, { 
+              cache: "no-store",
+              headers: { "Cache-Control": "no-cache" }
             });
-            console.log(`✅ Missions rechargées pour demande ${selectedDemande.id}:`, missionsData.missions?.length || 0);
+            if (missionsRes.ok) {
+              const missionsData = await missionsRes.json();
+              const missionsList = missionsData.missions || [];
+              // Mettre à jour le Map avec les nouvelles missions pour cette demande
+              setDemandesMissions(prev => {
+                const newMap = new Map(prev);
+                newMap.set(demandeIdToReload, missionsList);
+                console.log(`✅ Missions mises à jour pour demande ${demandeIdToReload}: ${missionsList.length} missions`);
+                if (missionsList.length > 0) {
+                  console.log(`   Prestataires: ${missionsList.map((m: any) => m.prestataireId).join(", ")}`);
+                }
+                return newMap;
+              });
+            } else {
+              console.error(`❌ Erreur API missions pour demande ${demandeIdToReload}:`, missionsRes.status);
+            }
+          } catch (err) {
+            console.error(`Erreur chargement missions pour demande ${demandeIdToReload}:`, err);
           }
-        } catch (err) {
-          console.error(`Erreur chargement missions pour demande ${selectedDemande.id}:`, err);
-        }
+        }, 500); // Attendre 500ms pour laisser le temps à la DB de s'actualiser
         
         // Recharger aussi toutes les demandes pour s'assurer que tout est à jour
         try {

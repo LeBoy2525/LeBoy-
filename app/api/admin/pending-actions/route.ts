@@ -29,10 +29,11 @@ export async function GET() {
     const allPrestataires = await getAllPrestataires();
     const prestataires = allPrestataires.filter((p) => !p.deletedAt);
     
-    // Pour les missions et propositions, utiliser les stores JSON directement pour cette route de lecture
-    // car getAllMissions/getAllPropositions ne sont pas encore implémentées dans dataAccess
-    const { missionsStore } = await import("@/lib/missionsStore");
-    const missions = missionsStore || [];
+    // CORRECTION: Utiliser getAllMissions depuis dataAccess pour utiliser la DB au lieu du store JSON
+    const { getAllMissions } = await import("@/lib/dataAccess");
+    const missions = await getAllMissions();
+    
+    // Pour les propositions, utiliser le store JSON temporairement (à migrer plus tard)
     const { propositionsStore } = await import("@/lib/propositionsStore");
     const propositions = propositionsStore || [];
 

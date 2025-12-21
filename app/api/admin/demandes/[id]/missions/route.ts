@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { getDemandeById } from "@/lib/dataAccess";
-import { getMissionsByClient } from "@/lib/dataAccess";
+import { getDemandeById, getMissionsByDemandeId } from "@/lib/dataAccess";
 import { getUserRoleAsync } from "@/lib/auth";
 
 type RouteParams = {
@@ -38,13 +37,19 @@ export async function GET(_req: Request, { params }: RouteParams) {
       );
     }
 
-    // Récupérer toutes les missions pour ce client
-    const missions = await getMissionsByClient(demande.email);
+    // CORRECTION: Utiliser getMissionsByDemandeId directement au lieu de getMissionsByClient
+    // Cela garantit que nous récupérons uniquement les missions pour cette demande spécifique
+    const missions = await getMissionsByDemandeId(demandeId);
 
-    // Filtrer pour ne garder que celles liées à cette demande et non archivées/supprimées
+    // Filtrer pour ne garder que celles non archivées/supprimées
     const missionsLinked = missions.filter(
-      (m) => m.demandeId === demandeId && !m.deleted && !m.archived
+      (m) => !m.deleted && !m.archived
     );
+
+    console.log(`[API MISSIONS] Missions récupérées pour demande ${demandeId}: ${missionsLinked.length} missions`);
+    if (missionsLinked.length > 0) {
+      console.log(`[API MISSIONS] Prestataires: ${missionsLinked.map(m => m.prestataireId).join(", ")}`);
+    }
 
     return NextResponse.json({ missions: missionsLinked }, { status: 200 });
   } catch (error) {

@@ -1304,6 +1304,27 @@ export async function getMissionsByDemandeId(demandeId: number): Promise<Mission
 }
 
 /**
+ * Récupère toutes les missions
+ * Bascule automatiquement entre JSON et DB selon USE_DB
+ */
+export async function getAllMissions(): Promise<Mission[]> {
+  if (USE_DB) {
+    try {
+      const { getAllMissions: getAllMissionsDB } = await import("@/repositories/missionsRepo");
+      const missions = await getAllMissionsDB() as any[];
+      return missions.map(convertPrismaMissionToJSON);
+    } catch (error) {
+      console.error("Erreur getAllMissions (DB):", error);
+      const { missionsStore } = await import("./missionsStore");
+      return missionsStore || [];
+    }
+  } else {
+    const { missionsStore } = await import("./missionsStore");
+    return missionsStore || [];
+  }
+}
+
+/**
  * Récupère une mission par ID
  * Bascule automatiquement entre JSON et DB selon USE_DB
  */
