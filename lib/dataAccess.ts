@@ -1245,20 +1245,19 @@ async function getPrestataireByEmailJSON(email: string): Promise<Prestataire | n
  * Bascule automatiquement entre JSON et DB selon USE_DB
  */
 export async function getMissionsByClient(email: string): Promise<Mission[]> {
-  // TEMPORAIRE: Désactiver Prisma pour les missions jusqu'à ce que le schéma soit corrigé
-  // if (USE_DB) {
-  //   try {
-  //     const { getMissionsByClient: getMissionsByClientDB } = await import("@/repositories/missionsRepo");
-  //     const missions = await getMissionsByClientDB(email.toLowerCase()) as any[];
-  //     
-  //     return missions.map(convertPrismaMissionToJSON);
-  //   } catch (error) {
-  //     console.error("Erreur getMissionsByClient (DB):", error);
-  //     return getMissionsByClientJSON(email);
-  //   }
-  // } else {
+  if (USE_DB) {
+    try {
+      const { getMissionsByClient: getMissionsByClientDB } = await import("@/repositories/missionsRepo");
+      const missions = await getMissionsByClientDB(email.toLowerCase()) as any[];
+      
+      return missions.map(convertPrismaMissionToJSON);
+    } catch (error) {
+      console.error("Erreur getMissionsByClient (DB):", error);
+      return getMissionsByClientJSON(email);
+    }
+  } else {
     return getMissionsByClientJSON(email);
-  // }
+  }
 }
 
 /**
@@ -1266,22 +1265,21 @@ export async function getMissionsByClient(email: string): Promise<Mission[]> {
  * Bascule automatiquement entre JSON et DB selon USE_DB
  */
 export async function getMissionsByPrestataire(prestataireId: number): Promise<Mission[]> {
-  // TEMPORAIRE: Désactiver Prisma pour les missions jusqu'à ce que le schéma soit corrigé
-  // if (USE_DB) {
-  //   try {
-  //     const { getMissionsByPrestataire: getMissionsByPrestataireDB } = await import("@/repositories/missionsRepo");
-  //     // Convertir l'ID number en string pour Prisma (UUID)
-  //     const prestataireIdStr = String(prestataireId);
-  //     const missions = await getMissionsByPrestataireDB(prestataireIdStr) as any[];
-  //     
-  //     return missions.map(convertPrismaMissionToJSON);
-  //   } catch (error) {
-  //     console.error("Erreur getMissionsByPrestataire (DB):", error);
-  //     return getMissionsByPrestataireJSON(prestataireId);
-  //   }
-  // } else {
+  if (USE_DB) {
+    try {
+      const { getMissionsByPrestataire: getMissionsByPrestataireDB } = await import("@/repositories/missionsRepo");
+      // Convertir l'ID number en string pour Prisma (UUID)
+      const prestataireIdStr = String(prestataireId);
+      const missions = await getMissionsByPrestataireDB(prestataireIdStr) as any[];
+      
+      return missions.map(convertPrismaMissionToJSON);
+    } catch (error) {
+      console.error("Erreur getMissionsByPrestataire (DB):", error);
+      return getMissionsByPrestataireJSON(prestataireId);
+    }
+  } else {
     return getMissionsByPrestataireJSON(prestataireId);
-  // }
+  }
 }
 
 /**
@@ -1289,21 +1287,20 @@ export async function getMissionsByPrestataire(prestataireId: number): Promise<M
  * Bascule automatiquement entre JSON et DB selon USE_DB
  */
 export async function getMissionsByDemandeId(demandeId: number): Promise<Mission[]> {
-  // TEMPORAIRE: Désactiver Prisma pour les missions jusqu'à ce que le schéma soit corrigé
-  // if (USE_DB) {
-  //   try {
-  //     const { getMissionsByDemandeId: getMissionsByDemandeIdDB } = await import("@/repositories/missionsRepo");
-  //     const demandeIdStr = String(demandeId);
-  //     const missions = await getMissionsByDemandeIdDB(demandeIdStr) as any[];
-  //     
-  //     return missions.map(convertPrismaMissionToJSON);
-  //   } catch (error) {
-  //     console.error("Erreur getMissionsByDemandeId (DB):", error);
-  //     return getMissionsByDemandeIdJSON(demandeId);
-  //   }
-  // } else {
+  if (USE_DB) {
+    try {
+      const { getMissionsByDemandeId: getMissionsByDemandeIdDB } = await import("@/repositories/missionsRepo");
+      const demandeIdStr = String(demandeId);
+      const missions = await getMissionsByDemandeIdDB(demandeIdStr) as any[];
+      
+      return missions.map(convertPrismaMissionToJSON);
+    } catch (error) {
+      console.error("Erreur getMissionsByDemandeId (DB):", error);
+      return getMissionsByDemandeIdJSON(demandeId);
+    }
+  } else {
     return getMissionsByDemandeIdJSON(demandeId);
-  // }
+  }
 }
 
 /**
@@ -1311,21 +1308,20 @@ export async function getMissionsByDemandeId(demandeId: number): Promise<Mission
  * Bascule automatiquement entre JSON et DB selon USE_DB
  */
 export async function getAllMissions(): Promise<Mission[]> {
-  // TEMPORAIRE: Désactiver Prisma pour les missions jusqu'à ce que le schéma soit corrigé
-  // if (USE_DB) {
-  //   try {
-  //     const { getAllMissions: getAllMissionsDB } = await import("@/repositories/missionsRepo");
-  //     const missions = await getAllMissionsDB() as any[];
-  //     return missions.map(convertPrismaMissionToJSON);
-  //   } catch (error) {
-  //     console.error("Erreur getAllMissions (DB):", error);
-  //     const { missionsStore } = await import("./missionsStore");
-  //     return missionsStore || [];
-  //   }
-  // } else {
+  if (USE_DB) {
+    try {
+      const { getAllMissions: getAllMissionsDB } = await import("@/repositories/missionsRepo");
+      const missions = await getAllMissionsDB() as any[];
+      return missions.map(convertPrismaMissionToJSON);
+    } catch (error) {
+      console.error("Erreur getAllMissions (DB):", error);
+      const { missionsStore } = await import("./missionsStore");
+      return missionsStore || [];
+    }
+  } else {
     const { missionsStore } = await import("./missionsStore");
     return missionsStore || [];
-  // }
+  }
 }
 
 /**
@@ -1333,36 +1329,33 @@ export async function getAllMissions(): Promise<Mission[]> {
  * Bascule automatiquement entre JSON et DB selon USE_DB
  */
 export async function getMissionById(id: number): Promise<Mission | null> {
-  // TEMPORAIRE: Désactiver Prisma pour les missions jusqu'à ce que le schéma soit corrigé
-  // if (USE_DB) {
-  //   try {
-  //     const { getMissionById: getMissionByIdDB } = await import("@/repositories/missionsRepo");
-  //     // Pour Prisma, on doit trouver la mission par son UUID
-  //     // On va devoir chercher toutes les missions et filtrer par ID converti
-  //     // Ou utiliser une autre méthode selon le schéma
-  //     const { getAllMissions } = await import("@/repositories/missionsRepo");
-  //     const allMissions = await getAllMissions() as any[];
-  //     const mission = allMissions.find((m: any) => {
-  //       let idNumber: number;
-  //       if (typeof m.id === "string" && m.id.includes("-")) {
-  //         const hash = m.id.split("").reduce((acc: number, char: string) => {
-  //           return ((acc << 5) - acc) + char.charCodeAt(0);
-  //         }, 0);
-  //         idNumber = Math.abs(hash) % 1000000;
-  //       } else {
-  //         idNumber = parseInt(String(m.id)) || 0;
-  //       }
-  //       return idNumber === id;
-  //     });
-  //     
-  //     return mission ? convertPrismaMissionToJSON(mission) : null;
-  //   } catch (error) {
-  //     console.error("Erreur getMissionById (DB):", error);
-  //     return getMissionByIdJSON(id);
-  //   }
-  // } else {
+  if (USE_DB) {
+    try {
+      // Pour Prisma, on doit trouver la mission par son UUID
+      // On va devoir chercher toutes les missions et filtrer par ID converti
+      const { getAllMissions } = await import("@/repositories/missionsRepo");
+      const allMissions = await getAllMissions() as any[];
+      const mission = allMissions.find((m: any) => {
+        let idNumber: number;
+        if (typeof m.id === "string" && m.id.includes("-")) {
+          const hash = m.id.split("").reduce((acc: number, char: string) => {
+            return ((acc << 5) - acc) + char.charCodeAt(0);
+          }, 0);
+          idNumber = Math.abs(hash) % 1000000;
+        } else {
+          idNumber = parseInt(String(m.id)) || 0;
+        }
+        return idNumber === id;
+      });
+      
+      return mission ? convertPrismaMissionToJSON(mission) : null;
+    } catch (error) {
+      console.error("Erreur getMissionById (DB):", error);
+      return getMissionByIdJSON(id);
+    }
+  } else {
     return getMissionByIdJSON(id);
-  // }
+  }
 }
 
 /**
@@ -1390,105 +1383,104 @@ export async function missionExistsForDemandeAndPrestataire(demandeId: number, p
 export async function createMission(
   data: Omit<Mission, "id" | "ref" | "createdAt" | "internalState" | "status" | "updates" | "sharedFiles">
 ): Promise<Mission> {
-  // TEMPORAIRE: Désactiver Prisma pour les missions jusqu'à ce que le schéma soit corrigé
-  // if (USE_DB) {
-  //   try {
-  //     const { createMission: createMissionDB, getAllMissions: getAllMissionsDB } = await import("@/repositories/missionsRepo");
-  //     
-  //     // Générer ref et createdAt comme le fait createMission JSON
-  //     const year = new Date().getFullYear();
-  //     const allMissions = await getAllMissionsDB() as any[];
-  //     const nextId = allMissions.length + 1;
-  //     const ref = `M-${year}-${String(nextId).padStart(3, "0")}`;
-  //     const createdAt = new Date().toISOString();
-  //     
-  //     // État interne initial
-  //     const { mapInternalStateToStatus, getProgressFromInternalState } = await import("./types");
-  //     const internalState = "CREATED";
-  //     const status = mapInternalStateToStatus(internalState);
-  //     
-  //     // Helper pour convertir undefined en null pour Prisma
-  //     const undefToNull = <T>(val: T | undefined): T | null => (val === undefined ? null : val);
-  //     
-  //     const mission = await createMissionDB({
-  //       ref,
-  //       createdAt,
-  //       demandeId: String(data.demandeId),
-  //       clientEmail: data.clientEmail,
-  //       prestataireId: data.prestataireId ? String(data.prestataireId) : null,
-  //       prestataireRef: undefToNull(data.prestataireRef),
-  //       internalState,
-  //       status,
-  //       dateAssignation: undefToNull(data.dateAssignation),
-  //       dateLimiteProposition: undefToNull(data.dateLimiteProposition),
-  //       dateAcceptation: undefToNull(data.dateAcceptation),
-  //       datePriseEnCharge: undefToNull(data.datePriseEnCharge),
-  //       dateDebut: undefToNull(data.dateDebut),
-  //       dateFin: undefToNull(data.dateFin),
-  //       titre: data.titre,
-  //       description: data.description,
-  //       serviceType: data.serviceType,
-  //       lieu: undefToNull(data.lieu),
-  //       urgence: data.urgence,
-  //       budget: undefToNull(data.budget),
-  //       tarifPrestataire: undefToNull(data.tarifPrestataire),
-  //       commissionICD: undefToNull(data.commissionICD),
-  //       commissionHybride: undefToNull(data.commissionHybride),
-  //       commissionRisk: undefToNull(data.commissionRisk),
-  //       commissionTotale: undefToNull(data.commissionTotale),
-  //       fraisSupplementaires: undefToNull(data.fraisSupplementaires),
-  //       tarifTotal: undefToNull(data.tarifTotal),
-  //       paiementEchelonne: undefToNull(data.paiementEchelonne),
-  //       sharedFiles: [],
-  //       progress: [],
-  //       currentProgress: getProgressFromInternalState(internalState),
-  //       phases: undefToNull(data.phases),
-  //       delaiMaximal: undefToNull(data.delaiMaximal),
-  //       dateLimiteMission: undefToNull(data.dateLimiteMission),
-  //       updates: [],
-  //       messages: [],
-  //       noteClient: undefToNull(data.noteClient),
-  //       notePrestataire: undefToNull(data.notePrestataire),
-  //       noteICD: undefToNull(data.noteICD),
-  //       noteAdminPourPrestataire: undefToNull(data.noteAdminPourPrestataire),
-  //       commentaireClient: undefToNull(data.commentaireClient),
-  //       commentairePrestataire: undefToNull(data.commentairePrestataire),
-  //       commentaireICD: undefToNull(data.commentaireICD),
-  //       commentaireAdminPourPrestataire: undefToNull(data.commentaireAdminPourPrestataire),
-  //       proofs: [],
-  //       proofSubmissionDate: undefToNull(data.proofSubmissionDate),
-  //       proofValidatedByAdmin: data.proofValidatedByAdmin || false,
-  //       proofValidatedAt: undefToNull(data.proofValidatedAt),
-  //       proofValidatedForClient: data.proofValidatedForClient || false,
-  //       proofValidatedForClientAt: undefToNull(data.proofValidatedForClientAt),
-  //       closedBy: undefToNull(data.closedBy),
-  //       closedAt: undefToNull(data.closedAt),
-  //       devisGenere: data.devisGenere || false,
-  //       devisGenereAt: undefToNull(data.devisGenereAt),
-  //       paiementEffectue: data.paiementEffectue || false,
-  //       paiementEffectueAt: undefToNull(data.paiementEffectueAt),
-  //       avanceVersee: data.avanceVersee || false,
-  //       avanceVerseeAt: undefToNull(data.avanceVerseeAt),
-  //       avancePercentage: undefToNull(data.avancePercentage),
-  //       soldeVersee: data.soldeVersee || false,
-  //       soldeVerseeAt: undefToNull(data.soldeVerseeAt),
-  //       estimationPartenaire: undefToNull(data.estimationPartenaire),
-  //       archived: data.archived || false,
-  //       archivedAt: undefToNull(data.archivedAt),
-  //       archivedBy: undefToNull(data.archivedBy),
-  //       deleted: data.deleted || false,
-  //       deletedAt: undefToNull(data.deletedAt),
-  //       deletedBy: undefToNull(data.deletedBy),
-  //     } as any);
+  if (USE_DB) {
+    try {
+      const { createMission: createMissionDB, getAllMissions: getAllMissionsDB } = await import("@/repositories/missionsRepo");
+      
+      // Générer ref et createdAt comme le fait createMission JSON
+      const year = new Date().getFullYear();
+      const allMissions = await getAllMissionsDB() as any[];
+      const nextId = allMissions.length + 1;
+      const ref = `M-${year}-${String(nextId).padStart(3, "0")}`;
+      const createdAt = new Date().toISOString();
+      
+      // État interne initial
+      const { mapInternalStateToStatus, getProgressFromInternalState } = await import("./types");
+      const internalState = "CREATED";
+      const status = mapInternalStateToStatus(internalState);
+      
+      // Helper pour convertir undefined en null pour Prisma
+      const undefToNull = <T>(val: T | undefined): T | null => (val === undefined ? null : val);
+      
+      const mission = await createMissionDB({
+        ref,
+        createdAt,
+        demandeId: String(data.demandeId),
+        clientEmail: data.clientEmail,
+        prestataireId: data.prestataireId ? String(data.prestataireId) : null,
+        prestataireRef: undefToNull(data.prestataireRef),
+        internalState,
+        status,
+        dateAssignation: undefToNull(data.dateAssignation),
+        dateLimiteProposition: undefToNull(data.dateLimiteProposition),
+        dateAcceptation: undefToNull(data.dateAcceptation),
+        datePriseEnCharge: undefToNull(data.datePriseEnCharge),
+        dateDebut: undefToNull(data.dateDebut),
+        dateFin: undefToNull(data.dateFin),
+        titre: data.titre,
+        description: data.description,
+        serviceType: data.serviceType,
+        lieu: undefToNull(data.lieu),
+        urgence: data.urgence,
+        budget: undefToNull(data.budget),
+        tarifPrestataire: undefToNull(data.tarifPrestataire),
+        commissionICD: undefToNull(data.commissionICD),
+        commissionHybride: undefToNull(data.commissionHybride),
+        commissionRisk: undefToNull(data.commissionRisk),
+        commissionTotale: undefToNull(data.commissionTotale),
+        fraisSupplementaires: undefToNull(data.fraisSupplementaires),
+        tarifTotal: undefToNull(data.tarifTotal),
+        paiementEchelonne: undefToNull(data.paiementEchelonne),
+        sharedFiles: [],
+        progress: [],
+        currentProgress: getProgressFromInternalState(internalState),
+        phases: undefToNull(data.phases),
+        delaiMaximal: undefToNull(data.delaiMaximal),
+        dateLimiteMission: undefToNull(data.dateLimiteMission),
+        updates: [],
+        messages: [],
+        noteClient: undefToNull(data.noteClient),
+        notePrestataire: undefToNull(data.notePrestataire),
+        noteICD: undefToNull(data.noteICD),
+        noteAdminPourPrestataire: undefToNull(data.noteAdminPourPrestataire),
+        commentaireClient: undefToNull(data.commentaireClient),
+        commentairePrestataire: undefToNull(data.commentairePrestataire),
+        commentaireICD: undefToNull(data.commentaireICD),
+        commentaireAdminPourPrestataire: undefToNull(data.commentaireAdminPourPrestataire),
+        proofs: [],
+        proofSubmissionDate: undefToNull(data.proofSubmissionDate),
+        proofValidatedByAdmin: data.proofValidatedByAdmin || false,
+        proofValidatedAt: undefToNull(data.proofValidatedAt),
+        proofValidatedForClient: data.proofValidatedForClient || false,
+        proofValidatedForClientAt: undefToNull(data.proofValidatedForClientAt),
+        closedBy: undefToNull(data.closedBy),
+        closedAt: undefToNull(data.closedAt),
+        devisGenere: data.devisGenere || false,
+        devisGenereAt: undefToNull(data.devisGenereAt),
+        paiementEffectue: data.paiementEffectue || false,
+        paiementEffectueAt: undefToNull(data.paiementEffectueAt),
+        avanceVersee: data.avanceVersee || false,
+        avanceVerseeAt: undefToNull(data.avanceVerseeAt),
+        avancePercentage: undefToNull(data.avancePercentage),
+        soldeVersee: data.soldeVersee || false,
+        soldeVerseeAt: undefToNull(data.soldeVerseeAt),
+        estimationPartenaire: undefToNull(data.estimationPartenaire),
+        archived: data.archived || false,
+        archivedAt: undefToNull(data.archivedAt),
+        archivedBy: undefToNull(data.archivedBy),
+        deleted: data.deleted || false,
+        deletedAt: undefToNull(data.deletedAt),
+        deletedBy: undefToNull(data.deletedBy),
+      } as any);
 
-  //     return convertPrismaMissionToJSON(mission);
-  //   } catch (error) {
-  //     console.error("Erreur createMission (DB):", error);
-  //     return createMissionJSON(data);
-  //   }
-  // } else {
+      return convertPrismaMissionToJSON(mission);
+    } catch (error) {
+      console.error("Erreur createMission (DB):", error);
+      return createMissionJSON(data);
+    }
+  } else {
     return createMissionJSON(data);
-  // }
+  }
 }
 
 // Fonction helper pour convertir Mission Prisma vers Mission JSON
@@ -1930,43 +1922,42 @@ export async function getPropositionById(id: number): Promise<PropositionPrestat
 export async function getPropositionsByDemandeId(demandeId: number): Promise<PropositionPrestataire[]> {
   if (!demandeId) return [];
 
-  // TEMPORAIRE: Désactiver Prisma pour les propositions jusqu'à ce que le schéma soit corrigé
-  // if (USE_DB) {
-  //   try {
-  //     const { getPropositionsByDemandeId: getPropositionsByDemandeIdDB } = await import("@/repositories/propositionsRepo");
-  //     const { getDemandeById } = await import("@/lib/dataAccess");
-  //     
-  //     // Récupérer la demande pour obtenir son UUID
-  //     const demande = await getDemandeById(demandeId);
-  //     if (!demande) return [];
+  if (USE_DB) {
+    try {
+      const { getPropositionsByDemandeId: getPropositionsByDemandeIdDB } = await import("@/repositories/propositionsRepo");
+      const { getDemandeById } = await import("@/lib/dataAccess");
+      
+      // Récupérer la demande pour obtenir son UUID
+      const demande = await getDemandeById(demandeId);
+      if (!demande) return [];
 
-  //     // Convertir l'ID numérique en UUID
-  //     // On doit trouver la demande dans la DB pour obtenir son UUID
-  //     const { getAllDemandes } = await import("@/repositories/demandesRepo");
-  //     const allDemandes = await getAllDemandes();
-  //     const demandeDB = allDemandes.find((d: any) => {
-  //       // Convertir l'UUID de la demande en nombre pour comparer
-  //       if (typeof d.id === "string" && d.id.includes("-")) {
-  //         const hash = d.id.split("").reduce((acc: number, char: string) => {
-  //           return ((acc << 5) - acc) + char.charCodeAt(0);
-  //         }, 0);
-  //         const idNumber = Math.abs(hash) % 1000000;
-  //         return idNumber === demandeId;
-  //       }
-  //       return parseInt(String(d.id)) === demandeId;
-  //     });
+      // Convertir l'ID numérique en UUID
+      // On doit trouver la demande dans la DB pour obtenir son UUID
+      const { getAllDemandes } = await import("@/repositories/demandesRepo");
+      const allDemandes = await getAllDemandes();
+      const demandeDB = allDemandes.find((d: any) => {
+        // Convertir l'UUID de la demande en nombre pour comparer
+        if (typeof d.id === "string" && d.id.includes("-")) {
+          const hash = d.id.split("").reduce((acc: number, char: string) => {
+            return ((acc << 5) - acc) + char.charCodeAt(0);
+          }, 0);
+          const idNumber = Math.abs(hash) % 1000000;
+          return idNumber === demandeId;
+        }
+        return parseInt(String(d.id)) === demandeId;
+      });
 
-  //     if (!demandeDB) return [];
+      if (!demandeDB) return [];
 
-  //     const propositions = await getPropositionsByDemandeIdDB(demandeDB.id);
-  //     return propositions.map(convertPrismaPropositionToJSON);
-  //   } catch (error) {
-  //     console.error("Erreur getPropositionsByDemandeId (DB):", error);
-  //     return getPropositionsByDemandeIdJSON(demandeId);
-  //   }
-  // } else {
+      const propositions = await getPropositionsByDemandeIdDB(demandeDB.id);
+      return propositions.map(convertPrismaPropositionToJSON);
+    } catch (error) {
+      console.error("Erreur getPropositionsByDemandeId (DB):", error);
+      return getPropositionsByDemandeIdJSON(demandeId);
+    }
+  } else {
     return getPropositionsByDemandeIdJSON(demandeId);
-  // }
+  }
 }
 
 /**
