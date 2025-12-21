@@ -496,6 +496,7 @@ export default function AdminDemandesPage() {
               <AssignModal
                 demande={selectedDemande}
                 matches={matches}
+                otherPrestataires={otherPrestataires}
                 demandeFiles={demandeFiles}
                 onClose={() => {
                   setShowAssignModal(false);
