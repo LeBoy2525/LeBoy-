@@ -65,7 +65,7 @@ export async function POST(req: Request) {
     dateLimiteProposition.setHours(dateLimiteProposition.getHours() + 24);
 
     // Créer une mission pour chaque prestataire
-    const missionsCreees = [];
+    const missionsCreees: Array<{ mission: any, prestataireId: number }> = [];
     const errors = [];
 
     for (const prestataireIdNum of prestataireIdsArray) {
@@ -117,7 +117,7 @@ export async function POST(req: Request) {
         // Set initial internal state: ASSIGNED_TO_PROVIDER (mandat assigné, en attente d'estimation)
         await updateMissionInternalState(mission.id, "ASSIGNED_TO_PROVIDER", userEmail || "admin@icd.ca");
         
-        missionsCreees.push(mission);
+        missionsCreees.push({ mission, prestataireId: prestataireIdNum });
       } catch (error) {
         console.error(`Erreur création mission pour prestataire ${prestataireIdNum}:`, error);
         errors.push(`Erreur lors de la création de la mission pour le prestataire ID ${prestataireIdNum}.`);
@@ -132,26 +132,9 @@ export async function POST(req: Request) {
     
     // Envoyer les emails avec délai pour éviter rate limit Resend (2 req/s max)
     // Espacer les envois de 600ms entre chaque email (plus sûr que 500ms)
-    // Stocker les IDs des prestataires avec leurs missions pour l'envoi d'emails
-    const missionsWithPrestataireIds: Array<{ mission: typeof missionsCreees[0], prestataireId: number }> = [];
-    for (let i = 0; i < missionsCreees.length; i++) {
-      const mission = missionsCreees[i];
-      // Trouver l'index dans prestataireIdsArray qui correspond à cette mission
-      // On doit trouver le prestataireId qui correspond à cette mission
-      const prestataireIdNum = prestataireIdsArray.find((id, idx) => {
-        // Vérifier si cette mission correspond à ce prestataire
-        // En comparant avec les missions créées précédemment
-        return idx < missionsCreees.length && missionsCreees[idx] === mission;
-      }) || prestataireIdsArray[i];
-      
-      if (prestataireIdNum) {
-        missionsWithPrestataireIds.push({ mission, prestataireId: prestataireIdNum });
-      }
-    }
-    
     // Envoyer les emails séquentiellement avec délai
-    for (let i = 0; i < missionsWithPrestataireIds.length; i++) {
-      const { mission, prestataireId } = missionsWithPrestataireIds[i];
+    for (let i = 0; i < missionsCreees.length; i++) {
+      const { mission, prestataireId } = missionsCreees[i];
       
       // Attendre 600ms avant chaque envoi (sauf le premier) pour respecter la limite de 2 req/s
       if (i > 0) {
@@ -198,10 +181,13 @@ export async function POST(req: Request) {
       );
     }
 
+    // Extraire uniquement les missions pour la réponse (sans les prestataireIds)
+    const missionsOnly = missionsCreees.map(item => item.mission);
+
     return NextResponse.json(
       {
         success: true,
-        missions: missionsCreees,
+        missions: missionsOnly,
         count: missionsCreees.length,
         errors: errors.length > 0 ? errors : undefined,
       },
