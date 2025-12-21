@@ -1337,13 +1337,12 @@ export default function AdminDemandeDetailPage() {
                 )}
               </div>
 
-              {/* Section Autres prestataires */}
-              {otherPrestataires.length > 0 && (
-                <div className="pt-6 border-t border-[#E2E2E8]">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-heading font-semibold text-[#0A1B2A]">
-                      {lang === "fr" ? "Autres prestataires" : "Other providers"} {otherPrestataires.length > 0 && `(${otherPrestataires.length})`}
-                    </h3>
+              {/* Section Autres prestataires - Toujours affichée si des prestataires actifs existent */}
+              <div className="pt-6 border-t border-[#E2E2E8]">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-heading font-semibold text-[#0A1B2A]">
+                    {lang === "fr" ? "Autres prestataires" : "Other providers"} {otherPrestataires.length > 0 && `(${otherPrestataires.length})`}
+                  </h3>
                     {selectedPrestataires.length > 0 && (
                       <span className="text-sm text-[#D4A657] font-semibold">
                         {lang === "fr" 
@@ -1354,11 +1353,20 @@ export default function AdminDemandeDetailPage() {
                   </div>
                   <p className="text-xs text-[#6B7280] mb-4">
                     {lang === "fr" 
-                      ? "Prestataires disponibles qui ne correspondent pas directement à la catégorie recherchée."
-                      : "Available providers that don't directly match the requested category."}
+                      ? "Tous les prestataires actifs disponibles. Vous pouvez assigner même si la catégorie ne correspond pas exactement."
+                      : "All active providers available. You can assign even if the category doesn't match exactly."}
                   </p>
-                  <div className="space-y-3">
-                    {otherPrestataires.map((match) => {
+                  {otherPrestataires.length === 0 ? (
+                    <div className="space-y-2 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                      <p className="text-sm text-gray-700 font-medium">
+                        {lang === "fr" 
+                          ? "Aucun autre prestataire actif disponible."
+                          : "No other active provider available."}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {otherPrestataires.map((match) => {
                       const prestataireId =
                         typeof match.prestataire.id === "string"
                           ? parseInt(match.prestataire.id)
