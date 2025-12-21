@@ -8,7 +8,7 @@ import type { Mission } from "@/lib/types";
 interface DemandeAssignmentStatusProps {
   demande: DemandeICD;
   missions: Mission[];
-  onAssignClick: () => void;
+  onAssignClick?: () => void; // Optionnel : si non fourni, le bouton ne s'affiche pas
   lang: "fr" | "en";
   t: any;
 }

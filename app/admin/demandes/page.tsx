@@ -94,9 +94,6 @@ export default function AdminDemandesPage() {
   const [demandes, setDemandes] = useState<DemandeICD[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedDemande, setSelectedDemande] = useState<DemandeICD | null>(null);
-  const [matches, setMatches] = useState<any[]>([]);
-  const [showAssignModal, setShowAssignModal] = useState(false);
   const [showCorbeille, setShowCorbeille] = useState(false);
   const [deletedDemandes, setDeletedDemandes] = useState<DemandeICD[]>([]);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -219,44 +216,7 @@ export default function AdminDemandesPage() {
     }
   }, [showCorbeille]);
 
-  const [otherPrestataires, setOtherPrestataires] = useState<any[]>([]);
-
-  const handleAssignClick = async (demande: DemandeICD) => {
-    setSelectedDemande(demande);
-    setMatches([]); // Réinitialiser les matches
-    setOtherPrestataires([]); // Réinitialiser les autres prestataires
-    
-    // Obtenir les prestataires suggérés et autres
-    try {
-      console.log("🔍 Recherche de prestataires pour demande:", demande.id);
-      const res = await fetch(`/api/matching/${demande.id}`, {
-        cache: "no-store",
-      });
-      
-      const data = await res.json();
-      console.log("🔍 Réponse API matching:", data);
-      
-      if (res.ok) {
-        setMatches(data.matches || []);
-        setOtherPrestataires(data.otherPrestataires || []);
-        console.log("✅ Matches suggérés reçus:", data.matches?.length || 0);
-        console.log("✅ Autres prestataires reçus:", data.otherPrestataires?.length || 0);
-      } else {
-        console.error("❌ Erreur API matching:", data.error);
-        alert(data.error || "Erreur lors de la recherche de prestataires");
-      }
-    } catch (err) {
-      console.error("❌ Erreur matching:", err);
-      alert("Erreur lors de la recherche de prestataires");
-    }
-    
-    setShowAssignModal(true);
-  };
-
-  // État pour protection anti double-clic
-  const [isSubmittingMission, setIsSubmittingMission] = useState(false);
-
-  const handleCreateMission = async (prestataireId: number, sharedFiles?: any[]) => {
+  // Fonctions d'assignation retirées - l'assignation se fait uniquement depuis la page de détail
     // Protection anti double-clic
     if (isSubmittingMission) {
       console.warn("⚠️ Tentative de double-soumission bloquée");
@@ -578,7 +538,6 @@ export default function AdminDemandesPage() {
                               <DemandeAssignmentStatus 
                                 demande={demande} 
                                 missions={demandesMissions.get(demande.id) || []}
-                                onAssignClick={() => handleAssignClick(demande)}
                                 lang={lang}
                                 t={t}
                               />
@@ -600,22 +559,7 @@ export default function AdminDemandesPage() {
               </div>
             )}
 
-            {/* Modal d'assignation */}
-            {showAssignModal && selectedDemande && (
-              <AssignModal
-                demande={selectedDemande}
-                matches={matches}
-                otherPrestataires={otherPrestataires}
-                demandeFiles={demandeFiles}
-                onClose={() => {
-                  setShowAssignModal(false);
-                  setSelectedDemande(null);
-                }}
-                onCreateMission={handleCreateMission}
-                isSubmitting={isSubmittingMission}
-                t={t}
-              />
-            )}
+            {/* Modal d'assignation retiré - l'assignation se fait uniquement depuis la page de détail */}
           </>
         ) : (
           // Afficher la corbeille
