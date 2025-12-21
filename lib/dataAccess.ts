@@ -1452,6 +1452,8 @@ export async function createMission(
         } else {
           console.warn(`[createMission] ⚠️ Prestataire non trouvé avec ID numérique: ${data.prestataireId}`);
         }
+      } else {
+        console.log(`[createMission] ℹ️ Aucun prestataireId fourni dans les données`);
       }
       
       // Générer ref et createdAt comme le fait createMission JSON
