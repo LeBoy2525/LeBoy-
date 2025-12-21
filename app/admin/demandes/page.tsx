@@ -125,12 +125,14 @@ export default function AdminDemandesPage() {
               if (missionsRes.ok) {
                 const missionsData = await missionsRes.json();
                 missionsMap.set(demande.id, missionsData.missions || []);
+                console.log(`✅ Missions chargées pour demande ${demande.id}:`, missionsData.missions?.length || 0);
               }
             } catch (err) {
               console.error(`Erreur chargement missions pour demande ${demande.id}:`, err);
             }
           }
           setDemandesMissions(missionsMap);
+          console.log(`✅ Total missions chargées: ${missionsMap.size} demandes avec missions`);
         }
       } catch (err) {
         console.error("Erreur:", err);
@@ -141,6 +143,34 @@ export default function AdminDemandesPage() {
 
     fetchDemandes();
   }, []);
+
+  // Recharger les missions quand la page redevient visible (retour depuis une autre page)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && demandes.length > 0) {
+        console.log("🔄 Page visible, rechargement des missions...");
+        async function reloadMissions() {
+          const missionsMap = new Map<number, any[]>();
+          for (const demande of demandes) {
+            try {
+              const missionsRes = await fetch(`/api/admin/demandes/${demande.id}/missions`, { cache: "no-store" });
+              if (missionsRes.ok) {
+                const missionsData = await missionsRes.json();
+                missionsMap.set(demande.id, missionsData.missions || []);
+              }
+            } catch (err) {
+              console.error(`Erreur rechargement missions pour demande ${demande.id}:`, err);
+            }
+          }
+          setDemandesMissions(missionsMap);
+        }
+        reloadMissions();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [demandes]);
 
   useEffect(() => {
     async function fetchDeletedDemandes() {

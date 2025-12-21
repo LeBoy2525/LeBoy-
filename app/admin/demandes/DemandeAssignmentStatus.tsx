@@ -20,7 +20,7 @@ export function DemandeAssignmentStatus({
   lang, 
   t 
 }: DemandeAssignmentStatusProps) {
-  const [prestataire, setPrestataire] = useState<any>(null);
+  const [prestataires, setPrestataires] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [propositions, setPropositions] = useState<any[]>([]);
 
@@ -29,7 +29,7 @@ export function DemandeAssignmentStatus({
       setLoading(true);
       
       if (missions.length === 0) {
-        setPrestataire(null);
+        setPrestataires([]);
         setPropositions([]);
         setLoading(false);
         return;
@@ -60,26 +60,30 @@ export function DemandeAssignmentStatus({
                 const res = await fetch(`/api/prestataires/${missionAcceptee.prestataireId}`, { cache: "no-store" });
                 if (res.ok) {
                   const data = await res.json();
-                  setPrestataire(data.prestataire);
+                  setPrestataires([data.prestataire]);
                 }
               } catch (err) {
                 console.error("Erreur récupération prestataire:", err);
               }
             }
           } else {
-            // Si pas de proposition acceptée mais qu'il y a des missions, charger le premier prestataire assigné
-            const firstMission = missions.find(m => m.prestataireId);
-            if (firstMission && firstMission.prestataireId) {
+            // Si pas de proposition acceptée mais qu'il y a des missions, charger TOUS les prestataires assignés
+            const prestataireIds = [...new Set(missions.map(m => m.prestataireId).filter(Boolean))];
+            const prestatairesPromises = prestataireIds.map(async (prestataireId) => {
               try {
-                const res = await fetch(`/api/prestataires/${firstMission.prestataireId}`, { cache: "no-store" });
+                const res = await fetch(`/api/prestataires/${prestataireId}`, { cache: "no-store" });
                 if (res.ok) {
                   const data = await res.json();
-                  setPrestataire(data.prestataire);
+                  return data.prestataire;
                 }
               } catch (err) {
-                console.error("Erreur récupération prestataire:", err);
+                console.error(`Erreur récupération prestataire ${prestataireId}:`, err);
               }
-            }
+              return null;
+            });
+            
+            const prestatairesData = await Promise.all(prestatairesPromises);
+            setPrestataires(prestatairesData.filter(Boolean));
           }
         }
       } catch (err) {
@@ -159,14 +163,22 @@ export function DemandeAssignmentStatus({
       );
     }
 
-    // En attente d'estimation des prestataires
+    // En attente d'estimation des prestataires - Afficher les noms si disponibles
+    const prestatairesNoms = prestataires.length > 0 
+      ? prestataires.map(p => p.nomEntreprise).join(", ")
+      : missions.length > 0 
+        ? `${missions.length} ${lang === "fr" ? "prestataire(s)" : "provider(s)"}`
+        : "";
+    
     return (
       <div className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-600 bg-blue-50 border border-blue-200 rounded-md">
         <UserPlus className="w-3.5 h-3.5" />
         <span>{lang === "fr" ? "En attente d'estimation" : "Waiting for estimation"}</span>
-        <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-[10px]">
-          {missions.length} {lang === "fr" ? "prestataire(s)" : "provider(s)"}
-        </span>
+        {prestatairesNoms && (
+          <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-[10px]">
+            {prestatairesNoms}
+          </span>
+        )}
       </div>
     );
   }
@@ -178,13 +190,23 @@ export function DemandeAssignmentStatus({
     return null;
   }
   
+  // Récupérer le prestataire correspondant à cette mission
+  const prestataire = prestataires.find(p => {
+    // Convertir l'ID du prestataire pour comparaison (peut être string ou number)
+    const prestataireId = typeof p.id === 'string' ? parseInt(p.id) : p.id;
+    const missionPrestataireId = typeof mission.prestataireId === 'string' ? parseInt(mission.prestataireId) : mission.prestataireId;
+    return prestataireId === missionPrestataireId;
+  }) || prestataires[0];
+  
+  const prestataireNom = prestataire?.nomEntreprise || mission.prestataireRef || (missions.length > 0 ? `${missions.length} ${lang === "fr" ? "prestataire(s)" : "provider(s)"}` : "N/A");
+  
   // Mission terminée
   if (mission.status === "termine_icd_canada" || mission.status === "cloture") {
     return (
       <div className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-purple-700 bg-purple-50 border border-purple-200 rounded-md">
         <CheckCircle className="w-3.5 h-3.5" />
         <span>
-          {t.prestataireAssigne}: {prestataire?.nomEntreprise || mission.prestataireRef || "N/A"}
+          {t.prestataireAssigne}: {prestataireNom}
         </span>
         <span className="ml-2 px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-[10px]">
           {t.terminee}
@@ -199,7 +221,7 @@ export function DemandeAssignmentStatus({
       <div className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-red-700 bg-red-50 border border-red-200 rounded-md">
         <User className="w-3.5 h-3.5" />
         <span>
-          {t.prestataireAssigne}: {prestataire?.nomEntreprise || mission.prestataireRef || "N/A"}
+          {t.prestataireAssigne}: {prestataireNom}
         </span>
         <span className="ml-2 px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-[10px]">
           {lang === "fr" ? "Refusée" : "Refused"}
@@ -229,7 +251,7 @@ export function DemandeAssignmentStatus({
       <div className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-orange-700 bg-orange-50 border-2 border-orange-400 rounded-md">
         <CheckCircle className="w-3.5 h-3.5" />
         <span>
-          {t.prestataireAssigne}: {prestataire?.nomEntreprise || mission.prestataireRef || "N/A"}
+          {t.prestataireAssigne}: {prestataireNom}
         </span>
         <span className="ml-2 px-2 py-0.5 bg-orange-600 text-white rounded-full text-[10px] font-bold animate-pulse">
           💰 {lang === "fr" ? "Envoi avance requis" : "Advance payment required"}
@@ -244,7 +266,7 @@ export function DemandeAssignmentStatus({
       <div className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-purple-700 bg-purple-50 border-2 border-purple-400 rounded-md">
         <CheckCircle className="w-3.5 h-3.5" />
         <span>
-          {t.prestataireAssigne}: {prestataire?.nomEntreprise || mission.prestataireRef || "N/A"}
+          {t.prestataireAssigne}: {prestataireNom}
         </span>
         <span className="ml-2 px-2 py-0.5 bg-purple-600 text-white rounded-full text-[10px] font-bold animate-pulse">
           ✅ {lang === "fr" ? "Validation requise" : "Validation required"}
@@ -265,7 +287,7 @@ export function DemandeAssignmentStatus({
       <div className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-green-700 bg-green-50 border border-green-200 rounded-md">
         <CheckCircle className="w-3.5 h-3.5" />
         <span>
-          {t.prestataireAssigne}: {prestataire?.nomEntreprise || mission.prestataireRef || "N/A"}
+          {t.prestataireAssigne}: {prestataireNom}
         </span>
       </div>
     );
@@ -277,7 +299,7 @@ export function DemandeAssignmentStatus({
       <div className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-green-700 bg-green-50 border border-green-200 rounded-md">
         <CheckCircle className="w-3.5 h-3.5" />
         <span>
-          {t.prestataireAssigne}: {prestataire?.nomEntreprise || mission.prestataireRef || "N/A"}
+          {t.prestataireAssigne}: {prestataireNom}
         </span>
       </div>
     );
