@@ -65,6 +65,20 @@ export async function getMissionsByClient(email: string) {
 export async function getMissionsByPrestataire(prestataireId: string) {
   console.log(`[missionsRepo] getMissionsByPrestataire appelé avec UUID: ${prestataireId}`);
   const db = ensurePrisma();
+  
+  // Vérifier d'abord si le prestataire existe
+  const prestataire = await db.prestataire.findUnique({
+    where: { id: prestataireId },
+    select: { id: true, email: true, ref: true },
+  });
+  
+  if (!prestataire) {
+    console.warn(`[missionsRepo] ⚠️ Prestataire UUID ${prestataireId} non trouvé dans la DB`);
+    return [];
+  }
+  
+  console.log(`[missionsRepo] ✅ Prestataire trouvé: ${prestataire.email} (${prestataire.ref})`);
+  
   const missions = await db.mission.findMany({
     where: {
       prestataireId,
@@ -79,7 +93,12 @@ export async function getMissionsByPrestataire(prestataireId: string) {
     //   prestataire: true,
     // },
   });
-  console.log(`[missionsRepo] getMissionsByPrestataire trouvé ${missions.length} mission(s) pour prestataireId: ${prestataireId}`);
+  
+  console.log(`[missionsRepo] 📋 Missions trouvées dans DB: ${missions.length}`);
+  missions.forEach((m, idx) => {
+    console.log(`[missionsRepo]   ${idx + 1}. ${m.ref} - prestataireId DB: ${m.prestataireId}, status: ${m.status}, deleted: ${m.deleted}`);
+  });
+  
   return missions;
 }
 
