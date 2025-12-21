@@ -198,7 +198,8 @@ export function DemandeAssignmentStatus({
     return prestataireId === missionPrestataireId;
   }) || prestataires[0];
   
-  const prestataireNom = prestataire?.nomEntreprise || mission.prestataireRef || (missions.length > 0 ? `${missions.length} ${lang === "fr" ? "prestataire(s)" : "provider(s)"}` : "N/A");
+  // Construire le nom du prestataire : utiliser le nom si disponible, sinon la référence de mission, sinon le nombre de prestataires
+  const prestataireNom = prestataire?.nomEntreprise || mission.prestataireRef || (prestataires.length > 0 ? prestataires.map(p => p.nomEntreprise).join(", ") : (missions.length > 0 ? `${missions.length} ${lang === "fr" ? "prestataire(s)" : "provider(s)"}` : "N/A"));
   
   // Mission terminée
   if (mission.status === "termine_icd_canada" || mission.status === "cloture") {
