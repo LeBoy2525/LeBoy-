@@ -90,7 +90,7 @@ export function DemandeAssignmentStatus({
     }
 
     fetchData();
-  }, [demande.id, missions]);, [missions, demande.id]);
+  }, [demande.id, missions]);
 
   if (loading) {
     return (
