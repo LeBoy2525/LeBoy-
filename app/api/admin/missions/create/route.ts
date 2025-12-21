@@ -118,32 +118,6 @@ export async function POST(req: Request) {
         await updateMissionInternalState(mission.id, "ASSIGNED_TO_PROVIDER", userEmail || "admin@icd.ca");
         
         missionsCreees.push(mission);
-
-        // Envoyer notification email au prestataire (en arrière-plan, ne pas bloquer)
-        (async () => {
-          try {
-            const { sendNotificationEmail } = await import("@/lib/emailService");
-            const protocol = process.env.NEXT_PUBLIC_APP_URL?.startsWith("https") ? "https" : "http";
-            const platformUrl = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://localhost:3000`;
-            
-            await sendNotificationEmail(
-              "mission-assigned",
-              { email: prestataire.email, name: prestataire.nomEntreprise || prestataire.nomContact },
-              {
-                missionRef: mission.ref,
-                serviceType: mission.serviceType,
-                lieu: mission.lieu || "Non spécifié",
-                platformUrl,
-                missionId: mission.id,
-                dateLimite: dateLimiteProposition.toISOString(),
-              },
-              "fr"
-            );
-          } catch (error) {
-            console.error(`Erreur envoi email notification prestataire ${prestataireIdNum}:`, error);
-            // Ne pas bloquer la création de la mission si l'email échoue
-          }
-        })();
       } catch (error) {
         console.error(`Erreur création mission pour prestataire ${prestataireIdNum}:`, error);
         errors.push(`Erreur lors de la création de la mission pour le prestataire ID ${prestataireIdNum}.`);
@@ -157,45 +131,61 @@ export async function POST(req: Request) {
     await new Promise(resolve => setTimeout(resolve, 100));
     
     // Envoyer les emails avec délai pour éviter rate limit Resend (2 req/s max)
-    // Espacer les envois de 500ms entre chaque email
+    // Espacer les envois de 600ms entre chaque email (plus sûr que 500ms)
+    // Stocker les IDs des prestataires avec leurs missions pour l'envoi d'emails
+    const missionsWithPrestataireIds: Array<{ mission: typeof missionsCreees[0], prestataireId: number }> = [];
     for (let i = 0; i < missionsCreees.length; i++) {
       const mission = missionsCreees[i];
-      const prestataireIdNum = prestataireIds[i];
+      // Trouver l'index dans prestataireIdsArray qui correspond à cette mission
+      // On doit trouver le prestataireId qui correspond à cette mission
+      const prestataireIdNum = prestataireIdsArray.find((id, idx) => {
+        // Vérifier si cette mission correspond à ce prestataire
+        // En comparant avec les missions créées précédemment
+        return idx < missionsCreees.length && missionsCreees[idx] === mission;
+      }) || prestataireIdsArray[i];
       
-      // Trouver le prestataire correspondant
-      const prestataire = await getPrestataireById(prestataireIdNum);
-      if (!prestataire) continue;
+      if (prestataireIdNum) {
+        missionsWithPrestataireIds.push({ mission, prestataireId: prestataireIdNum });
+      }
+    }
+    
+    // Envoyer les emails séquentiellement avec délai
+    for (let i = 0; i < missionsWithPrestataireIds.length; i++) {
+      const { mission, prestataireId } = missionsWithPrestataireIds[i];
       
-      // Attendre 500ms * index pour espacer les envois (2 par seconde max)
+      // Attendre 600ms avant chaque envoi (sauf le premier) pour respecter la limite de 2 req/s
       if (i > 0) {
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 600));
       }
       
-      // Envoyer l'email (en arrière-plan, ne pas bloquer)
-      (async () => {
-        try {
-          const { sendNotificationEmail } = await import("@/lib/emailService");
-          const protocol = process.env.NEXT_PUBLIC_APP_URL?.startsWith("https") ? "https" : "http";
-          const platformUrl = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://localhost:3000`;
-          
-          await sendNotificationEmail(
-            "mission-assigned",
-            { email: prestataire.email, name: prestataire.nomEntreprise || prestataire.nomContact },
-            {
-              missionRef: mission.ref,
-              serviceType: mission.serviceType,
-              lieu: mission.lieu || "Non spécifié",
-              platformUrl,
-              missionId: mission.id,
-              dateLimite: dateLimiteProposition.toISOString(),
-            },
-            "fr"
-          );
-        } catch (error) {
-          console.error(`Erreur envoi email notification prestataire ${prestataireIdNum}:`, error);
-          // Ne pas bloquer la création de la mission si l'email échoue
+      try {
+        const prestataire = await getPrestataireById(prestataireId);
+        if (!prestataire) {
+          console.warn(`Prestataire ${prestataireId} non trouvé pour l'envoi d'email`);
+          continue;
         }
-      })();
+        
+        const { sendNotificationEmail } = await import("@/lib/emailService");
+        const protocol = process.env.NEXT_PUBLIC_APP_URL?.startsWith("https") ? "https" : "http";
+        const platformUrl = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://localhost:3000`;
+        
+        await sendNotificationEmail(
+          "mission-assigned",
+          { email: prestataire.email, name: prestataire.nomEntreprise || prestataire.nomContact },
+          {
+            missionRef: mission.ref,
+            serviceType: mission.serviceType,
+            lieu: mission.lieu || "Non spécifié",
+            platformUrl,
+            missionId: mission.id,
+            dateLimite: dateLimiteProposition.toISOString(),
+          },
+          "fr"
+        );
+      } catch (error) {
+        console.error(`Erreur envoi email notification prestataire ${prestataireId}:`, error);
+        // Ne pas bloquer si l'email échoue
+      }
     }
 
     if (missionsCreees.length === 0) {
