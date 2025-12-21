@@ -711,12 +711,28 @@ export async function createDemande(
       const { createDemande: createDemandeDB, getAllDemandes: getAllDemandesDB } = await import("@/repositories/demandesRepo");
       
       // Générer ref et createdAt comme le fait addDemande JSON
+      // IMPORTANT: Trouver la dernière référence existante pour éviter les doublons
       const year = new Date().getFullYear();
-      // Pour la ref, on compte les demandes existantes
       const allDemandes = await getAllDemandesDB();
-      const nextId = allDemandes.length + 1;
+      
+      // Trouver le numéro le plus élevé pour cette année
+      let maxRefNumber = 0;
+      const refPattern = new RegExp(`^D-${year}-(\\d+)$`);
+      for (const demande of allDemandes) {
+        const match = demande.ref?.match(refPattern);
+        if (match) {
+          const refNum = parseInt(match[1], 10);
+          if (refNum > maxRefNumber) {
+            maxRefNumber = refNum;
+          }
+        }
+      }
+      
+      const nextId = maxRefNumber + 1;
       const ref = `D-${year}-${String(nextId).padStart(3, "0")}`;
       const createdAt = new Date().toISOString();
+      
+      console.log(`[createDemande] 📝 Génération ref: ${ref} (maxRefNumber trouvé: ${maxRefNumber}, nextId: ${nextId})`);
       
       const demande = await createDemandeDB({
         ref,
@@ -1457,11 +1473,28 @@ export async function createMission(
       }
       
       // Générer ref et createdAt comme le fait createMission JSON
+      // IMPORTANT: Trouver la dernière référence existante pour éviter les doublons
       const year = new Date().getFullYear();
       const allMissions = await getAllMissionsDB() as any[];
-      const nextId = allMissions.length + 1;
+      
+      // Trouver le numéro le plus élevé pour cette année
+      let maxRefNumber = 0;
+      const refPattern = new RegExp(`^M-${year}-(\\d+)$`);
+      for (const mission of allMissions) {
+        const match = mission.ref?.match(refPattern);
+        if (match) {
+          const refNum = parseInt(match[1], 10);
+          if (refNum > maxRefNumber) {
+            maxRefNumber = refNum;
+          }
+        }
+      }
+      
+      const nextId = maxRefNumber + 1;
       const ref = `M-${year}-${String(nextId).padStart(3, "0")}`;
       const createdAt = new Date().toISOString();
+      
+      console.log(`[createMission] 📝 Génération ref: ${ref} (maxRefNumber trouvé: ${maxRefNumber}, nextId: ${nextId})`);
       
       // État interne initial
       const { mapInternalStateToStatus, getProgressFromInternalState } = await import("./types");
