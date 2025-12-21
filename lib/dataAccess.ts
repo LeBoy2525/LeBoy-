@@ -1268,9 +1268,14 @@ export async function getMissionsByPrestataire(prestataireId: number): Promise<M
   if (USE_DB) {
     try {
       const { getMissionsByPrestataire: getMissionsByPrestataireDB } = await import("@/repositories/missionsRepo");
-      // Convertir l'ID number en string pour Prisma (UUID)
-      const prestataireIdStr = String(prestataireId);
-      const missions = await getMissionsByPrestataireDB(prestataireIdStr) as any[];
+      // Trouver l'UUID du prestataire à partir de son ID numérique
+      const prestataireDB = await findPrestatairePrismaByNumericId(prestataireId);
+      if (!prestataireDB) {
+        console.error(`[getMissionsByPrestataire] ❌ Prestataire non trouvé avec ID numérique: ${prestataireId}`);
+        return [];
+      }
+      
+      const missions = await getMissionsByPrestataireDB(prestataireDB.id) as any[];
       
       return missions.map(convertPrismaMissionToJSON);
     } catch (error) {
