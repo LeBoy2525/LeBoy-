@@ -40,23 +40,23 @@ export async function GET(
     const suggestedMatches = matches.filter(m => m.score > 0);
     const suggestedIds = new Set(suggestedMatches.map(m => m.prestataire.id));
     
-    // Les autres prestataires sont TOUS les prestataires disponibles (actifs ou en attente, non rejetés)
-    // qui ne sont pas déjà dans les suggestions
-    // Même s'il n'y a pas de suggestions, on affiche tous les prestataires disponibles
+    // Les autres prestataires sont TOUS les prestataires actifs qui ne sont pas dans les suggestions
+    // L'admin peut assigner même si la catégorie ne correspond pas exactement
+    // On inclut uniquement les prestataires actifs (pas en_attente) pour cette section
     const otherPrestataires = allPrestataires
       .filter(p => 
-        !suggestedIds.has(p.id) && 
-        p.statut !== "rejete" && 
+        !suggestedIds.has(p.id) && // Ne pas inclure ceux déjà suggérés
+        p.statut === "actif" && // Uniquement les prestataires actifs
         !p.deletedAt
       )
       .map(p => ({
         prestataire: p,
         score: 0,
-        reasons: ["Autre prestataire disponible"],
+        reasons: ["Prestataire actif disponible"],
       }));
     
-    // Si aucun prestataire suggéré, on retourne quand même une liste vide pour afficher "Prestataires suggérés (0)"
-    // et tous les prestataires disponibles dans "Autres prestataires"
+    console.log(`[API MATCHING] Prestataires actifs disponibles: ${allPrestataires.filter(p => p.statut === "actif" && !p.deletedAt).length}`);
+    console.log(`[API MATCHING] Autres prestataires (actifs, non suggérés): ${otherPrestataires.length}`);
 
     console.log("🔍 API Matching - Résultats:", {
       demandeId: demande.id,
