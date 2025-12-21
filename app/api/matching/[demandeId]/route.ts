@@ -34,29 +34,40 @@ export async function GET(
     console.log(`[API MATCHING] Prestataires actifs: ${allPrestataires.filter(p => p.statut === "actif").length}`);
     
     // Passer les prestataires à la fonction de matching
+    // Cette fonction filtre par spécialité, ville et pays pour les suggestions
     const matches = matchDemandeToPrestataires(demande, allPrestataires);
 
     // Séparer les prestataires suggérés (avec score > 0) des autres
     const suggestedMatches = matches.filter(m => m.score > 0);
     const suggestedIds = new Set(suggestedMatches.map(m => m.prestataire.id));
     
-    // Les autres prestataires sont TOUS les prestataires actifs qui ne sont pas dans les suggestions
-    // L'admin peut assigner même si la catégorie ne correspond pas exactement
-    // On inclut uniquement les prestataires actifs (pas en_attente) pour cette section
-    const otherPrestataires = allPrestataires
-      .filter(p => 
-        !suggestedIds.has(p.id) && // Ne pas inclure ceux déjà suggérés
-        p.statut === "actif" && // Uniquement les prestataires actifs
-        !p.deletedAt
-      )
+    // IMPORTANT: Les autres prestataires sont TOUS les prestataires actifs disponibles
+    // SANS AUCUN FILTRAGE par ville, pays ou spécialité
+    // Chaque demande est indépendante - un prestataire peut recevoir plusieurs demandes
+    // L'admin peut assigner même si la catégorie/ville/pays ne correspond pas exactement
+    const allActivePrestataires = allPrestataires.filter(p => 
+      p.statut === "actif" && 
+      !p.deletedAt
+    );
+    
+    const otherPrestataires = allActivePrestataires
+      .filter(p => !suggestedIds.has(p.id)) // Ne pas inclure ceux déjà suggérés
       .map(p => ({
         prestataire: p,
         score: 0,
         reasons: ["Prestataire actif disponible"],
       }));
     
-    console.log(`[API MATCHING] Prestataires actifs disponibles: ${allPrestataires.filter(p => p.statut === "actif" && !p.deletedAt).length}`);
+    console.log(`[API MATCHING] Prestataires actifs disponibles (total): ${allActivePrestataires.length}`);
+    console.log(`[API MATCHING] Prestataires suggérés: ${suggestedMatches.length}`);
     console.log(`[API MATCHING] Autres prestataires (actifs, non suggérés): ${otherPrestataires.length}`);
+    console.log(`[API MATCHING] Détail demande:`, {
+      id: demande.id,
+      ref: demande.ref,
+      serviceType: demande.serviceType,
+      lieu: demande.lieu,
+      country: demande.country
+    });
 
     console.log("🔍 API Matching - Résultats:", {
       demandeId: demande.id,
