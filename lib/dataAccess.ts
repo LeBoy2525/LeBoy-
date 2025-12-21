@@ -1551,13 +1551,38 @@ function convertPrismaMissionToJSON(mission: any): Mission {
   // Helper pour convertir null en undefined
   const nullToUndef = <T>(val: T | null): T | undefined => (val === null ? undefined : val);
 
+  // Convertir demandeId UUID en ID numérique
+  let demandeIdNumber: number;
+  if (typeof mission.demandeId === "string" && mission.demandeId.includes("-")) {
+    const hash = mission.demandeId.split("").reduce((acc: number, char: string) => {
+      return ((acc << 5) - acc) + char.charCodeAt(0);
+    }, 0);
+    demandeIdNumber = Math.abs(hash) % 1000000;
+  } else {
+    demandeIdNumber = parseInt(String(mission.demandeId)) || 0;
+  }
+
+  // Convertir prestataireId UUID en ID numérique
+  let prestataireIdNumber: number | undefined = undefined;
+  if (mission.prestataireId) {
+    if (typeof mission.prestataireId === "string" && mission.prestataireId.includes("-")) {
+      // C'est un UUID, convertir en ID numérique
+      const hash = mission.prestataireId.split("").reduce((acc: number, char: string) => {
+        return ((acc << 5) - acc) + char.charCodeAt(0);
+      }, 0);
+      prestataireIdNumber = Math.abs(hash) % 1000000;
+    } else {
+      prestataireIdNumber = parseInt(String(mission.prestataireId)) || undefined;
+    }
+  }
+
   return {
     id: idNumber,
     ref: mission.ref,
     createdAt: mission.createdAt.toISOString(),
-    demandeId: parseInt(String(mission.demandeId)) || 0,
+    demandeId: demandeIdNumber,
     clientEmail: mission.clientEmail,
-    prestataireId: mission.prestataireId ? parseInt(String(mission.prestataireId)) : undefined,
+    prestataireId: prestataireIdNumber,
     prestataireRef: nullToUndef(mission.prestataireRef),
     internalState: mission.internalState as any,
     status: mission.status as any,
