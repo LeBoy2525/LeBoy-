@@ -1191,14 +1191,16 @@ export default function AdminDemandeDetailPage() {
                     : "Click on a card to select a provider. Use the checkbox to deselect."}
                 </p>
                 {matches.length === 0 ? (
-                  <div className="space-y-2 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <p className="text-sm text-yellow-800 font-medium">
-                      {lang === "fr" ? "Aucun prestataire disponible" : "No provider available"}
+                  <div className="space-y-2 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                    <p className="text-sm text-gray-700 font-medium">
+                      {lang === "fr" 
+                        ? "Aucun prestataire ne correspond directement à cette catégorie de service."
+                        : "No provider directly matches this service category."}
                     </p>
-                    <p className="text-xs text-yellow-700">
-                      {lang === "fr"
-                        ? "Vérifiez que des prestataires sont validés (statut 'actif') dans la section Prestataires."
-                        : "Check that providers are validated (status 'active') in the Providers section."}
+                    <p className="text-xs text-gray-600">
+                      {lang === "fr" 
+                        ? "Consultez la section 'Autres prestataires' ci-dessous pour voir tous les prestataires disponibles." 
+                        : "Check the 'Other providers' section below to see all available providers."}
                     </p>
                   </div>
                 ) : (

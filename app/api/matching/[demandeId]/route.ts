@@ -40,8 +40,9 @@ export async function GET(
     const suggestedMatches = matches.filter(m => m.score > 0);
     const suggestedIds = new Set(suggestedMatches.map(m => m.prestataire.id));
     
-    // Les autres prestataires sont ceux qui ne sont pas dans les suggestions
-    // et qui sont actifs ou en attente (non rejetés)
+    // Les autres prestataires sont TOUS les prestataires disponibles (actifs ou en attente, non rejetés)
+    // qui ne sont pas déjà dans les suggestions
+    // Même s'il n'y a pas de suggestions, on affiche tous les prestataires disponibles
     const otherPrestataires = allPrestataires
       .filter(p => 
         !suggestedIds.has(p.id) && 
@@ -53,6 +54,9 @@ export async function GET(
         score: 0,
         reasons: ["Autre prestataire disponible"],
       }));
+    
+    // Si aucun prestataire suggéré, on retourne quand même une liste vide pour afficher "Prestataires suggérés (0)"
+    // et tous les prestataires disponibles dans "Autres prestataires"
 
     console.log("🔍 API Matching - Résultats:", {
       demandeId: demande.id,
