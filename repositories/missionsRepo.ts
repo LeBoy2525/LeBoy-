@@ -46,7 +46,8 @@ export async function getMissionsByClient(email: string) {
 }
 
 export async function getMissionsByPrestataire(prestataireId: string) {
-  return prisma.mission.findMany({
+  console.log(`[missionsRepo] getMissionsByPrestataire appelé avec UUID: ${prestataireId}`);
+  const missions = await prisma.mission.findMany({
     where: {
       prestataireId,
       deleted: false,
@@ -60,6 +61,8 @@ export async function getMissionsByPrestataire(prestataireId: string) {
     //   prestataire: true,
     // },
   });
+  console.log(`[missionsRepo] getMissionsByPrestataire trouvé ${missions.length} mission(s) pour prestataireId: ${prestataireId}`);
+  return missions;
 }
 
 export async function getMissionsByDemandeId(demandeId: string) {

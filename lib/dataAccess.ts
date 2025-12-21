@@ -1265,6 +1265,8 @@ export async function getMissionsByClient(email: string): Promise<Mission[]> {
  * Bascule automatiquement entre JSON et DB selon USE_DB
  */
 export async function getMissionsByPrestataire(prestataireId: number): Promise<Mission[]> {
+  console.log(`[getMissionsByPrestataire] 🔍 Recherche missions pour prestataire ID numérique: ${prestataireId}`);
+  
   if (USE_DB) {
     try {
       const { getMissionsByPrestataire: getMissionsByPrestataireDB } = await import("@/repositories/missionsRepo");
@@ -1275,9 +1277,21 @@ export async function getMissionsByPrestataire(prestataireId: number): Promise<M
         return [];
       }
       
-      const missions = await getMissionsByPrestataireDB(prestataireDB.id) as any[];
+      console.log(`[getMissionsByPrestataire] ✅ Prestataire trouvé: ${prestataireDB.email} (UUID: ${prestataireDB.id})`);
       
-      return missions.map(convertPrismaMissionToJSON);
+      const missions = await getMissionsByPrestataireDB(prestataireDB.id) as any[];
+      console.log(`[getMissionsByPrestataire] 📋 Missions brutes trouvées dans DB: ${missions.length}`);
+      missions.forEach((m: any, idx: number) => {
+        console.log(`[getMissionsByPrestataire]   ${idx + 1}. Mission ${m.ref} - prestataireId DB: ${m.prestataireId}`);
+      });
+      
+      const convertedMissions = missions.map(convertPrismaMissionToJSON);
+      console.log(`[getMissionsByPrestataire] ✅ Missions converties: ${convertedMissions.length}`);
+      convertedMissions.forEach((m: Mission, idx: number) => {
+        console.log(`[getMissionsByPrestataire]   ${idx + 1}. Mission ${m.ref} - prestataireId converti: ${m.prestataireId}`);
+      });
+      
+      return convertedMissions;
     } catch (error) {
       console.error("Erreur getMissionsByPrestataire (DB):", error);
       return getMissionsByPrestataireJSON(prestataireId);
