@@ -1385,8 +1385,18 @@ export async function getMissionsByDemandeId(demandeId: number): Promise<Mission
   if (USE_DB) {
     try {
       const { getMissionsByDemandeId: getMissionsByDemandeIdDB } = await import("@/repositories/missionsRepo");
-      const demandeIdStr = String(demandeId);
-      const missions = await getMissionsByDemandeIdDB(demandeIdStr) as any[];
+      
+      // IMPORTANT: Convertir l'ID numérique en UUID avant de chercher les missions
+      const demandeDB = await findDemandePrismaByNumericId(demandeId);
+      if (!demandeDB) {
+        console.warn(`[getMissionsByDemandeId] Demande ${demandeId} non trouvée, retourne tableau vide`);
+        return [];
+      }
+      
+      // Utiliser l'UUID de la demande pour chercher les missions
+      const missions = await getMissionsByDemandeIdDB(demandeDB.id) as any[];
+      
+      console.log(`[getMissionsByDemandeId] Demande ${demandeId} (UUID: ${demandeDB.id.substring(0, 8)}...): ${missions.length} missions trouvées`);
       
       return missions.map(convertPrismaMissionToJSON);
     } catch (error) {
