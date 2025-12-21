@@ -192,10 +192,19 @@ export async function GET() {
       (p) => p.statut === "en_attente"
     ).length;
 
-    return NextResponse.json({
-      demandes: demandesEnAttente,
-      prestataires: prestatairesEnAttente,
-    });
+    return NextResponse.json(
+      {
+        demandes: demandesEnAttente,
+        prestataires: prestatairesEnAttente,
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+          "Pragma": "no-cache",
+          "Expires": "0",
+        },
+      }
+    );
   } catch (error) {
     console.error("Erreur /api/admin/pending-actions:", error);
     return NextResponse.json(
