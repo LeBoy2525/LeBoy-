@@ -1612,30 +1612,77 @@ export async function updateMissionInternalState(
   newInternalState: string,
   authorEmail: string
 ): Promise<Mission | null> {
-  // TEMPORAIRE: Désactiver Prisma pour les missions jusqu'à ce que le schéma soit corrigé
-  // if (USE_DB) {
-  //   try {
-  //     // Pour Prisma, utiliser la logique du store JSON qui est complète
-  //     // On récupère la mission, on la met à jour via le store JSON, puis on sauvegarde dans Prisma
-  //     const mission = await getMissionById(id);
-  //     if (!mission) return null;
+  if (USE_DB) {
+    try {
+      // Pour Prisma, utiliser la logique du store JSON qui est complète
+      // On récupère la mission, on la met à jour via le store JSON, puis on sauvegarde dans Prisma
+      const mission = await getMissionById(id);
+      if (!mission) return null;
 
-  //     // Utiliser la logique complète du store JSON
-  //     const result = await updateMissionInternalStateJSON(id, newInternalState, authorEmail);
-  //     
-  //     if (!result) return null;
+      // Utiliser la logique complète du store JSON
+      const result = await updateMissionInternalStateJSON(id, newInternalState, authorEmail);
+      
+      if (!result) return null;
 
-  //     // TEMPORAIRE: Désactiver Prisma pour les missions jusqu'à ce que le schéma soit corrigé
-  //     // La sauvegarde se fait déjà via le store JSON dans updateMissionInternalStateJSON
+      // Sauvegarder dans Prisma
+      try {
+        const { updateMission: updateMissionDB } = await import("@/repositories/missionsRepo");
+        // Trouver la mission dans Prisma en utilisant demandeId
+        const { getMissionsByDemandeId: getMissionsByDemandeIdDB } = await import("@/repositories/missionsRepo");
+        const missionsForDemande = await getMissionsByDemandeIdDB(String(mission.demandeId)) as any[];
+        const missionDB = missionsForDemande.find((m: any) => {
+          let idNumber: number;
+          if (typeof m.id === "string" && m.id.includes("-")) {
+            const hash = m.id.split("").reduce((acc: number, char: string) => {
+              return ((acc << 5) - acc) + char.charCodeAt(0);
+            }, 0);
+            idNumber = Math.abs(hash) % 1000000;
+          } else {
+            idNumber = parseInt(String(m.id)) || 0;
+          }
+          return idNumber === id;
+        });
 
-  //     return result;
-  //   } catch (error) {
-  //     console.error("Erreur updateMissionInternalState (DB):", error);
-  //     return updateMissionInternalStateJSON(id, newInternalState, authorEmail);
-  //   }
-  // } else {
+        if (missionDB) {
+          const updateData: any = {
+            internalState: result.internalState,
+            status: result.status,
+            currentProgress: result.currentProgress,
+            updates: result.updates ? JSON.parse(JSON.stringify(result.updates)) : [],
+            progress: result.progress ? JSON.parse(JSON.stringify(result.progress)) : [],
+            dateAssignation: result.dateAssignation ? new Date(result.dateAssignation) : null,
+            dateAcceptation: result.dateAcceptation ? new Date(result.dateAcceptation) : null,
+            datePriseEnCharge: result.datePriseEnCharge ? new Date(result.datePriseEnCharge) : null,
+            dateDebut: result.dateDebut ? new Date(result.dateDebut) : null,
+            dateFin: result.dateFin ? new Date(result.dateFin) : null,
+            paiementEffectue: result.paiementEffectue,
+            paiementEffectueAt: result.paiementEffectueAt ? new Date(result.paiementEffectueAt) : null,
+            avanceVersee: result.avanceVersee,
+            avanceVerseeAt: result.avanceVerseeAt ? new Date(result.avanceVerseeAt) : null,
+            soldeVersee: result.soldeVersee,
+            soldeVerseeAt: result.soldeVerseeAt ? new Date(result.soldeVerseeAt) : null,
+            proofSubmissionDate: result.proofSubmissionDate ? new Date(result.proofSubmissionDate) : null,
+            proofValidatedByAdmin: result.proofValidatedByAdmin,
+            proofValidatedAt: result.proofValidatedAt ? new Date(result.proofValidatedAt) : null,
+            proofValidatedForClient: result.proofValidatedForClient,
+            proofValidatedForClientAt: result.proofValidatedForClientAt ? new Date(result.proofValidatedForClientAt) : null,
+          };
+
+          await updateMissionDB(missionDB.id, updateData);
+        }
+      } catch (prismaError) {
+        console.error("Erreur mise à jour Prisma dans updateMissionInternalState:", prismaError);
+        // Continuer avec le résultat JSON même si Prisma échoue
+      }
+
+      return result;
+    } catch (error) {
+      console.error("Erreur updateMissionInternalState (DB):", error);
+      return updateMissionInternalStateJSON(id, newInternalState, authorEmail);
+    }
+  } else {
     return updateMissionInternalStateJSON(id, newInternalState, authorEmail);
-  // }
+  }
 }
 
 /**
