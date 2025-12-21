@@ -1548,11 +1548,12 @@ export async function createMission(
       if (!prisma) {
         throw new Error("Prisma n'est pas disponible");
       }
-      ref = `M-${year}-${String(nextId).padStart(3, "0")}`;
-      
       const createdAt = new Date().toISOString();
       
-      console.log(`[createMission] 📝 Génération ref: ${ref} (nextId: ${nextId}, tentatives: ${attempts})`);
+      // IMPORTANT: Générer la ref atomiquement AVANT de créer la mission
+      const { generateMissionRef } = await import("@/lib/missionRef");
+      const ref = await generateMissionRef(prisma);
+      console.log(`[createMission] ✅ Référence générée atomiquement: ${ref}`);
       
       // État interne initial
       const { mapInternalStateToStatus, getProgressFromInternalState } = await import("./types");
@@ -1564,11 +1565,9 @@ export async function createMission(
       
       console.log(`[createMission] 📝 Création mission avec demandeId UUID: ${demandeDB.id}, prestataireId UUID: ${prestataireIdUUID || "null"}`);
       
-      // Créer la mission (la ref sera générée atomiquement dans createMissionDB)
-      // Plus besoin de retry loop car la génération est atomique via compteur DB
+      // Créer la mission avec la ref générée atomiquement
       const mission = await createMissionDB({
-                // ref sera généré atomiquement dans createMissionDB si non fourni
-                ref: undefined as any, // Laisser createMissionDB générer atomiquement
+                ref, // Utiliser la ref générée atomiquement
             createdAt,
             demandeId: demandeDB.id as any, // Utiliser l'UUID de la demande (cast pour compatibilité type Mission)
             clientEmail: data.clientEmail,
