@@ -193,6 +193,9 @@ export interface Mission {
   proofs?: MissionProof[]; // Preuves uploadées par le prestataire
   proofSubmissionDate?: string; // Date de soumission des preuves
   proofValidatedByAdmin?: boolean; // Si l'admin a validé les preuves
+  
+  // Suivi des notifications
+  notifiedProviderAt?: string; // Date d'envoi de la notification au prestataire (ISO date)
   proofValidatedAt?: string; // Date de validation par l'admin
   proofValidatedForClient?: boolean; // Si le client peut voir les preuves
   proofValidatedForClientAt?: string; // Date à laquelle les preuves ont été validées pour le client (pour calculer les 24h)
