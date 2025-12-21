@@ -106,9 +106,22 @@ export async function createMission(data: Omit<Mission, "id">) {
   console.log(`[missionsRepo] createMission appelé avec demandeId: ${demandeIdStr}, prestataireId: ${prestataireIdStr}`);
   
   const db = ensurePrisma();
+  
+  // IMPORTANT: Générer la ref de manière atomique dans la même transaction
+  // Si data.ref est fourni, on l'utilise (pour compatibilité), sinon on génère atomiquement
+  let refToUse: string;
+  if (data.ref) {
+    refToUse = data.ref;
+    console.log(`[missionsRepo] Utilisation ref fournie: ${refToUse}`);
+  } else {
+    // Générer atomiquement via le compteur DB
+    const { generateMissionRef } = await import("@/lib/missionRef");
+    refToUse = await generateMissionRef(db);
+  }
+  
   return db.mission.create({
     data: {
-      ref: data.ref,
+      ref: refToUse,
       demandeId: demandeIdStr,
       clientEmail: data.clientEmail,
       prestataireId: prestataireIdStr,

@@ -107,6 +107,9 @@ model Mission {
   prestataireId         String?
   prestataireRef        String?
   
+  // Suivi des notifications
+  notifiedProviderAt    DateTime? // Date d'envoi de la notification au prestataire
+  
   // État interne du workflow
   internalState         String   // MissionInternalState
   status                String   // MissionStatus
@@ -335,4 +338,12 @@ model EmailLog {
   @@index([status])
   @@index([createdAt])
   @@map("email_logs")
+}
+
+model MissionRefCounter {
+  year                  Int      @id // Année (ex: 2025)
+  lastNumber            Int      @default(0)
+  updatedAt             DateTime @updatedAt
+  
+  @@map("mission_ref_counters")
 }

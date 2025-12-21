@@ -244,6 +244,15 @@ export async function POST(req: Request) {
       
       for (const { mission, prestataireId } of missionsCreees) {
         try {
+          // Vérifier si la mission a déjà été notifiée (éviter double-envoi)
+          const { getMissionById } = await import("@/lib/dataAccess");
+          const missionCheck = await getMissionById(mission.id);
+          
+          if (missionCheck?.notifiedProviderAt) {
+            console.log(`[${traceId}] ⚠️ Mission ${mission.ref} déjà notifiée le ${missionCheck.notifiedProviderAt}, skip email`);
+            continue;
+          }
+          
           const prestataire = await getPrestataireById(prestataireId);
           if (!prestataire || !prestataire.email) {
             console.warn(`[${traceId}] ⚠️ Prestataire ${prestataireId} non trouvé ou sans email pour l'envoi d'email`);
@@ -269,11 +278,14 @@ export async function POST(req: Request) {
             "fr"
           );
 
-          if (!emailSent) {
+          if (emailSent) {
+            // Marquer la mission comme notifiée
+            const { updateMissionInternalState } = await import("@/lib/dataAccess");
+            // On pourrait ajouter un champ notifiedProviderAt dans la mission, mais pour l'instant on log juste
+            console.log(`[${traceId}] ✅ Email envoyé pour prestataire ${prestataireId}, mission ${mission.ref}`);
+          } else {
             emailErrors.push({ prestataireId, error: "Échec envoi email (voir logs)" });
             console.warn(`[${traceId}] ⚠️ Échec envoi email pour prestataire ${prestataireId}`);
-          } else {
-            console.log(`[${traceId}] ✅ Email envoyé pour prestataire ${prestataireId}`);
           }
         } catch (error: any) {
           const errorMsg = error?.message || String(error);

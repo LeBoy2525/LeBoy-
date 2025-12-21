@@ -1613,17 +1613,11 @@ export async function createMission(
       
       console.log(`[createMission] 📝 Création mission avec demandeId UUID: ${demandeDB.id}, prestataireId UUID: ${prestataireIdUUID || "null"}`);
       
-      // Créer la mission avec retry en cas d'erreur P2002 (contrainte unique)
-      // Même si on a vérifié la ref, il peut y avoir une condition de course
-      let mission;
-      let createAttempts = 0;
-      let currentRef = ref;
-      const maxAttempts = 10; // Augmenter le nombre de tentatives pour gérer les conditions de course
-      
-      while (createAttempts < maxAttempts) {
-        try {
-          mission = await createMissionDB({
-                ref: currentRef,
+      // Créer la mission (la ref sera générée atomiquement dans createMissionDB)
+      // Plus besoin de retry loop car la génération est atomique via compteur DB
+      const mission = await createMissionDB({
+                // ref sera généré atomiquement dans createMissionDB si non fourni
+                ref: undefined as any, // Laisser createMissionDB générer atomiquement
             createdAt,
             demandeId: demandeDB.id as any, // Utiliser l'UUID de la demande (cast pour compatibilité type Mission)
             clientEmail: data.clientEmail,
@@ -1691,47 +1685,8 @@ export async function createMission(
             deleted: data.deleted || false,
             deletedAt: undefToNull(data.deletedAt),
             deletedBy: undefToNull(data.deletedBy),
+            notifiedProviderAt: null, // Pas encore notifié
           } as any);
-          
-          // Succès, sortir de la boucle
-          break;
-        } catch (error: any) {
-          createAttempts++;
-          
-          // Si c'est une erreur P2002 (contrainte unique), générer une nouvelle ref et retryer
-          if (error?.code === 'P2002' && createAttempts < maxAttempts) {
-            console.warn(`[createMission] ⚠️ Contrainte unique sur ${currentRef} lors de la création (tentative ${createAttempts}/${maxAttempts}), génération nouvelle ref...`);
-            // Générer une nouvelle référence en incrémentant
-            const refMatch = currentRef.match(/^M-(\d{4})-(\d+)$/);
-            if (refMatch) {
-              const refYear = parseInt(refMatch[1]);
-              const refNum = parseInt(refMatch[2]);
-              // Incrémenter et utiliser un offset basé sur le nombre de tentatives pour éviter les collisions
-              const newRefNum = refNum + createAttempts;
-              currentRef = `M-${refYear}-${String(newRefNum).padStart(3, "0")}`;
-              console.log(`[createMission] 🔄 Nouvelle ref générée: ${currentRef}`);
-            } else {
-              // Fallback: utiliser timestamp + tentative
-              const timestamp = Date.now() % 10000; // 4 derniers chiffres
-              currentRef = `M-${year}-${String(timestamp + createAttempts).padStart(3, "0")}`;
-            }
-            // Attendre un peu avant de retryer pour laisser le temps à la DB de se synchroniser
-            // Délai progressif : 100ms, 200ms, 300ms, etc.
-            await new Promise(resolve => setTimeout(resolve, 100 * createAttempts));
-            continue;
-          }
-          
-          // Autre erreur ou trop de tentatives, propager l'erreur
-          if (createAttempts >= maxAttempts) {
-            console.error(`[createMission] ❌ Impossible de créer la mission après ${maxAttempts} tentatives`);
-          }
-          throw error;
-        }
-      }
-      
-      if (!mission) {
-        throw new Error(`Impossible de créer la mission après ${createAttempts} tentatives`);
-      }
 
       return convertPrismaMissionToJSON(mission);
     } catch (error) {
