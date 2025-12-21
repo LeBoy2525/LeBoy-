@@ -22,16 +22,23 @@ export async function getDemandeById(id: string) {
 
 export async function getDemandeByRef(ref: string) {
   // @ts-ignore
-  // Recherche insensible à la casse car l'URL peut être en minuscules
-  const demandes = await (prisma as any).demande.findMany({
-    where: {
-      ref: {
-        equals: ref,
-        mode: 'insensitive',
-      },
-    },
+  // Recherche insensible à la casse : essayer d'abord avec la ref exacte, puis en majuscules
+  // Car les refs sont stockées comme "D-2025-003" mais l'URL peut être "d-2025-003"
+  const refUpper = ref.toUpperCase();
+  
+  // Essayer avec la ref exacte
+  let demande = await (prisma as any).demande.findUnique({
+    where: { ref },
   });
-  return demandes[0] || null;
+  
+  // Si pas trouvé et que la ref est différente en majuscules, essayer en majuscules
+  if (!demande && ref !== refUpper) {
+    demande = await (prisma as any).demande.findUnique({
+      where: { ref: refUpper },
+    });
+  }
+  
+  return demande || null;
 }
 
 export async function createDemande(data: Omit<DemandeICD, "id">) {
