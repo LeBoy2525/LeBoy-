@@ -2,6 +2,7 @@
 // Service d'envoi d'email avec Resend
 
 import { Resend } from "resend";
+import { enqueueEmailSend } from "./email/rateLimit";
 
 // Initialiser Resend avec la clé API depuis les variables d'environnement
 const resend = process.env.RESEND_API_KEY
@@ -278,7 +279,7 @@ Si vous avez des questions, contactez-nous à contact@leboy.com
 }
 
 /**
- * Envoie une notification email générique
+ * Envoie une notification email générique avec rate limiting
  */
 export async function sendNotificationEmail(
   type: string,
@@ -298,19 +299,33 @@ export async function sendNotificationEmail(
     // Appliquer le mode safe si activé
     const safeEmail = getSafeRecipient(recipient.email);
 
-    const { error } = await resend.emails.send({
-      from: `${FROM_NAME} <${FROM_EMAIL}>`,
-      to: [safeEmail],
-      subject,
-      html,
-    });
+    // Utiliser le rate limiter pour éviter les erreurs 429
+    try {
+      await enqueueEmailSend(async () => {
+        const { error } = await resend.emails.send({
+          from: `${FROM_NAME} <${FROM_EMAIL}>`,
+          to: [safeEmail],
+          subject,
+          html,
+        });
 
-    if (error) {
+        if (error) {
+          // Propager l'erreur pour que le rate limiter puisse gérer le retry
+          throw error;
+        }
+      });
+
+      return true;
+    } catch (error: any) {
+      // Si c'est une erreur 429 après retry, loguer mais ne pas bloquer
+      if (error?.statusCode === 429) {
+        console.error(`[email] Erreur Resend 429 (après retry) pour ${safeEmail}:`, error);
+        return false;
+      }
+      // Autres erreurs
       console.error("Erreur Resend:", error);
       return false;
     }
-
-    return true;
   } catch (error) {
     console.error("Erreur lors de l'envoi de la notification:", error);
     return false;

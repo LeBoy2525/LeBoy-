@@ -253,7 +253,16 @@ export default function AdminDemandesPage() {
     setShowAssignModal(true);
   };
 
+  // État pour protection anti double-clic
+  const [isSubmittingMission, setIsSubmittingMission] = useState(false);
+
   const handleCreateMission = async (prestataireId: number, sharedFiles?: any[]) => {
+    // Protection anti double-clic
+    if (isSubmittingMission) {
+      console.warn("⚠️ Tentative de double-soumission bloquée");
+      return;
+    }
+
     if (!selectedDemande) return;
 
     // Validation
@@ -264,10 +273,16 @@ export default function AdminDemandesPage() {
       return;
     }
 
+    // Générer un requestId pour l'idempotence (optionnel)
+    const requestId = `mission-${selectedDemande.id}-${prestataireId}-${Date.now()}`;
+
+    setIsSubmittingMission(true);
+
     try {
       console.log("Création mission:", {
         demandeId: selectedDemande.id,
         prestataireId,
+        requestId,
       });
 
       const res = await fetch("/api/admin/missions/create", {
@@ -277,6 +292,7 @@ export default function AdminDemandesPage() {
           demandeId: selectedDemande.id,
           prestataireId: Number(prestataireId),
           sharedFiles: sharedFiles || [],
+          requestId, // Pour l'idempotence future
         }),
       });
 
@@ -350,6 +366,9 @@ export default function AdminDemandesPage() {
     } catch (err) {
       console.error("Erreur:", err);
       alert(lang === "fr" ? "Erreur lors de la création de la mission" : "Error creating mission");
+    } finally {
+      // Toujours réinitialiser l'état de soumission
+      setIsSubmittingMission(false);
     }
   };
 
@@ -593,6 +612,7 @@ export default function AdminDemandesPage() {
                   setSelectedDemande(null);
                 }}
                 onCreateMission={handleCreateMission}
+                isSubmitting={isSubmittingMission}
                 t={t}
               />
             )}
@@ -737,6 +757,7 @@ function AssignModal({
   demandeFiles,
   onClose,
   onCreateMission,
+  isSubmitting = false,
   t,
 }: {
   demande: DemandeICD;
@@ -745,6 +766,7 @@ function AssignModal({
   demandeFiles: any[];
   onClose: () => void;
   onCreateMission: (prestataireId: number, sharedFiles?: any[]) => void;
+  isSubmitting?: boolean;
   t: any;
 }) {
   const { lang } = useLanguage();
@@ -1288,13 +1310,15 @@ function AssignModal({
           <div className="flex gap-3 pt-4 border-t border-[#E2E2E8]">
             <button
               type="submit"
-              disabled={selectedPrestataires.length === 0}
+              disabled={selectedPrestataires.length === 0 || isSubmitting}
               className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-[#0A1B2A] text-white text-sm font-semibold rounded-md hover:bg-[#07121e] transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <CheckCircle2 className="w-4 h-4" />
-              {lang === "fr" 
-                ? `Assigner ${selectedPrestataires.length > 0 ? `${selectedPrestataires.length} prestataire(s)` : 'les prestataires'}`
-                : `Assign ${selectedPrestataires.length > 0 ? `${selectedPrestataires.length} provider(s)` : 'providers'}`}
+              {isSubmitting 
+                ? (lang === "fr" ? "Création en cours..." : "Creating...")
+                : (lang === "fr" 
+                  ? `Assigner ${selectedPrestataires.length > 0 ? `${selectedPrestataires.length} prestataire(s)` : 'les prestataires'}`
+                  : `Assign ${selectedPrestataires.length > 0 ? `${selectedPrestataires.length} provider(s)` : 'providers'}`)}
             </button>
             <button
               type="button"
