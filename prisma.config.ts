@@ -7,6 +7,7 @@ import { defineConfig } from "prisma/config";
 // Les migrations nécessitent une connexion directe, pas de pooling
 // POSTGRES_PRISMA_URL est pour le runtime (avec pooling)
 const DIRECT_URL = process.env.POSTGRES_URL_NON_POOLING || process.env.DATABASE_URL || process.env.POSTGRES_URL || "postgresql://placeholder@localhost:5432/placeholder";
+const POOLING_URL = process.env.POSTGRES_PRISMA_URL || DIRECT_URL;
 
 export default defineConfig({
   schema: "prisma/schema.prisma",
@@ -14,6 +15,8 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    url: DIRECT_URL,
+    url: DIRECT_URL,        // Pour les migrations (connexion directe)
+    directUrl: DIRECT_URL,  // Connexion directe pour migrations
   },
+  // Note: POSTGRES_PRISMA_URL sera utilisé dans lib/db.ts pour le runtime PrismaClient
 });

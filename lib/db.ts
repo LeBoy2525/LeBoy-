@@ -64,6 +64,7 @@ if (databaseUrl) {
     }
     
     // Option 1 : Utiliser POSTGRES_PRISMA_URL (pooling) si disponible (recommandé pour Vercel Postgres)
+    // Pour Prisma 7.x, on passe l'URL via datasourceUrl dans le constructeur
     if (postgresPrismaUrl && isPostgres) {
       try {
         if (!isBuildTime && typeof window === "undefined") {
@@ -71,6 +72,7 @@ if (databaseUrl) {
         }
         prismaInstance = new PrismaClient({
           log: prismaConfig.log,
+          datasourceUrl: postgresPrismaUrl,
         });
         if (!isBuildTime && typeof window === "undefined") {
           console.log(`[db] ✅ PrismaClient créé avec POSTGRES_PRISMA_URL (pooling)`);
@@ -107,9 +109,11 @@ if (databaseUrl) {
           console.log(`[db] ⚠️ ATTENTION: Prisma 7.x nécessite un adapter ou Accelerate`);
           console.log(`[db] Si erreur "adapter required", définissez PRISMA_DATABASE_URL avec Prisma Accelerate`);
         }
-        // Essayer avec config minimale - laisser Prisma choisir le moteur
+        // Essayer avec datasourceUrl si disponible
+        const fallbackUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
         prismaInstance = new PrismaClient({
           log: prismaConfig.log,
+          ...(fallbackUrl ? { datasourceUrl: fallbackUrl } : {}),
         });
         if (!isBuildTime && typeof window === "undefined") {
           console.log(`[db] ✅ PrismaClient créé avec moteur standard`);
