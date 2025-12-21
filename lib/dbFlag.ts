@@ -8,12 +8,18 @@
  * Cela garantit que le fallback JSON fonctionne même si USE_DB=true mais que la DB n'est pas disponible
  */
 
-// Vérifier si DATABASE_URL est disponible
-const hasDatabaseUrl = !!process.env.DATABASE_URL;
+// Vérifier si une URL de base de données est disponible
+// Support pour POSTGRES_PRISMA_URL, PRISMA_DATABASE_URL, DATABASE_URL, POSTGRES_URL
+const hasDatabaseUrl = !!(
+  process.env.POSTGRES_PRISMA_URL ||
+  process.env.PRISMA_DATABASE_URL ||
+  process.env.DATABASE_URL ||
+  process.env.POSTGRES_URL
+);
 
 // USE_DB est true seulement si :
 // 1. USE_DB=true est explicitement défini OU NODE_ENV=production
-// 2. ET DATABASE_URL est définie
+// 2. ET une URL de base de données est définie (POSTGRES_PRISMA_URL, PRISMA_DATABASE_URL, DATABASE_URL, ou POSTGRES_URL)
 // Si Prisma n'est pas initialisé, le fallback JSON sera utilisé automatiquement dans dataAccess
 const explicitUseDB = process.env.USE_DB === "true";
 const isProduction = process.env.NODE_ENV === "production";
