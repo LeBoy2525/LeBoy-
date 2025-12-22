@@ -284,6 +284,31 @@ export async function createMission(data: Omit<Mission, "id">) {
         deletedBy: data.deletedBy || null,
       },
     });
+    
+    console.log(`[missionsRepo] ✅ Mission créée dans DB:`);
+    console.log(`[missionsRepo]   - ref: ${missionCreated.ref}`);
+    console.log(`[missionsRepo]   - id: ${missionCreated.id}`);
+    console.log(`[missionsRepo]   - demandeId: ${missionCreated.demandeId}`);
+    console.log(`[missionsRepo]   - prestataireId: ${missionCreated.prestataireId || "NULL ⚠️"}`);
+    console.log(`[missionsRepo]   - internalState: ${missionCreated.internalState}`);
+    console.log(`[missionsRepo]   - status: ${missionCreated.status}`);
+    console.log(`[missionsRepo]   - deleted: ${missionCreated.deleted}`);
+    console.log(`[missionsRepo]   - archived: ${missionCreated.archived}`);
+    
+    // Vérifier que le prestataireId a bien été sauvegardé
+    if (!missionCreated.prestataireId) {
+      console.error(`[missionsRepo] ❌ ERREUR CRITIQUE: Mission créée SANS prestataireId!`);
+      console.error(`[missionsRepo]   Ref: ${missionCreated.ref}`);
+      console.error(`[missionsRepo]   PrestataireId attendu: ${prestataireIdStr}`);
+    } else if (missionCreated.prestataireId !== prestataireIdStr) {
+      console.error(`[missionsRepo] ❌ ERREUR: prestataireId sauvegardé ne correspond pas!`);
+      console.error(`[missionsRepo]   Attendu: ${prestataireIdStr}`);
+      console.error(`[missionsRepo]   Sauvegardé: ${missionCreated.prestataireId}`);
+    } else {
+      console.log(`[missionsRepo] ✅ prestataireId correctement sauvegardé: ${missionCreated.prestataireId}`);
+    }
+    
+    return missionCreated;
   });
 }
 
