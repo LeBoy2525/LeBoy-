@@ -123,8 +123,21 @@ export async function POST(req: Request) {
 
     for (const prestataireIdNum of prestataireIdsArray) {
       try {
+        // ============================================
+        // DIAGNOSTIC 1: LOGS DÉTAILLÉS AVANT ASSIGNATION
+        // ============================================
+        console.log(`[${traceId}] ========================================`);
+        console.log(`[${traceId}] 🔍 DIAGNOSTIC ASSIGNATION ADMIN`);
+        console.log(`[${traceId}] ========================================`);
+        console.log(`[${traceId}] 📋 demandeId: ${demandeIdNum} (type: ${typeof demandeIdNum})`);
+        console.log(`[${traceId}] 👤 prestataireId sélectionné: ${prestataireIdNum} (type: ${typeof prestataireIdNum})`);
+        console.log(`[${traceId}] 📧 Email admin: ${userEmail}`);
+        
         // Vérifier si une mission existe déjà pour cette demande et ce prestataire
-        if (await missionExistsForDemandeAndPrestataire(demandeIdNum, prestataireIdNum)) {
+        const missionExists = await missionExistsForDemandeAndPrestataire(demandeIdNum, prestataireIdNum);
+        console.log(`[${traceId}] 🔍 Mission existe déjà? ${missionExists ? "OUI ⚠️" : "NON ✅"}`);
+        
+        if (missionExists) {
           const errorMsg = `Une mission existe déjà pour le prestataire ID ${prestataireIdNum}.`;
           console.warn(`[${traceId}] ⚠️ ${errorMsg}`);
           errors.push(errorMsg);
@@ -140,6 +153,8 @@ export async function POST(req: Request) {
           continue;
         }
 
+        console.log(`[${traceId}] ✅ Prestataire trouvé: ${prestataire.email} (ref: ${prestataire.ref})`);
+
         // Validation des champs essentiels du prestataire
         if (!prestataire.email) {
           const errorMsg = `Prestataire ID ${prestataireIdNum} n'a pas d'email.`;
@@ -147,6 +162,15 @@ export async function POST(req: Request) {
           errors.push(errorMsg);
           continue;
         }
+
+        // ============================================
+        // ACTION DB: CRÉER MISSION
+        // ============================================
+        console.log(`[${traceId}] 📝 Action DB: CREATE Mission`);
+        console.log(`[${traceId}]   - demandeId: ${demandeIdNum}`);
+        console.log(`[${traceId}]   - prestataireId: ${prestataireIdNum}`);
+        console.log(`[${traceId}]   - dateAssignation: ${dateAssignation.toISOString()}`);
+        console.log(`[${traceId}]   - dateLimiteProposition: ${dateLimiteProposition.toISOString()}`);
 
         // Créer la mission sans tarif (le tarif sera défini par le partenaire lors de son estimation)
         const mission = await createMission({
@@ -167,6 +191,28 @@ export async function POST(req: Request) {
           dateLimiteProposition: dateLimiteProposition.toISOString(),
         });
 
+        // ============================================
+        // DIAGNOSTIC 2: RÉSULTAT DB RENVOYÉ
+        // ============================================
+        console.log(`[${traceId}] ✅ Mission créée dans DB:`);
+        console.log(`[${traceId}]   - id: ${mission.id} (type: ${typeof mission.id})`);
+        console.log(`[${traceId}]   - ref: ${mission.ref}`);
+        console.log(`[${traceId}]   - demandeId: ${mission.demandeId} (type: ${typeof mission.demandeId})`);
+        console.log(`[${traceId}]   - prestataireId: ${mission.prestataireId} (type: ${typeof mission.prestataireId})`);
+        console.log(`[${traceId}]   - internalState: ${mission.internalState}`);
+        console.log(`[${traceId}]   - status: ${mission.status}`);
+        console.log(`[${traceId}]   - deleted: ${mission.deleted}`);
+        console.log(`[${traceId}]   - archived: ${mission.archived}`);
+        
+        // Vérifier cohérence prestataireId
+        if (mission.prestataireId !== prestataireIdNum) {
+          console.error(`[${traceId}] ❌ ERREUR: prestataireId mismatch!`);
+          console.error(`[${traceId}]   Attendu: ${prestataireIdNum} (type: ${typeof prestataireIdNum})`);
+          console.error(`[${traceId}]   Reçu: ${mission.prestataireId} (type: ${typeof mission.prestataireId})`);
+        } else {
+          console.log(`[${traceId}] ✅ prestataireId cohérent: ${mission.prestataireId}`);
+        }
+
         // Ajouter les fichiers partagés si fournis (safe access)
         if (safeSharedFiles.length > 0) {
           mission.sharedFiles = safeSharedFiles.map((file) => ({
@@ -180,10 +226,18 @@ export async function POST(req: Request) {
         }
 
         // Set initial internal state: ASSIGNED_TO_PROVIDER (mandat assigné, en attente d'estimation)
+        console.log(`[${traceId}] 📝 Action DB: UPDATE Mission internalState → ASSIGNED_TO_PROVIDER`);
         await updateMissionInternalState(mission.id, "ASSIGNED_TO_PROVIDER", userEmail || "admin@icd.ca");
         
+        // Vérifier que le statut a bien été mis à jour
+        const missionAfterUpdate = await (await import("@/lib/dataAccess")).getMissionById(mission.id);
+        console.log(`[${traceId}] ✅ Mission après update:`);
+        console.log(`[${traceId}]   - internalState: ${missionAfterUpdate?.internalState}`);
+        console.log(`[${traceId}]   - status: ${missionAfterUpdate?.status}`);
+        
         missionsCreees.push({ mission, prestataireId: prestataireIdNum });
-        console.log(`[${traceId}] ✅ Mission créée: ${mission.ref} pour prestataire ${prestataireIdNum}`);
+        console.log(`[${traceId}] ✅ Mission créée et assignée: ${mission.ref} pour prestataire ${prestataireIdNum}`);
+        console.log(`[${traceId}] ========================================`);
         
       } catch (error: any) {
         const errorMsg = `Erreur lors de la création de la mission pour le prestataire ID ${prestataireIdNum}: ${error?.message || String(error)}`;

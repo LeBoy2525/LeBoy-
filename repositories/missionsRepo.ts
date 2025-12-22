@@ -63,7 +63,8 @@ export async function getMissionsByClient(email: string) {
 }
 
 export async function getMissionsByPrestataire(prestataireId: string) {
-  console.log(`[missionsRepo] getMissionsByPrestataire appelé avec UUID: ${prestataireId}`);
+  const traceId = `REPO-${Date.now()}`;
+  console.log(`[${traceId}] [missionsRepo] getMissionsByPrestataire appelé avec UUID: ${prestataireId}`);
   const db = ensurePrisma();
   
   // Vérifier d'abord si le prestataire existe
@@ -73,11 +74,20 @@ export async function getMissionsByPrestataire(prestataireId: string) {
   });
   
   if (!prestataire) {
-    console.warn(`[missionsRepo] ⚠️ Prestataire UUID ${prestataireId} non trouvé dans la DB`);
+    console.warn(`[${traceId}] [missionsRepo] ⚠️ Prestataire UUID ${prestataireId} non trouvé dans la DB`);
     return [];
   }
   
-  console.log(`[missionsRepo] ✅ Prestataire trouvé: ${prestataire.email} (${prestataire.ref})`);
+  console.log(`[${traceId}] [missionsRepo] ✅ Prestataire trouvé: ${prestataire.email} (${prestataire.ref})`);
+  
+  // ============================================
+  // QUERY PRISMA DÉTAILLÉE
+  // ============================================
+  console.log(`[${traceId}] [missionsRepo] 🔍 Query Prisma:`);
+  console.log(`[${traceId}]   db.mission.findMany({`);
+  console.log(`[${traceId}]     where: { prestataireId: "${prestataireId}" }`);
+  console.log(`[${traceId}]     orderBy: { createdAt: "desc" }`);
+  console.log(`[${traceId}]   })`);
   
   // Rechercher toutes les missions avec ce prestataireId (même celles supprimées pour diagnostic)
   const allMissionsRaw = await db.mission.findMany({
@@ -98,6 +108,8 @@ export async function getMissionsByPrestataire(prestataireId: string) {
       createdAt: true,
     },
   });
+  
+  console.log(`[${traceId}] [missionsRepo] 📋 Résultat query: ${allMissionsRaw.length} mission(s) trouvée(s)`);
   
   console.log(`[missionsRepo] 🔍 Recherche missions avec prestataireId UUID: ${prestataireId}`);
   console.log(`[missionsRepo] 📋 Total missions trouvées (y compris supprimées): ${allMissionsRaw.length}`);
