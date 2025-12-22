@@ -77,7 +77,10 @@ export async function POST(req: Request) {
 
     // demandeId est maintenant un UUID string
     const demandeIdUUID = typeof demandeId === 'string' ? demandeId : String(demandeId);
-    if (!demandeIdUUID || demandeIdUUID.length < 30) {
+    
+    // Validation UUID (format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!demandeIdUUID || !UUID_REGEX.test(demandeIdUUID)) {
       console.error(`[${traceId}] ❌ demandeId invalide (UUID attendu): ${demandeId}`);
       return NextResponse.json(
         { error: "Demande ID invalide (UUID attendu)." },
@@ -88,16 +91,42 @@ export async function POST(req: Request) {
     console.log(`[${traceId}] ✅ Validation OK - demandeId UUID: ${demandeIdUUID}, prestataires: ${prestataireIdsArray.length}, fichiers: ${safeSharedFiles.length}`);
 
     // ============================================
-    // RÉCUPÉRATION DE LA DEMANDE
+    // RÉCUPÉRATION DE LA DEMANDE VIA PRISMA DIRECTEMENT
     // ============================================
+    console.log(`[${traceId}] 🔍 Recherche demande avec UUID: ${demandeIdUUID}`);
+    const { prisma } = await import("@/lib/db");
+    if (!prisma) {
+      console.error(`[${traceId}] ❌ Prisma non disponible`);
+      return NextResponse.json(
+        { error: "Erreur serveur (DB non disponible)." },
+        { status: 500 }
+      );
+    }
+    
+    const demandePrisma = await prisma.demande.findUnique({
+      where: { id: demandeIdUUID },
+    });
+    
+    if (!demandePrisma) {
+      console.error(`[${traceId}] ❌ Demande UUID ${demandeIdUUID} non trouvée dans Prisma`);
+      return NextResponse.json(
+        { error: "Demande non trouvée." },
+        { status: 404 }
+      );
+    }
+    
+    console.log(`[${traceId}] ✅ Demande trouvée: UUID=${demandePrisma.id}, ref=${demandePrisma.ref}`);
+    
+    // Convertir Prisma vers JSON pour compatibilité avec le reste du code
     const { getDemandeById } = await import("@/lib/dataAccess");
     const demande = await getDemandeById(demandeIdUUID);
     
     if (!demande) {
-      console.error(`[${traceId}] ❌ Demande UUID ${demandeIdUUID} non trouvée`);
+      // Ce cas ne devrait jamais arriver car on vient de trouver la demande
+      console.error(`[${traceId}] ❌ Erreur lors de la conversion de la demande`);
       return NextResponse.json(
-        { error: "Demande non trouvée." },
-        { status: 404 }
+        { error: "Erreur serveur." },
+        { status: 500 }
       );
     }
 
@@ -168,8 +197,8 @@ export async function POST(req: Request) {
         // ACTION DB: CRÉER MISSION
         // ============================================
         console.log(`[${traceId}] 📝 Action DB: CREATE Mission`);
-        console.log(`[${traceId}]   - demandeId UUID: ${demandeIdUUID}`);
-        console.log(`[${traceId}]   - prestataireId UUID: ${prestataireIdUUID}`);
+        console.log(`[${traceId}]   - demandeId UUID: ${demandeIdUUID} (type: ${typeof demandeIdUUID})`);
+        console.log(`[${traceId}]   - prestataireId UUID: ${prestataireIdUUID} (type: ${typeof prestataireIdUUID})`);
         console.log(`[${traceId}]   - dateAssignation: ${dateAssignation.toISOString()}`);
         console.log(`[${traceId}]   - dateLimiteProposition: ${dateLimiteProposition.toISOString()}`);
 
@@ -205,7 +234,15 @@ export async function POST(req: Request) {
         console.log(`[${traceId}]   - deleted: ${mission.deleted}`);
         console.log(`[${traceId}]   - archived: ${mission.archived}`);
         
-        // Vérifier cohérence prestataireId
+        // Vérifier cohérence des UUIDs
+        if (mission.demandeId !== demandeIdUUID) {
+          console.error(`[${traceId}] ❌ ERREUR: demandeId mismatch!`);
+          console.error(`[${traceId}]   Attendu: ${demandeIdUUID} (type: ${typeof demandeIdUUID})`);
+          console.error(`[${traceId}]   Reçu: ${mission.demandeId} (type: ${typeof mission.demandeId})`);
+        } else {
+          console.log(`[${traceId}] ✅ demandeId cohérent: ${mission.demandeId}`);
+        }
+        
         if (mission.prestataireId !== prestataireIdUUID) {
           console.error(`[${traceId}] ❌ ERREUR: prestataireId mismatch!`);
           console.error(`[${traceId}]   Attendu: ${prestataireIdUUID} (type: ${typeof prestataireIdUUID})`);

@@ -1253,10 +1253,27 @@ export async function missionExistsForDemandeAndPrestataire(
   if (!USE_DB) return false;
 
   try {
-    if (!demandeId || !prestataireId) return false;
+    if (!demandeId || !prestataireId) {
+      console.warn(`[missionExistsForDemandeAndPrestataire] ⚠️ Paramètres manquants: demandeId=${demandeId}, prestataireId=${prestataireId}`);
+      return false;
+    }
 
+    // Validation UUID
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!UUID_REGEX.test(demandeId)) {
+      console.error(`[missionExistsForDemandeAndPrestataire] ❌ demandeId invalide (UUID attendu): ${demandeId}`);
+      return false;
+    }
+    if (!UUID_REGEX.test(prestataireId)) {
+      console.error(`[missionExistsForDemandeAndPrestataire] ❌ prestataireId invalide (UUID attendu): ${prestataireId}`);
+      return false;
+    }
+
+    console.log(`[missionExistsForDemandeAndPrestataire] 🔍 Vérification mission avec demandeId UUID: ${demandeId}, prestataireId UUID: ${prestataireId}`);
     const { missionExistsForDemandeAndPrestataire: existsDB } = await import("@/repositories/missionsRepo");
-    return await existsDB(demandeId, prestataireId);
+    const exists = await existsDB(demandeId, prestataireId);
+    console.log(`[missionExistsForDemandeAndPrestataire] ${exists ? "✅ Mission existe" : "❌ Mission n'existe pas"}`);
+    return exists;
   } catch (error) {
     console.error("Erreur missionExistsForDemandeAndPrestataire (DB):", error);
     return false;
@@ -1310,17 +1327,34 @@ export async function createMission(
         ? (typeof data.prestataireId === "string" ? data.prestataireId : String(data.prestataireId))
         : null;
       
+      // Validation UUID
+      const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!UUID_REGEX.test(demandeIdUUID)) {
+        console.error(`[createMission] ❌ demandeId invalide (UUID attendu): ${demandeIdUUID}`);
+        throw new Error(`Demande ID invalide (UUID attendu): ${demandeIdUUID}`);
+      }
+      if (prestataireIdUUID && !UUID_REGEX.test(prestataireIdUUID)) {
+        console.error(`[createMission] ❌ prestataireId invalide (UUID attendu): ${prestataireIdUUID}`);
+        throw new Error(`Prestataire ID invalide (UUID attendu): ${prestataireIdUUID}`);
+      }
+      
       console.log(`[createMission] 📝 Création mission avec demandeId UUID: ${demandeIdUUID}, prestataireId UUID: ${prestataireIdUUID || "null"}`);
       
-      // Vérifier que la demande existe
-      const { getDemandeById: getDemandeByIdDB } = await import("@/repositories/demandesRepo");
-      const demandeDB = await getDemandeByIdDB(demandeIdUUID);
+      // Vérifier que la demande existe via Prisma directement
+      const { prisma } = await import("@/lib/db");
+      if (!prisma) {
+        throw new Error("Prisma n'est pas disponible");
+      }
+      
+      const demandeDB = await prisma.demande.findUnique({
+        where: { id: demandeIdUUID },
+      });
       if (!demandeDB) {
         console.error(`[createMission] ❌ Demande non trouvée avec UUID: ${demandeIdUUID}`);
         throw new Error(`Demande non trouvée avec UUID: ${demandeIdUUID}`);
       }
       
-      console.log(`[createMission] ✅ Demande trouvée: UUID=${demandeDB.id}`);
+      console.log(`[createMission] ✅ Demande trouvée: UUID=${demandeDB.id}, ref=${demandeDB.ref}`);
       
       // Vérifier que le prestataire existe si fourni
       if (prestataireIdUUID) {
@@ -1337,10 +1371,7 @@ export async function createMission(
       
       // IMPORTANT: Utiliser la génération atomique de ref via compteur DB
       // Plus besoin de retry loop ni de recherche de max ref - la génération est atomique
-      const { prisma } = await import("@/lib/db");
-      if (!prisma) {
-        throw new Error("Prisma n'est pas disponible");
-      }
+      // (prisma déjà importé ci-dessus)
       const createdAt = new Date().toISOString();
       
       // IMPORTANT: Générer la ref atomiquement AVANT de créer la mission

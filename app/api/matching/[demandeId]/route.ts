@@ -12,10 +12,13 @@ export async function GET(
 ) {
   try {
     const resolvedParams = await params;
-    const demandeId = parseInt(resolvedParams.demandeId);
-    if (isNaN(demandeId)) {
+    const demandeId = resolvedParams.demandeId; // UUID string directement
+    
+    // Validation UUID
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!demandeId || !UUID_REGEX.test(demandeId)) {
       return NextResponse.json(
-        { error: "ID de demande invalide." },
+        { error: "ID de demande invalide (UUID attendu)." },
         { status: 400 }
       );
     }
