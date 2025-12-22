@@ -26,6 +26,11 @@ const nextConfig: NextConfig = {
   // Utiliser Turbopack pour des builds plus rapides (plus rapide que webpack)
   // Si problème, on peut revenir à webpack avec --webpack flag
   // turbopack: {}, // Activé par défaut dans Next.js 16
+  
+  // Variables d'environnement publiques pour la détection de version
+  env: {
+    NEXT_PUBLIC_BUILD_TIME: new Date().toISOString(),
+  },
 };
 
 export default nextConfig;

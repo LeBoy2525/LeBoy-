@@ -28,7 +28,9 @@ export function VersionChecker() {
 
     try {
       setIsChecking(true);
-      const res = await fetch("/api/version", {
+      // Ajouter un timestamp pour éviter le cache
+      const timestamp = Date.now();
+      const res = await fetch(`/api/version?t=${timestamp}`, {
         cache: "no-store",
         headers: {
           "Cache-Control": "no-cache",
@@ -36,14 +38,25 @@ export function VersionChecker() {
         },
       });
 
-      if (!res.ok) return;
+      if (!res.ok) {
+        console.warn(`[VersionChecker] ❌ Erreur API version: ${res.status}`);
+        return;
+      }
 
       const data = await res.json();
       const currentVersion = localStorage.getItem("app_version");
       const lastCheckTime = localStorage.getItem("app_version_check_time");
 
+      console.log(`[VersionChecker] 🔍 Vérification version:`, {
+        versionServeur: data.version,
+        versionLocale: currentVersion || "première visite",
+        timestamp: data.timestamp,
+        sources: data.sources,
+      });
+
       // Si c'est la première visite, sauvegarder la version actuelle
       if (!currentVersion) {
+        console.log(`[VersionChecker] ✅ Première visite - sauvegarde version: ${data.version}`);
         localStorage.setItem("app_version", data.version);
         localStorage.setItem("app_version_check_time", Date.now().toString());
         return;
@@ -51,11 +64,13 @@ export function VersionChecker() {
 
       // Si la version a changé, afficher la notification
       if (currentVersion !== data.version) {
-        console.log(`🔄 Nouvelle version détectée: ${currentVersion} → ${data.version}`);
+        console.log(`[VersionChecker] 🔄 Nouvelle version détectée: ${currentVersion} → ${data.version}`);
         setShowReload(true);
+      } else {
+        console.log(`[VersionChecker] ✅ Version à jour: ${data.version}`);
       }
     } catch (err) {
-      console.error("Erreur vérification version:", err);
+      console.error("[VersionChecker] ❌ Erreur vérification version:", err);
     } finally {
       setIsChecking(false);
     }
