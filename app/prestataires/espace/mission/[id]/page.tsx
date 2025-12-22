@@ -83,7 +83,8 @@ export default function MissionDetailPage() {
           return;
         }
 
-        console.log("🔍 Chargement mission ID:", missionId);
+        // missionId est maintenant un UUID string (pas un nombre)
+        console.log("🔍 Chargement mission UUID:", missionId);
         const res = await fetch(`/api/prestataires/espace/missions/${missionId}`, {
           cache: "no-store",
         });

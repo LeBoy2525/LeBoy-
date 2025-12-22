@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { getMissionById } from "@/lib/dataAccess";
-import { getPrestataireByEmail } from "@/lib/dataAccess";
+import { getPrestataireByEmail, convertPrismaMissionToJSON } from "@/lib/dataAccess";
+import { getMissionById } from "@/repositories/missionsRepo";
+import { prisma } from "@/lib/db";
 
 type RouteParams = {
   params: Promise<{ id: string }>;
@@ -20,25 +21,36 @@ export async function GET(_req: Request, { params }: RouteParams) {
     }
 
     const resolvedParams = await params;
-    const missionId = parseInt(resolvedParams.id);
-    if (isNaN(missionId)) {
+    const missionUuid = resolvedParams.id; // UUID string (pas de parseInt)
+
+    // Valider que c'est un UUID (format basique)
+    if (!missionUuid || typeof missionUuid !== "string" || missionUuid.length < 30) {
       return NextResponse.json(
-        { error: "ID invalide." },
+        { error: "UUID invalide." },
         { status: 400 }
       );
     }
 
-    console.log("🔍 Recherche mission ID:", missionId);
-    const mission = await getMissionById(missionId);
-    if (!mission) {
-      console.log("❌ Mission non trouvée pour ID:", missionId);
+    console.log("🔍 Recherche mission UUID:", missionUuid);
+
+    // Utiliser Prisma directement avec l'UUID (pas de conversion hash)
+    if (!prisma) {
+      return NextResponse.json(
+        { error: "Base de données non disponible." },
+        { status: 500 }
+      );
+    }
+
+    const missionPrisma = await getMissionById(missionUuid);
+    if (!missionPrisma) {
+      console.log("❌ Mission non trouvée pour UUID:", missionUuid);
       return NextResponse.json(
         { error: "Mission non trouvée." },
         { status: 404 }
       );
     }
 
-    console.log("✅ Mission trouvée:", mission.ref, "prestataireId:", mission.prestataireId);
+    console.log("✅ Mission trouvée:", missionPrisma.ref, "prestataireId:", missionPrisma.prestataireId);
 
     // Vérifier que le prestataire a accès à cette mission
     const prestataire = await getPrestataireByEmail(userEmail);
@@ -53,6 +65,10 @@ export async function GET(_req: Request, { params }: RouteParams) {
 
     console.log("✅ Prestataire trouvé:", prestataire.ref, "ID:", prestataire.id);
 
+    // Convertir la mission Prisma en Mission JSON
+    const mission = convertPrismaMissionToJSON(missionPrisma);
+
+    // Vérifier l'accès avec l'ID numérique converti (pour compatibilité)
     if (mission.prestataireId !== prestataire.id) {
       console.log("❌ Accès refusé - mission.prestataireId:", mission.prestataireId, "prestataire.id:", prestataire.id);
       return NextResponse.json(

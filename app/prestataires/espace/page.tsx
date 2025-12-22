@@ -375,7 +375,7 @@ function MissionCard({ mission, t, lang }: { mission: Mission; t: any; lang: "fr
         </div>
         <div className="flex flex-col gap-2 ml-4">
           <Link
-            href={`/prestataires/espace/mission/${mission.id}`}
+            href={`/prestataires/espace/mission/${mission.uuid}`}
             className="px-4 py-2 text-xs font-semibold text-[#0A1B2A] border border-[#0A1B2A] rounded-md hover:bg-[#0A1B2A] hover:text-white transition"
           >
             {t.voirDetails}
@@ -507,7 +507,7 @@ function ArchivedMissionCard({ mission, t, lang, onRestore }: { mission: Mission
         </div>
         <div className="flex flex-col gap-2 ml-4">
           <Link
-            href={`/prestataires/espace/mission/${mission.id}`}
+            href={`/prestataires/espace/mission/${mission.uuid}`}
             className="px-4 py-2 text-xs font-semibold text-[#0A1B2A] border border-[#0A1B2A] rounded-md hover:bg-[#0A1B2A] hover:text-white transition"
           >
             {t.voirDetails}

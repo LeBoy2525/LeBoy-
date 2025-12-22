@@ -1652,7 +1652,7 @@ export async function createMission(
 }
 
 // Fonction helper pour convertir Mission Prisma vers Mission JSON
-function convertPrismaMissionToJSON(mission: any): Mission {
+export function convertPrismaMissionToJSON(mission: any): Mission {
   let idNumber: number;
   if (typeof mission.id === "string" && mission.id.includes("-")) {
     const hash = mission.id.split("").reduce((acc: number, char: string) => {
@@ -1694,6 +1694,7 @@ function convertPrismaMissionToJSON(mission: any): Mission {
 
   return {
     id: idNumber,
+    uuid: mission.id, // UUID Prisma (identifiant unique pour navigation)
     ref: mission.ref,
     createdAt: mission.createdAt.toISOString(),
     demandeId: demandeIdNumber,

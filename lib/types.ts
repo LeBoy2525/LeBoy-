@@ -114,6 +114,7 @@ export interface MissionProof {
 
 export interface Mission {
   id: number;
+  uuid: string; // UUID Prisma (identifiant unique pour navigation)
   ref: string; // M-2025-001
   demandeId: number; // Référence à la demande originale
   clientEmail: string;
