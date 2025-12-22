@@ -3,7 +3,7 @@
 import { loadFromFile, saveToFileAsync } from "./persistence";
 
 export type DemandeICD = {
-  id: number;
+  id: string; // UUID
   ref: string; // ex : D-2025-001
   createdAt: string; // ISO
 

@@ -36,15 +36,15 @@ export async function POST(req: Request) {
       );
     }
 
-    // Support pour plusieurs prestataires ou un seul (rétrocompatibilité)
-    let prestataireIdsArray: number[] = [];
+    // Support pour plusieurs prestataires ou un seul (UUID strings maintenant)
+    let prestataireIdsArray: string[] = [];
     if (prestataireIds && Array.isArray(prestataireIds)) {
       prestataireIdsArray = prestataireIds
-        .map((id: any) => typeof id === 'number' ? id : parseInt(String(id)))
-        .filter((id: number) => !isNaN(id) && id > 0);
+        .map((id: any) => typeof id === 'string' ? id : String(id))
+        .filter((id: string) => id && id.length > 0);
     } else if (prestataireId) {
-      const id = typeof prestataireId === 'number' ? prestataireId : parseInt(String(prestataireId));
-      if (!isNaN(id) && id > 0) {
+      const id = typeof prestataireId === 'string' ? prestataireId : String(prestataireId);
+      if (id && id.length > 0) {
         prestataireIdsArray = [id];
       }
     }
@@ -52,7 +52,7 @@ export async function POST(req: Request) {
     if (prestataireIdsArray.length === 0) {
       console.error(`[${traceId}] ❌ Aucun prestataireId valide`);
       return NextResponse.json(
-        { error: "Au moins un Prestataire ID valide est requis." },
+        { error: "Au moins un Prestataire ID valide (UUID) est requis." },
         { status: 400 }
       );
     }
@@ -75,25 +75,26 @@ export async function POST(req: Request) {
         }))
       : [];
 
-    const demandeIdNum = typeof demandeId === 'number' ? demandeId : parseInt(String(demandeId));
-    if (isNaN(demandeIdNum) || demandeIdNum <= 0) {
-      console.error(`[${traceId}] ❌ demandeId invalide: ${demandeId}`);
+    // demandeId est maintenant un UUID string
+    const demandeIdUUID = typeof demandeId === 'string' ? demandeId : String(demandeId);
+    if (!demandeIdUUID || demandeIdUUID.length < 30) {
+      console.error(`[${traceId}] ❌ demandeId invalide (UUID attendu): ${demandeId}`);
       return NextResponse.json(
-        { error: "Demande ID invalide." },
+        { error: "Demande ID invalide (UUID attendu)." },
         { status: 400 }
       );
     }
 
-    console.log(`[${traceId}] ✅ Validation OK - demandeId: ${demandeIdNum}, prestataires: ${prestataireIdsArray.length}, fichiers: ${safeSharedFiles.length}`);
+    console.log(`[${traceId}] ✅ Validation OK - demandeId UUID: ${demandeIdUUID}, prestataires: ${prestataireIdsArray.length}, fichiers: ${safeSharedFiles.length}`);
 
     // ============================================
     // RÉCUPÉRATION DE LA DEMANDE
     // ============================================
-    const allDemandes = await getAllDemandes();
-    const demande = allDemandes.find((d) => d.id === demandeIdNum);
+    const { getDemandeById } = await import("@/lib/dataAccess");
+    const demande = await getDemandeById(demandeIdUUID);
     
     if (!demande) {
-      console.error(`[${traceId}] ❌ Demande ${demandeIdNum} non trouvée`);
+      console.error(`[${traceId}] ❌ Demande UUID ${demandeIdUUID} non trouvée`);
       return NextResponse.json(
         { error: "Demande non trouvée." },
         { status: 404 }
@@ -102,7 +103,7 @@ export async function POST(req: Request) {
 
     // Validation des champs essentiels de la demande
     if (!demande.serviceType || !demande.description) {
-      console.error(`[${traceId}] ❌ Demande ${demandeIdNum} incomplète (serviceType ou description manquant)`);
+      console.error(`[${traceId}] ❌ Demande UUID ${demandeIdUUID} incomplète (serviceType ou description manquant)`);
       return NextResponse.json(
         { error: "La demande est incomplète (serviceType ou description manquant)." },
         { status: 400 }
@@ -117,11 +118,11 @@ export async function POST(req: Request) {
     // ============================================
     // CRÉATION DES MISSIONS (SANS EMAIL)
     // ============================================
-    const missionsCreees: Array<{ mission: any, prestataireId: number }> = [];
+    const missionsCreees: Array<{ mission: any, prestataireId: string }> = [];
     const errors: string[] = [];
-    const emailErrors: Array<{ prestataireId: number; error: string }> = [];
+    const emailErrors: Array<{ prestataireId: string; error: string }> = [];
 
-    for (const prestataireIdNum of prestataireIdsArray) {
+    for (const prestataireIdUUID of prestataireIdsArray) {
       try {
         // ============================================
         // DIAGNOSTIC 1: LOGS DÉTAILLÉS AVANT ASSIGNATION
@@ -129,25 +130,25 @@ export async function POST(req: Request) {
         console.log(`[${traceId}] ========================================`);
         console.log(`[${traceId}] 🔍 DIAGNOSTIC ASSIGNATION ADMIN`);
         console.log(`[${traceId}] ========================================`);
-        console.log(`[${traceId}] 📋 demandeId: ${demandeIdNum} (type: ${typeof demandeIdNum})`);
-        console.log(`[${traceId}] 👤 prestataireId sélectionné: ${prestataireIdNum} (type: ${typeof prestataireIdNum})`);
+        console.log(`[${traceId}] 📋 demandeId UUID: ${demandeIdUUID}`);
+        console.log(`[${traceId}] 👤 prestataireId UUID sélectionné: ${prestataireIdUUID}`);
         console.log(`[${traceId}] 📧 Email admin: ${userEmail}`);
         
         // Vérifier si une mission existe déjà pour cette demande et ce prestataire
-        const missionExists = await missionExistsForDemandeAndPrestataire(demandeIdNum, prestataireIdNum);
+        const missionExists = await missionExistsForDemandeAndPrestataire(demandeIdUUID, prestataireIdUUID);
         console.log(`[${traceId}] 🔍 Mission existe déjà? ${missionExists ? "OUI ⚠️" : "NON ✅"}`);
         
         if (missionExists) {
-          const errorMsg = `Une mission existe déjà pour le prestataire ID ${prestataireIdNum}.`;
+          const errorMsg = `Une mission existe déjà pour le prestataire UUID ${prestataireIdUUID}.`;
           console.warn(`[${traceId}] ⚠️ ${errorMsg}`);
           errors.push(errorMsg);
           continue;
         }
 
         // Récupérer le prestataire pour obtenir sa référence
-        const prestataire = await getPrestataireById(prestataireIdNum);
+        const prestataire = await getPrestataireById(prestataireIdUUID);
         if (!prestataire) {
-          const errorMsg = `Prestataire ID ${prestataireIdNum} non trouvé.`;
+          const errorMsg = `Prestataire UUID ${prestataireIdUUID} non trouvé.`;
           console.error(`[${traceId}] ❌ ${errorMsg}`);
           errors.push(errorMsg);
           continue;
@@ -157,7 +158,7 @@ export async function POST(req: Request) {
 
         // Validation des champs essentiels du prestataire
         if (!prestataire.email) {
-          const errorMsg = `Prestataire ID ${prestataireIdNum} n'a pas d'email.`;
+          const errorMsg = `Prestataire UUID ${prestataireIdUUID} n'a pas d'email.`;
           console.error(`[${traceId}] ❌ ${errorMsg}`);
           errors.push(errorMsg);
           continue;
@@ -167,16 +168,16 @@ export async function POST(req: Request) {
         // ACTION DB: CRÉER MISSION
         // ============================================
         console.log(`[${traceId}] 📝 Action DB: CREATE Mission`);
-        console.log(`[${traceId}]   - demandeId: ${demandeIdNum}`);
-        console.log(`[${traceId}]   - prestataireId: ${prestataireIdNum}`);
+        console.log(`[${traceId}]   - demandeId UUID: ${demandeIdUUID}`);
+        console.log(`[${traceId}]   - prestataireId UUID: ${prestataireIdUUID}`);
         console.log(`[${traceId}]   - dateAssignation: ${dateAssignation.toISOString()}`);
         console.log(`[${traceId}]   - dateLimiteProposition: ${dateLimiteProposition.toISOString()}`);
 
         // Créer la mission sans tarif (le tarif sera défini par le partenaire lors de son estimation)
         const mission = await createMission({
-          demandeId: demandeIdNum,
+          demandeId: demandeIdUUID,
           clientEmail: demande.email || 'unknown@example.com',
-          prestataireId: prestataireIdNum,
+          prestataireId: prestataireIdUUID,
           prestataireRef: prestataire.ref || null,
           titre: `${demande.serviceType} - ${demande.lieu || "Cameroun"}`,
           description: demande.description || '',
@@ -205,9 +206,9 @@ export async function POST(req: Request) {
         console.log(`[${traceId}]   - archived: ${mission.archived}`);
         
         // Vérifier cohérence prestataireId
-        if (mission.prestataireId !== prestataireIdNum) {
+        if (mission.prestataireId !== prestataireIdUUID) {
           console.error(`[${traceId}] ❌ ERREUR: prestataireId mismatch!`);
-          console.error(`[${traceId}]   Attendu: ${prestataireIdNum} (type: ${typeof prestataireIdNum})`);
+          console.error(`[${traceId}]   Attendu: ${prestataireIdUUID} (type: ${typeof prestataireIdUUID})`);
           console.error(`[${traceId}]   Reçu: ${mission.prestataireId} (type: ${typeof mission.prestataireId})`);
         } else {
           console.log(`[${traceId}] ✅ prestataireId cohérent: ${mission.prestataireId}`);
@@ -235,12 +236,12 @@ export async function POST(req: Request) {
         console.log(`[${traceId}]   - internalState: ${missionAfterUpdate?.internalState}`);
         console.log(`[${traceId}]   - status: ${missionAfterUpdate?.status}`);
         
-        missionsCreees.push({ mission, prestataireId: prestataireIdNum });
-        console.log(`[${traceId}] ✅ Mission créée et assignée: ${mission.ref} pour prestataire ${prestataireIdNum}`);
+        missionsCreees.push({ mission, prestataireId: prestataireIdUUID });
+        console.log(`[${traceId}] ✅ Mission créée et assignée: ${mission.ref} pour prestataire UUID ${prestataireIdUUID}`);
         console.log(`[${traceId}] ========================================`);
         
       } catch (error: any) {
-        const errorMsg = `Erreur lors de la création de la mission pour le prestataire ID ${prestataireIdNum}: ${error?.message || String(error)}`;
+        const errorMsg = `Erreur lors de la création de la mission pour le prestataire UUID ${prestataireIdUUID}: ${error?.message || String(error)}`;
         console.error(`[${traceId}] ❌ ${errorMsg}`, error);
         errors.push(errorMsg);
       }

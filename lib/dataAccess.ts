@@ -118,29 +118,46 @@ export async function getUserByEmail(email: string): Promise<User | null> {
 /**
  * Convertir un Prestataire Prisma vers le format JSON
  */
-/**
- * Fonction helper pour calculer le hash d'un UUID vers un ID numérique
- * DOIT être identique à calculateUUIDHash utilisée dans findPrestatairePrismaByNumericId
- */
-function calculateUUIDHash(uuid: string): number {
-  const hash = uuid.split("").reduce((acc: number, char: string) => {
-    return ((acc << 5) - acc) + char.charCodeAt(0);
-  }, 0);
-  return Math.abs(hash) % 1000000; // Limiter à 6 chiffres
+// Fonction helper pour convertir une demande Prisma en DemandeICD JSON
+function convertPrismaDemandeToJSON(demande: any): DemandeICD {
+  // Utiliser directement l'UUID string (plus de conversion)
+  const demandeId = typeof demande.id === "string" ? demande.id : String(demande.id);
+
+  return {
+    id: demandeId, // UUID directement
+    ref: demande.ref,
+    createdAt: demande.createdAt.toISOString(),
+    deviceId: demande.deviceId || undefined,
+    fullName: demande.fullName,
+    email: demande.email,
+    phone: demande.phone,
+    serviceType: demande.serviceType,
+    serviceSubcategory: demande.serviceSubcategory || undefined,
+    serviceAutre: demande.serviceAutre || undefined,
+    country: demande.country || undefined,
+    description: demande.description,
+    lieu: demande.lieu || undefined,
+    budget: demande.budget || undefined,
+    urgence: demande.urgence,
+    fileIds: demande.fileIds || [],
+    statut: demande.statut as any,
+    rejeteeAt: demande.rejeteeAt?.toISOString(),
+    rejeteeBy: demande.rejeteeBy || undefined,
+    raisonRejet: demande.raisonRejet || undefined,
+    modificationDemandeeAt: demande.modificationDemandeeAt?.toISOString(),
+    modificationDemandeeBy: demande.modificationDemandeeBy || undefined,
+    messageModification: demande.messageModification || undefined,
+    deletedAt: demande.deletedAt?.toISOString(),
+    deletedBy: demande.deletedBy || undefined,
+  };
 }
 
 function convertPrismaPrestataireToJSON(prestataire: any): Prestataire {
-  // Convertir l'UUID en nombre pour compatibilité
-  let idNumber: number;
-  if (typeof prestataire.id === "string" && prestataire.id.includes("-")) {
-    // Utiliser la fonction helper pour garantir la cohérence
-    idNumber = calculateUUIDHash(prestataire.id);
-  } else {
-    idNumber = parseInt(String(prestataire.id)) || 0;
-  }
+  // Utiliser directement l'UUID string (plus de conversion)
+  const prestataireId = typeof prestataire.id === "string" ? prestataire.id : String(prestataire.id);
 
   return {
-    id: idNumber,
+    id: prestataireId, // UUID directement
     ref: prestataire.ref,
     createdAt: prestataire.createdAt.toISOString(),
     nomEntreprise: prestataire.nomEntreprise,
@@ -538,40 +555,13 @@ export async function getAllPrestataires(): Promise<Prestataire[]> {
 }
 
 /**
- * Récupère un prestataire par ID
+ * Récupère un prestataire par ID (UUID string)
  * Bascule automatiquement entre JSON et DB selon USE_DB
  */
-/**
- * Trouve le prestataire Prisma par son ID numérique (converti depuis UUID)
- * Utilise calculateUUIDHash définie plus haut pour garantir la cohérence
- */
-async function findPrestatairePrismaByNumericId(id: number): Promise<any | null> {
-  const { getAllPrestataires: getAllPrestatairesDB } = await import("@/repositories/prestatairesRepo");
-  const allPrestataires = await getAllPrestatairesDB() as any[];
+export async function getPrestataireById(id: string): Promise<Prestataire | null> {
+  console.log(`[dataAccess] getPrestataireById appelé avec UUID: ${id} (type: ${typeof id})`);
   
-  for (const p of allPrestataires) {
-    if (typeof p.id === "string" && p.id.includes("-")) {
-      // C'est un UUID, calculer le hash
-      const numericId = calculateUUIDHash(p.id);
-      if (numericId === id) {
-        return p;
-      }
-    } else {
-      // C'est déjà un ID numérique
-      const numericId = parseInt(String(p.id));
-      if (numericId === id) {
-        return p;
-      }
-    }
-  }
-  
-  return null;
-}
-
-export async function getPrestataireById(id: number): Promise<Prestataire | null> {
-  console.log(`[dataAccess] getPrestataireById appelé avec ID: ${id} (type: ${typeof id})`);
-  
-  if (!id || isNaN(id)) {
+  if (!id || typeof id !== "string") {
     console.log(`[dataAccess] ❌ ID vide/null/invalide: ${id}`);
     return null;
   }
@@ -580,40 +570,29 @@ export async function getPrestataireById(id: number): Promise<Prestataire | null
     try {
       console.log(`[dataAccess] USE_DB=true, recherche dans Prisma...`);
       
-      // Trouver directement le prestataire Prisma par ID numérique
-      const prestatairePrisma = await findPrestatairePrismaByNumericId(id);
+      // Utiliser directement l'UUID pour trouver le prestataire
+      const { getPrestataireById: getPrestataireByIdDB } = await import("@/repositories/prestatairesRepo");
+      const prestatairePrisma = await getPrestataireByIdDB(id);
       
       if (prestatairePrisma) {
         console.log(`[dataAccess] ✅ Prestataire Prisma trouvé: ${prestatairePrisma.email} (UUID: ${prestatairePrisma.id})`);
         const jsonPrestataire = convertPrismaPrestataireToJSON(prestatairePrisma);
-        console.log(`[dataAccess] ✅ Conversion JSON réussie: ID numérique = ${jsonPrestataire.id}`);
+        console.log(`[dataAccess] ✅ Conversion JSON réussie: UUID = ${jsonPrestataire.id}`);
         return jsonPrestataire;
       } else {
-        // Diagnostic : afficher tous les prestataires avec leurs IDs convertis
-        const { getAllPrestataires: getAllPrestatairesDB } = await import("@/repositories/prestatairesRepo");
-        const allPrestataires = await getAllPrestatairesDB() as any[];
-        
-        console.error(`[dataAccess] ❌ Aucun prestataire trouvé avec ID numérique: ${id}`);
-        console.error(`[dataAccess] Diagnostic - IDs disponibles (premiers 10):`);
-        allPrestataires.slice(0, 10).forEach((p: any, idx: number) => {
-          if (typeof p.id === "string" && p.id.includes("-")) {
-            const numericId = calculateUUIDHash(p.id);
-            console.error(`[dataAccess]   ${idx + 1}. UUID: ${p.id.substring(0, 8)}... → ID numérique: ${numericId}, Email: ${p.email}, Ref: ${p.ref}`);
-          } else {
-            console.error(`[dataAccess]   ${idx + 1}. ID: ${p.id}, Email: ${p.email}, Ref: ${p.ref}`);
-          }
-        });
-        
+        console.error(`[dataAccess] ❌ Aucun prestataire trouvé avec UUID: ${id}`);
         return null;
       }
     } catch (error) {
       console.error("Erreur getPrestataireById (DB):", error);
       console.error("Stack:", (error as Error).stack);
-      return getPrestataireByIdJSON(id);
+      // Fallback JSON si disponible (mais JSON utilise des IDs numériques, donc pas de fallback direct)
+      return null;
     }
   } else {
     console.log(`[dataAccess] USE_DB=false, recherche dans JSON`);
-    return getPrestataireByIdJSON(id);
+    // JSON utilise des IDs numériques, donc pas de fallback direct avec UUID
+    return null;
   }
 }
 
@@ -651,16 +630,14 @@ export async function createPrestataire(
       } as any);
 
       const jsonPrestataire = convertPrismaPrestataireToJSON(prestataire);
-      console.log(`[dataAccess] ✅ Conversion JSON: ID numérique = ${jsonPrestataire.id}, Email = ${jsonPrestataire.email}`);
+      console.log(`[dataAccess] ✅ Conversion JSON: UUID = ${jsonPrestataire.id}, Email = ${jsonPrestataire.email}`);
       
-      // Vérifier immédiatement que le prestataire peut être retrouvé par son ID numérique
+      // Vérifier immédiatement que le prestataire peut être retrouvé par son UUID
       const verifyPrestataire = await getPrestataireById(jsonPrestataire.id);
       if (verifyPrestataire) {
-        console.log(`[dataAccess] ✅ Vérification: Prestataire retrouvable immédiatement après création (ID: ${jsonPrestataire.id})`);
+        console.log(`[dataAccess] ✅ Vérification: Prestataire retrouvable immédiatement après création (UUID: ${jsonPrestataire.id})`);
       } else {
-        console.error(`[dataAccess] ❌ ERREUR: Prestataire non retrouvable immédiatement après création (ID: ${jsonPrestataire.id})!`);
-        console.error(`[dataAccess] UUID original: ${prestataire.id}`);
-        console.error(`[dataAccess] ID numérique calculé: ${jsonPrestataire.id}`);
+        console.error(`[dataAccess] ❌ ERREUR: Prestataire non retrouvable immédiatement après création (UUID: ${jsonPrestataire.id})!`);
       }
       
       return jsonPrestataire;
@@ -808,40 +785,7 @@ export async function createDemande(
       }) as any; // Type assertion car Prisma retourne un type différent
 
       // Convertir le Demande Prisma vers le format DemandeICD JSON
-      let idNumber: number;
-      if (typeof demande.id === "string" && demande.id.includes("-")) {
-        const hash = demande.id.split("").reduce((acc: number, char: string) => {
-          return ((acc << 5) - acc) + char.charCodeAt(0);
-        }, 0);
-        idNumber = Math.abs(hash) % 1000000;
-      } else {
-        idNumber = parseInt(String(demande.id)) || 0;
-      }
-
-      return {
-        id: idNumber,
-        ref: demande.ref,
-        createdAt: demande.createdAt.toISOString(),
-        deviceId: demande.deviceId || undefined,
-        fullName: demande.fullName,
-        email: demande.email,
-        phone: demande.phone,
-        serviceType: demande.serviceType,
-        serviceSubcategory: demande.serviceSubcategory || undefined,
-        serviceAutre: demande.serviceAutre || undefined,
-        country: demande.country || undefined,
-        description: demande.description,
-        lieu: demande.lieu || undefined,
-        budget: demande.budget || undefined,
-        urgence: demande.urgence,
-        fileIds: demande.fileIds || [],
-        statut: demande.statut as any,
-        rejeteeAt: demande.rejeteeAt?.toISOString(),
-        rejeteeBy: demande.rejeteeBy || undefined,
-        raisonRejet: demande.raisonRejet || undefined,
-        deletedAt: demande.deletedAt?.toISOString(),
-        deletedBy: demande.deletedBy || undefined,
-      };
+      return convertPrismaDemandeToJSON(demande);
     } catch (error) {
       console.error("Erreur createDemande (DB):", error);
       // Fallback sur JSON en cas d'erreur
@@ -862,42 +806,7 @@ export async function getAllDemandes(): Promise<DemandeICD[]> {
       const { getAllDemandes: getAllDemandesDB } = await import("@/repositories/demandesRepo");
       const demandes = await getAllDemandesDB() as any[]; // Type assertion car Prisma retourne un type différent
       
-      return demandes.map((d: any) => {
-        let idNumber: number;
-        if (typeof d.id === "string" && d.id.includes("-")) {
-          const hash = d.id.split("").reduce((acc: number, char: string) => {
-            return ((acc << 5) - acc) + char.charCodeAt(0);
-          }, 0);
-          idNumber = Math.abs(hash) % 1000000;
-        } else {
-          idNumber = parseInt(String(d.id)) || 0;
-        }
-
-        return {
-          id: idNumber,
-          ref: d.ref,
-          createdAt: d.createdAt.toISOString(),
-          deviceId: d.deviceId || undefined,
-          fullName: d.fullName,
-          email: d.email,
-          phone: d.phone,
-          serviceType: d.serviceType,
-          serviceSubcategory: d.serviceSubcategory || undefined,
-          serviceAutre: d.serviceAutre || undefined,
-          country: d.country || undefined,
-          description: d.description,
-          lieu: d.lieu || undefined,
-          budget: d.budget || undefined,
-          urgence: d.urgence,
-          fileIds: d.fileIds || [],
-          statut: d.statut as any,
-          rejeteeAt: d.rejeteeAt?.toISOString(),
-          rejeteeBy: d.rejeteeBy || undefined,
-          raisonRejet: d.raisonRejet || undefined,
-          deletedAt: d.deletedAt?.toISOString(),
-          deletedBy: d.deletedBy || undefined,
-        };
-      });
+      return demandes.map(convertPrismaDemandeToJSON);
     } catch (error) {
       console.error("Erreur getAllDemandes (DB):", error);
       // Fallback sur JSON en cas d'erreur
@@ -933,36 +842,7 @@ async function getAllDemandesJSON(): Promise<DemandeICD[]> {
   }
 }
 
-/**
- * Récupère une demande par ID
- * Bascule automatiquement entre JSON et DB selon USE_DB
- */
-export async function getDemandeById(id: number): Promise<DemandeICD | null> {
-  if (!id) return null;
-
-  if (USE_DB) {
-    try {
-      const { getDemandeById: getDemandeByIdDB } = await import("@/repositories/demandesRepo");
-      
-      // Convertir l'ID numérique en UUID si nécessaire
-      // Pour l'instant, on cherche dans toutes les demandes
-      const allDemandes = await getAllDemandes();
-      const demande = allDemandes.find((d) => d.id === id);
-      
-      return demande || null;
-    } catch (error) {
-      console.error("Erreur getDemandeById (DB):", error);
-      return getDemandeByIdJSON(id);
-    }
-  } else {
-    return getDemandeByIdJSON(id);
-  }
-}
-
-async function getDemandeByIdJSON(id: number): Promise<DemandeICD | null> {
-  const { getDemandeById: getDemandeByIdStore } = await import("./demandesStore");
-  return getDemandeByIdStore(id) || null;
-}
+// getDemandeById est maintenant défini plus bas avec UUID string
 
 /**
  * Récupère une demande par ref
@@ -979,40 +859,7 @@ export async function getDemandeByRef(ref: string): Promise<DemandeICD | null> {
       if (!demande) return null;
 
       // Convertir Prisma vers JSON
-      let idNumber: number;
-      if (typeof demande.id === "string" && demande.id.includes("-")) {
-        const hash = demande.id.split("").reduce((acc: number, char: string) => {
-          return ((acc << 5) - acc) + char.charCodeAt(0);
-        }, 0);
-        idNumber = Math.abs(hash) % 1000000;
-      } else {
-        idNumber = parseInt(String(demande.id)) || 0;
-      }
-
-      return {
-        id: idNumber,
-        ref: demande.ref,
-        createdAt: demande.createdAt.toISOString(),
-        deviceId: demande.deviceId || undefined,
-        fullName: demande.fullName,
-        email: demande.email,
-        phone: demande.phone,
-        serviceType: demande.serviceType,
-        serviceSubcategory: demande.serviceSubcategory || undefined,
-        serviceAutre: demande.serviceAutre || undefined,
-        country: demande.country || undefined,
-        description: demande.description,
-        lieu: demande.lieu || undefined,
-        budget: demande.budget || undefined,
-        urgence: demande.urgence,
-        fileIds: demande.fileIds || [],
-        statut: demande.statut as any,
-        rejeteeAt: demande.rejeteeAt?.toISOString(),
-        rejeteeBy: demande.rejeteeBy || undefined,
-        raisonRejet: demande.raisonRejet || undefined,
-        deletedAt: demande.deletedAt?.toISOString(),
-        deletedBy: demande.deletedBy || undefined,
-      };
+      return convertPrismaDemandeToJSON(demande);
     } catch (error) {
       console.error("Erreur getDemandeByRef (DB):", error);
       return getDemandeByRefJSON(ref);
@@ -1341,42 +1188,28 @@ export async function getMissionsByClient(email: string): Promise<Mission[]> {
  * Récupère les missions d'un prestataire par ID
  * Bascule automatiquement entre JSON et DB selon USE_DB
  */
-export async function getMissionsByPrestataire(prestataireId: number): Promise<Mission[]> {
-  console.log(`[getMissionsByPrestataire] 🔍 Recherche missions pour prestataire ID numérique: ${prestataireId}`);
+export async function getMissionsByPrestataire(prestataireId: string): Promise<Mission[]> {
+  console.log(`[getMissionsByPrestataire] 🔍 Recherche missions pour prestataire UUID: ${prestataireId}`);
   
   if (USE_DB) {
     try {
       const { getMissionsByPrestataire: getMissionsByPrestataireDB } = await import("@/repositories/missionsRepo");
-      // Trouver l'UUID du prestataire à partir de son ID numérique
-      const prestataireDB = await findPrestatairePrismaByNumericId(prestataireId);
-      if (!prestataireDB) {
-        console.error(`[getMissionsByPrestataire] ❌ Prestataire non trouvé avec ID numérique: ${prestataireId}`);
-        return [];
-      }
       
-      console.log(`[getMissionsByPrestataire] ✅ Prestataire trouvé: ${prestataireDB.email} (UUID: ${prestataireDB.id})`);
-      
-      const missions = await getMissionsByPrestataireDB(prestataireDB.id) as any[];
-      console.log(`[getMissionsByPrestataire] 📋 Missions brutes trouvées dans DB: ${missions.length}`);
-      missions.forEach((m: any, idx: number) => {
-        console.log(`[getMissionsByPrestataire]   ${idx + 1}. Mission ${m.ref} - prestataireId DB: ${m.prestataireId}`);
-      });
+      // Utiliser directement l'UUID pour chercher les missions
+      const missions = await getMissionsByPrestataireDB(prestataireId) as any[];
+      console.log(`[getMissionsByPrestataire] 📋 Missions trouvées dans DB: ${missions.length}`);
       
       const convertedMissions = missions.map(convertPrismaMissionToJSON);
       console.log(`[getMissionsByPrestataire] ✅ Missions converties: ${convertedMissions.length}`);
-      console.log(`[getMissionsByPrestataire] 🔍 Prestataire ID numérique recherché: ${prestataireId}`);
-      convertedMissions.forEach((m: Mission, idx: number) => {
-        const match = m.prestataireId === prestataireId;
-        console.log(`[getMissionsByPrestataire]   ${idx + 1}. Mission ${m.ref} - prestataireId converti: ${m.prestataireId} ${match ? "✅ MATCH" : "❌ NO MATCH"}`);
-      });
       
       return convertedMissions;
     } catch (error) {
       logPrismaError("getMissionsByPrestataire", error, { context: "DB" });
-      return getMissionsByPrestataireJSON(prestataireId);
+      return [];
     }
   } else {
-    return getMissionsByPrestataireJSON(prestataireId);
+    // JSON utilise des IDs numériques, donc pas de fallback direct avec UUID
+    return [];
   }
 }
 
@@ -1384,30 +1217,24 @@ export async function getMissionsByPrestataire(prestataireId: number): Promise<M
  * Récupère les missions d'une demande par ID
  * Bascule automatiquement entre JSON et DB selon USE_DB
  */
-export async function getMissionsByDemandeId(demandeId: number): Promise<Mission[]> {
+export async function getMissionsByDemandeId(demandeId: string): Promise<Mission[]> {
   if (USE_DB) {
     try {
       const { getMissionsByDemandeId: getMissionsByDemandeIdDB } = await import("@/repositories/missionsRepo");
       
-      // IMPORTANT: Convertir l'ID numérique en UUID avant de chercher les missions
-      const demandeDB = await findDemandePrismaByNumericId(demandeId);
-      if (!demandeDB) {
-        console.warn(`[getMissionsByDemandeId] Demande ${demandeId} non trouvée, retourne tableau vide`);
-        return [];
-      }
+      // Utiliser directement l'UUID pour chercher les missions
+      const missions = await getMissionsByDemandeIdDB(demandeId) as any[];
       
-      // Utiliser l'UUID de la demande pour chercher les missions
-      const missions = await getMissionsByDemandeIdDB(demandeDB.id) as any[];
-      
-      console.log(`[getMissionsByDemandeId] Demande ${demandeId} (UUID: ${demandeDB.id.substring(0, 8)}...): ${missions.length} missions trouvées`);
+      console.log(`[getMissionsByDemandeId] Demande UUID ${demandeId.substring(0, 8)}...: ${missions.length} missions trouvées`);
       
       return missions.map(convertPrismaMissionToJSON);
     } catch (error) {
       logPrismaError("getMissionsByDemandeId", error, { context: "DB" });
-      return getMissionsByDemandeIdJSON(demandeId);
+      return [];
     }
   } else {
-    return getMissionsByDemandeIdJSON(demandeId);
+    // JSON utilise des IDs numériques, donc pas de fallback direct avec UUID
+    return [];
   }
 }
 
@@ -1436,33 +1263,21 @@ export async function getAllMissions(): Promise<Mission[]> {
  * Récupère une mission par ID
  * Bascule automatiquement entre JSON et DB selon USE_DB
  */
-export async function getMissionById(id: number): Promise<Mission | null> {
+export async function getMissionById(id: string): Promise<Mission | null> {
   if (USE_DB) {
     try {
-      // Pour Prisma, on doit trouver la mission par son UUID
-      // On va devoir chercher toutes les missions et filtrer par ID converti
-      const { getAllMissions } = await import("@/repositories/missionsRepo");
-      const allMissions = await getAllMissions() as any[];
-      const mission = allMissions.find((m: any) => {
-        let idNumber: number;
-        if (typeof m.id === "string" && m.id.includes("-")) {
-          const hash = m.id.split("").reduce((acc: number, char: string) => {
-            return ((acc << 5) - acc) + char.charCodeAt(0);
-          }, 0);
-          idNumber = Math.abs(hash) % 1000000;
-        } else {
-          idNumber = parseInt(String(m.id)) || 0;
-        }
-        return idNumber === id;
-      });
+      // Utiliser directement l'UUID pour trouver la mission
+      const { getMissionById: getMissionByIdDB } = await import("@/repositories/missionsRepo");
+      const mission = await getMissionByIdDB(id);
       
       return mission ? convertPrismaMissionToJSON(mission) : null;
     } catch (error) {
       logPrismaError("getMissionById", error, { context: "DB" });
-      return getMissionByIdJSON(id);
+      return null;
     }
   } else {
-    return getMissionByIdJSON(id);
+    // JSON utilise des IDs numériques, donc pas de fallback direct avec UUID
+    return null;
   }
 }
 
@@ -1470,17 +1285,18 @@ export async function getMissionById(id: number): Promise<Mission | null> {
  * Vérifie si une mission existe pour une demande et un prestataire
  * Bascule automatiquement entre JSON et DB selon USE_DB
  */
-export async function missionExistsForDemandeAndPrestataire(demandeId: number, prestataireId: number): Promise<boolean> {
+export async function missionExistsForDemandeAndPrestataire(demandeId: string, prestataireId: string): Promise<boolean> {
   if (USE_DB) {
     try {
       const missions = await getMissionsByDemandeId(demandeId);
       return missions.some((m) => m.prestataireId === prestataireId);
     } catch (error) {
       console.error("Erreur missionExistsForDemandeAndPrestataire (DB):", error);
-      return missionExistsForDemandeAndPrestataireJSON(demandeId, prestataireId);
+      return false;
     }
   } else {
-    return missionExistsForDemandeAndPrestataireJSON(demandeId, prestataireId);
+    // JSON utilise des IDs numériques, donc pas de fallback direct avec UUID
+    return false;
   }
 }
 
@@ -1488,29 +1304,32 @@ export async function missionExistsForDemandeAndPrestataire(demandeId: number, p
  * Crée une nouvelle mission
  * Bascule automatiquement entre JSON et DB selon USE_DB
  */
-// Helper pour trouver l'UUID d'une demande à partir de son ID numérique
-async function findDemandePrismaByNumericId(id: number): Promise<any | null> {
-  try {
-    const { getAllDemandes: getAllDemandesDB } = await import("@/repositories/demandesRepo");
-    const allDemandes = await getAllDemandesDB() as any[];
-    
-    const demande = allDemandes.find((d: any) => {
-      if (typeof d.id === "string" && d.id.includes("-")) {
-        // UUID: convertir en nombre pour comparer
-        const hash = d.id.split("").reduce((acc: number, char: string) => {
-          return ((acc << 5) - acc) + char.charCodeAt(0);
-        }, 0);
-        const idNumber = Math.abs(hash) % 1000000;
-        return idNumber === id;
-      } else {
-        // ID numérique direct
-        return parseInt(String(d.id)) === id;
+/**
+ * Récupère une demande par ID (UUID string)
+ * Bascule automatiquement entre JSON et DB selon USE_DB
+ */
+export async function getDemandeById(id: string): Promise<DemandeICD | null> {
+  if (!id || typeof id !== "string") return null;
+
+  if (USE_DB) {
+    try {
+      const { getDemandeById: getDemandeByIdDB } = await import("@/repositories/demandesRepo");
+      
+      // Utiliser directement l'UUID pour trouver la demande
+      const demandePrisma = await getDemandeByIdDB(id);
+      
+      if (demandePrisma) {
+        return convertPrismaDemandeToJSON(demandePrisma);
       }
-    });
-    
-    return demande || null;
-  } catch (error) {
-    console.error("Erreur findDemandePrismaByNumericId:", error);
+      
+      return null;
+    } catch (error) {
+      console.error("Erreur getDemandeById (DB):", error);
+      // Fallback JSON si disponible (mais JSON utilise des IDs numériques, donc pas de fallback direct)
+      return null;
+    }
+  } else {
+    // JSON utilise des IDs numériques, donc pas de fallback direct avec UUID
     return null;
   }
 }
@@ -1520,26 +1339,34 @@ export async function createMission(
 ): Promise<Mission> {
   if (USE_DB) {
     try {
-      const { createMission: createMissionDB, getAllMissions: getAllMissionsDB } = await import("@/repositories/missionsRepo");
+      const { createMission: createMissionDB } = await import("@/repositories/missionsRepo");
       
-      // Trouver l'UUID de la demande à partir de son ID numérique
-      const demandeDB = await findDemandePrismaByNumericId(data.demandeId);
+      // data.demandeId et data.prestataireId sont maintenant des UUID strings directement
+      const demandeIdUUID = typeof data.demandeId === "string" ? data.demandeId : String(data.demandeId);
+      const prestataireIdUUID = data.prestataireId 
+        ? (typeof data.prestataireId === "string" ? data.prestataireId : String(data.prestataireId))
+        : null;
+      
+      console.log(`[createMission] 📝 Création mission avec demandeId UUID: ${demandeIdUUID}, prestataireId UUID: ${prestataireIdUUID || "null"}`);
+      
+      // Vérifier que la demande existe
+      const { getDemandeById: getDemandeByIdDB } = await import("@/repositories/demandesRepo");
+      const demandeDB = await getDemandeByIdDB(demandeIdUUID);
       if (!demandeDB) {
-        console.error(`[createMission] ❌ Demande non trouvée avec ID numérique: ${data.demandeId}`);
-        throw new Error(`Demande non trouvée avec ID: ${data.demandeId}`);
+        console.error(`[createMission] ❌ Demande non trouvée avec UUID: ${demandeIdUUID}`);
+        throw new Error(`Demande non trouvée avec UUID: ${demandeIdUUID}`);
       }
       
-      console.log(`[createMission] ✅ Demande trouvée: ID numérique=${data.demandeId}, UUID=${demandeDB.id}`);
+      console.log(`[createMission] ✅ Demande trouvée: UUID=${demandeDB.id}`);
       
-      // Trouver l'UUID du prestataire si fourni
-      let prestataireIdUUID: string | null = null;
-      if (data.prestataireId) {
-        const prestataireDB = await findPrestatairePrismaByNumericId(data.prestataireId);
+      // Vérifier que le prestataire existe si fourni
+      if (prestataireIdUUID) {
+        const { getPrestataireById: getPrestataireByIdDB } = await import("@/repositories/prestatairesRepo");
+        const prestataireDB = await getPrestataireByIdDB(prestataireIdUUID);
         if (prestataireDB) {
-          prestataireIdUUID = prestataireDB.id;
-          console.log(`[createMission] ✅ Prestataire trouvé: ID numérique=${data.prestataireId}, UUID=${prestataireDB.id}`);
+          console.log(`[createMission] ✅ Prestataire trouvé: UUID=${prestataireDB.id}`);
         } else {
-          console.warn(`[createMission] ⚠️ Prestataire non trouvé avec ID numérique: ${data.prestataireId}`);
+          console.warn(`[createMission] ⚠️ Prestataire non trouvé avec UUID: ${prestataireIdUUID}`);
         }
       } else {
         console.log(`[createMission] ℹ️ Aucun prestataireId fourni dans les données`);
@@ -1566,15 +1393,13 @@ export async function createMission(
       // Helper pour convertir undefined en null pour Prisma
       const undefToNull = <T>(val: T | undefined): T | null => (val === undefined ? null : val);
       
-      console.log(`[createMission] 📝 Création mission avec demandeId UUID: ${demandeDB.id}, prestataireId UUID: ${prestataireIdUUID || "null"}`);
-      
       // Créer la mission avec la ref générée atomiquement
       const mission = await createMissionDB({
                 ref, // Utiliser la ref générée atomiquement
             createdAt,
-            demandeId: demandeDB.id as any, // Utiliser l'UUID de la demande (cast pour compatibilité type Mission)
+            demandeId: demandeIdUUID, // UUID directement
             clientEmail: data.clientEmail,
-            prestataireId: prestataireIdUUID as any, // Utiliser l'UUID du prestataire (cast pour compatibilité type Mission)
+            prestataireId: prestataireIdUUID, // UUID directement ou null
             prestataireRef: undefToNull(data.prestataireRef),
             internalState,
             status,
@@ -1653,53 +1478,23 @@ export async function createMission(
 
 // Fonction helper pour convertir Mission Prisma vers Mission JSON
 export function convertPrismaMissionToJSON(mission: any): Mission {
-  let idNumber: number;
-  if (typeof mission.id === "string" && mission.id.includes("-")) {
-    const hash = mission.id.split("").reduce((acc: number, char: string) => {
-      return ((acc << 5) - acc) + char.charCodeAt(0);
-    }, 0);
-    idNumber = Math.abs(hash) % 1000000;
-  } else {
-    idNumber = parseInt(String(mission.id)) || 0;
-  }
-
   // Helper pour convertir null en undefined
   const nullToUndef = <T>(val: T | null): T | undefined => (val === null ? undefined : val);
 
-  // Convertir demandeId UUID en ID numérique
-  let demandeIdNumber: number;
-  if (typeof mission.demandeId === "string" && mission.demandeId.includes("-")) {
-    const hash = mission.demandeId.split("").reduce((acc: number, char: string) => {
-      return ((acc << 5) - acc) + char.charCodeAt(0);
-    }, 0);
-    demandeIdNumber = Math.abs(hash) % 1000000;
-  } else {
-    demandeIdNumber = parseInt(String(mission.demandeId)) || 0;
-  }
-
-  // Convertir prestataireId UUID en ID numérique
-  let prestataireIdNumber: number | undefined = undefined;
-  if (mission.prestataireId) {
-    if (typeof mission.prestataireId === "string" && mission.prestataireId.includes("-")) {
-      // C'est un UUID, utiliser la fonction calculateUUIDHash pour garantir la cohérence
-      prestataireIdNumber = calculateUUIDHash(mission.prestataireId);
-      console.log(`[convertPrismaMissionToJSON] 🔄 Conversion prestataireId UUID ${mission.prestataireId.substring(0, 8)}... → ID numérique: ${prestataireIdNumber} (hash calculé)`);
-    } else {
-      prestataireIdNumber = parseInt(String(mission.prestataireId)) || undefined;
-      console.log(`[convertPrismaMissionToJSON] ℹ️ prestataireId déjà numérique: ${prestataireIdNumber}`);
-    }
-  } else {
-    console.log(`[convertPrismaMissionToJSON] ⚠️ Mission ${mission.ref} n'a pas de prestataireId`);
-  }
+  // Utiliser directement les UUID strings (plus de conversion)
+  const missionId = typeof mission.id === "string" ? mission.id : String(mission.id);
+  const demandeId = typeof mission.demandeId === "string" ? mission.demandeId : String(mission.demandeId);
+  const prestataireId = mission.prestataireId 
+    ? (typeof mission.prestataireId === "string" ? mission.prestataireId : String(mission.prestataireId))
+    : null;
 
   return {
-    id: idNumber,
-    uuid: mission.id, // UUID Prisma (identifiant unique pour navigation)
+    id: missionId, // UUID Prisma directement
     ref: mission.ref,
     createdAt: mission.createdAt.toISOString(),
-    demandeId: demandeIdNumber,
+    demandeId: demandeId, // UUID directement
     clientEmail: mission.clientEmail,
-    prestataireId: prestataireIdNumber,
+    prestataireId: prestataireId, // UUID directement ou null
     prestataireRef: nullToUndef(mission.prestataireRef),
     internalState: mission.internalState as any,
     status: mission.status as any,
@@ -1804,80 +1599,37 @@ async function createMissionJSON(
  * Bascule automatiquement entre JSON et DB selon USE_DB
  */
 export async function updateMissionInternalState(
-  id: number,
+  id: string,
   newInternalState: string,
   authorEmail: string
 ): Promise<Mission | null> {
   if (USE_DB) {
     try {
-      // Pour Prisma, utiliser la logique du store JSON qui est complète
-      // On récupère la mission, on la met à jour via le store JSON, puis on sauvegarde dans Prisma
+      // Utiliser directement l'UUID pour récupérer et mettre à jour la mission
       const mission = await getMissionById(id);
       if (!mission) return null;
 
-      // Utiliser la logique complète du store JSON
-      const result = await updateMissionInternalStateJSON(id, newInternalState, authorEmail);
+      // Mettre à jour via Prisma directement
+      const { updateMission } = await import("@/repositories/missionsRepo");
+      const { mapInternalStateToStatus } = await import("./types");
       
-      if (!result) return null;
+      const updatedMission = await updateMission(id, {
+        internalState: newInternalState as any,
+        status: mapInternalStateToStatus(newInternalState as any),
+      });
+      
+      if (!updatedMission) return null;
 
-      // Sauvegarder dans Prisma
-      try {
-        const { updateMission: updateMissionDB } = await import("@/repositories/missionsRepo");
-        // Trouver la mission dans Prisma en utilisant demandeId
-        const { getMissionsByDemandeId: getMissionsByDemandeIdDB } = await import("@/repositories/missionsRepo");
-        const missionsForDemande = await getMissionsByDemandeIdDB(String(mission.demandeId)) as any[];
-        const missionDB = missionsForDemande.find((m: any) => {
-          let idNumber: number;
-          if (typeof m.id === "string" && m.id.includes("-")) {
-            const hash = m.id.split("").reduce((acc: number, char: string) => {
-              return ((acc << 5) - acc) + char.charCodeAt(0);
-            }, 0);
-            idNumber = Math.abs(hash) % 1000000;
-          } else {
-            idNumber = parseInt(String(m.id)) || 0;
-          }
-          return idNumber === id;
-        });
-
-        if (missionDB) {
-          const updateData: any = {
-            internalState: result.internalState,
-            status: result.status,
-            currentProgress: result.currentProgress,
-            updates: result.updates ? JSON.parse(JSON.stringify(result.updates)) : [],
-            progress: result.progress ? JSON.parse(JSON.stringify(result.progress)) : [],
-            dateAssignation: result.dateAssignation ? new Date(result.dateAssignation) : null,
-            dateAcceptation: result.dateAcceptation ? new Date(result.dateAcceptation) : null,
-            datePriseEnCharge: result.datePriseEnCharge ? new Date(result.datePriseEnCharge) : null,
-            dateDebut: result.dateDebut ? new Date(result.dateDebut) : null,
-            dateFin: result.dateFin ? new Date(result.dateFin) : null,
-            paiementEffectue: result.paiementEffectue,
-            paiementEffectueAt: result.paiementEffectueAt ? new Date(result.paiementEffectueAt) : null,
-            avanceVersee: result.avanceVersee,
-            avanceVerseeAt: result.avanceVerseeAt ? new Date(result.avanceVerseeAt) : null,
-            soldeVersee: result.soldeVersee,
-            soldeVerseeAt: result.soldeVerseeAt ? new Date(result.soldeVerseeAt) : null,
-            proofSubmissionDate: result.proofSubmissionDate ? new Date(result.proofSubmissionDate) : null,
-            proofValidatedByAdmin: result.proofValidatedByAdmin,
-            proofValidatedAt: result.proofValidatedAt ? new Date(result.proofValidatedAt) : null,
-            proofValidatedForClient: result.proofValidatedForClient,
-            proofValidatedForClientAt: result.proofValidatedForClientAt ? new Date(result.proofValidatedForClientAt) : null,
-          };
-
-          await updateMissionDB(missionDB.id, updateData);
-        }
-      } catch (prismaError) {
-        console.error("Erreur mise à jour Prisma dans updateMissionInternalState:", prismaError);
-        // Continuer avec le résultat JSON même si Prisma échoue
-      }
-
-      return result;
+      // Ajouter l'update dans la liste des updates (optionnel, peut être fait séparément)
+      // Pour l'instant, on retourne simplement la mission mise à jour
+      return convertPrismaMissionToJSON(updatedMission);
     } catch (error) {
       logPrismaError("updateMissionInternalState", error, { context: "DB" });
-      return updateMissionInternalStateJSON(id, newInternalState, authorEmail);
+      return null;
     }
   } else {
-    return updateMissionInternalStateJSON(id, newInternalState, authorEmail);
+    // JSON utilise des IDs numériques, donc pas de fallback direct avec UUID
+    return null;
   }
 }
 
@@ -2070,56 +1822,20 @@ export async function updateMissionStatus(
  * Convertir une proposition Prisma vers le format JSON
  */
 function convertPrismaPropositionToJSON(proposition: any): PropositionPrestataire {
-  // Convertir l'UUID en nombre pour compatibilité
-  let idNumber: number;
-  if (typeof proposition.id === "string" && proposition.id.includes("-")) {
-    const hash = proposition.id.split("").reduce((acc: number, char: string) => {
-      return ((acc << 5) - acc) + char.charCodeAt(0);
-    }, 0);
-    idNumber = Math.abs(hash) % 1000000;
-  } else {
-    idNumber = parseInt(String(proposition.id)) || 0;
-  }
-
-  // Convertir demandeId et prestataireId
-  let demandeIdNumber: number;
-  if (typeof proposition.demandeId === "string" && proposition.demandeId.includes("-")) {
-    const hash = proposition.demandeId.split("").reduce((acc: number, char: string) => {
-      return ((acc << 5) - acc) + char.charCodeAt(0);
-    }, 0);
-    demandeIdNumber = Math.abs(hash) % 1000000;
-  } else {
-    demandeIdNumber = parseInt(String(proposition.demandeId)) || 0;
-  }
-
-  let prestataireIdNumber: number;
-  if (typeof proposition.prestataireId === "string" && proposition.prestataireId.includes("-")) {
-    const hash = proposition.prestataireId.split("").reduce((acc: number, char: string) => {
-      return ((acc << 5) - acc) + char.charCodeAt(0);
-    }, 0);
-    prestataireIdNumber = Math.abs(hash) % 1000000;
-  } else {
-    prestataireIdNumber = parseInt(String(proposition.prestataireId)) || 0;
-  }
-
-  let missionIdNumber: number | null = null;
-  if (proposition.missionId) {
-    if (typeof proposition.missionId === "string" && proposition.missionId.includes("-")) {
-      const hash = proposition.missionId.split("").reduce((acc: number, char: string) => {
-        return ((acc << 5) - acc) + char.charCodeAt(0);
-      }, 0);
-      missionIdNumber = Math.abs(hash) % 1000000;
-    } else {
-      missionIdNumber = parseInt(String(proposition.missionId)) || 0;
-    }
-  }
+  // Utiliser directement les UUID strings (plus de conversion)
+  const propositionId = typeof proposition.id === "string" ? proposition.id : String(proposition.id);
+  const demandeId = typeof proposition.demandeId === "string" ? proposition.demandeId : String(proposition.demandeId);
+  const prestataireId = typeof proposition.prestataireId === "string" ? proposition.prestataireId : String(proposition.prestataireId);
+  const missionId = proposition.missionId 
+    ? (typeof proposition.missionId === "string" ? proposition.missionId : String(proposition.missionId))
+    : null;
 
   return {
-    id: idNumber,
+    id: propositionId, // UUID directement
     ref: proposition.ref,
     createdAt: proposition.createdAt.toISOString(),
-    demandeId: demandeIdNumber,
-    prestataireId: prestataireIdNumber,
+    demandeId: demandeId, // UUID directement
+    prestataireId: prestataireId, // UUID directement
     prix_prestataire: proposition.prix_prestataire,
     delai_estime: proposition.delai_estime,
     commentaire: proposition.commentaire,
@@ -2130,7 +1846,7 @@ function convertPrismaPropositionToJSON(proposition: any): PropositionPrestatair
     accepteeBy: proposition.accepteeBy || null,
     refuseeBy: proposition.refuseeBy || null,
     raisonRefus: proposition.raisonRefus || null,
-    missionId: missionIdNumber,
+    missionId: missionId, // UUID directement ou null
   };
 }
 
@@ -2206,23 +1922,24 @@ export async function getPropositionsByDemandeId(demandeId: number): Promise<Pro
 /**
  * Récupérer toutes les propositions pour un prestataire
  */
-export async function getPropositionsByPrestataireId(prestataireId: number): Promise<PropositionPrestataire[]> {
-  if (!prestataireId) return [];
+export async function getPropositionsByPrestataireId(prestataireId: string): Promise<PropositionPrestataire[]> {
+  if (!prestataireId || typeof prestataireId !== "string") return [];
 
   if (USE_DB) {
     try {
       const { getPropositionsByPrestataireId: getPropositionsByPrestataireIdDB } = await import("@/repositories/propositionsRepo");
-      const { getPrestataireByEmail } = await import("@/lib/dataAccess");
       
-      // On doit trouver le prestataire dans la DB pour obtenir son UUID
-      // Pour l'instant, on utilise le fallback JSON car on n'a pas l'email
-      return getPropositionsByPrestataireIdJSON(prestataireId);
+      // Utiliser directement l'UUID pour chercher les propositions
+      const propositions = await getPropositionsByPrestataireIdDB(prestataireId) as any[];
+      
+      return propositions.map(convertPrismaPropositionToJSON);
     } catch (error) {
       console.error("Erreur getPropositionsByPrestataireId (DB):", error);
-      return getPropositionsByPrestataireIdJSON(prestataireId);
+      return [];
     }
   } else {
-    return getPropositionsByPrestataireIdJSON(prestataireId);
+    // JSON utilise des IDs numériques, donc pas de fallback direct avec UUID
+    return [];
   }
 }
 

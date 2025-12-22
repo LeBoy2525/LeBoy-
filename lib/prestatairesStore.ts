@@ -33,7 +33,7 @@ export function mapLegacyServiceTypeToCategory(serviceType: string): string {
 export type StatutPrestataire = "en_attente" | "actif" | "suspendu" | "rejete";
 
 export type Prestataire = {
-  id: number;
+  id: string; // UUID
   ref: string; // ex : P-2025-001
   createdAt: string; // ISO
 

@@ -44,8 +44,8 @@ export type MissionUpdateType =
   | "message";
 
 export interface MissionUpdate {
-  id: number;
-  missionId: number;
+  id: string;
+  missionId: string;
   type: MissionUpdateType;
   author: "admin" | "prestataire" | "client";
   authorEmail: string;
@@ -86,7 +86,7 @@ export interface ExecutionPhase {
 
 export interface Message {
   id: string;
-  missionId: number;
+  missionId: string;
   from: "client" | "prestataire" | "admin";
   fromEmail: string;
   to: "client" | "prestataire" | "admin";
@@ -113,12 +113,11 @@ export interface MissionProof {
 }
 
 export interface Mission {
-  id: number;
-  uuid: string; // UUID Prisma (identifiant unique pour navigation)
+  id: string; // UUID Prisma (identifiant unique)
   ref: string; // M-2025-001
-  demandeId: number; // Référence à la demande originale
+  demandeId: string; // Référence à la demande originale (UUID)
   clientEmail: string;
-  prestataireId?: number | null;
+  prestataireId?: string | null; // UUID du prestataire
   prestataireRef?: string | null;
   
   // État interne du workflow (source de vérité)

@@ -3,12 +3,12 @@
 import { loadFromFile, saveToFileAsync } from "./persistence";
 
 export type PropositionPrestataire = {
-  id: number;
+  id: string; // UUID
   ref: string; // ex : PROP-2025-001
   createdAt: string; // ISO
 
-  demandeId: number; // ID de la demande concernée
-  prestataireId: number; // ID du prestataire qui soumet la proposition
+  demandeId: string; // UUID de la demande concernée
+  prestataireId: string; // UUID du prestataire qui soumet la proposition
 
   // Informations de la proposition
   prix_prestataire: number; // Montant proposé en FCFA
@@ -25,7 +25,7 @@ export type PropositionPrestataire = {
   raisonRefus?: string | null; // Raison du refus (optionnel)
 
   // Si acceptée, créer une mission
-  missionId?: number | null; // ID de la mission créée si acceptée
+  missionId?: string | null; // UUID de la mission créée si acceptée
 };
 
 type GlobalStore = {
