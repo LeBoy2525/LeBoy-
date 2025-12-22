@@ -1460,7 +1460,12 @@ export async function createMission(
             notifiedProviderAt: null, // Pas encore notifié
           } as any);
 
-      return convertPrismaMissionToJSON(mission);
+      const json = convertPrismaMissionToJSON(mission) as any;
+      
+      // conserver l'UUID Prisma pour toutes les opérations DB (update/findUnique)
+      json.dbId = mission.id;
+      
+      return json;
     } catch (error) {
       logPrismaError("createMission", error, { context: "DB" });
       return createMissionJSON(data);

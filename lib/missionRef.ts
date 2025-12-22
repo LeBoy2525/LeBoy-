@@ -17,40 +17,41 @@ export async function generateMissionRef(
   now: Date = new Date()
 ): Promise<string> {
   const year = now.getFullYear();
-  
-  // Transaction atomique : upsert + increment + read
-  // Utiliser $queryRaw pour éviter les problèmes de typage avant génération Prisma
-  const counter = await prisma.$transaction(async (tx: any) => {
-    // 1. Upsert le compteur pour l'année (crée si absent avec lastNumber=0)
-    await tx.missionRefCounter.upsert({
+
+  try {
+    const counter = await prisma.missionRefCounter.upsert({
       where: { year },
-      create: {
-        year,
-        lastNumber: 0,
-      },
-      update: {}, // Pas de mise à jour, on va juste incrémenter
+      update: { lastNumber: { increment: 1 } },
+      create: { year, lastNumber: 1 },
+      select: { lastNumber: true },
     });
-    
-    // 2. Incrémenter atomiquement le compteur
-    const updated = await tx.missionRefCounter.update({
-      where: { year },
-      data: {
-        lastNumber: {
-          increment: 1,
-        },
-      },
+
+    const seq = counter.lastNumber;
+    return `M-${year}-${String(seq).padStart(3, "0")}`;
+  } catch (e: any) {
+    // Fallback si table manquante (P2021 / 42P01)
+    const msg = String(e?.message || "");
+    const code = e?.code;
+
+    const isMissingTable =
+      code === "P2021" ||
+      msg.includes("does not exist") ||
+      msg.includes("mission_ref_counters");
+
+    if (!isMissingTable) throw e;
+
+    // fallback: prendre la dernière ref en DB et incrémenter
+    const last = await prisma.mission.findFirst({
+      where: { ref: { startsWith: `M-${year}-` } },
+      orderBy: { createdAt: "desc" },
+      select: { ref: true },
     });
-    
-    return updated;
-  });
-  
-  // 3. Générer la référence avec padding à 3 chiffres
-  const refNumber = counter.lastNumber;
-  const ref = `M-${year}-${String(refNumber).padStart(3, "0")}`;
-  
-  console.log(`[generateMissionRef] ✅ Référence générée atomiquement: ${ref} (année: ${year}, numéro: ${refNumber})`);
-  
-  return ref;
+
+    const lastSeq = last?.ref ? parseInt(last.ref.split("-")[2] || "0", 10) : 0;
+    const nextSeq = (Number.isFinite(lastSeq) ? lastSeq : 0) + 1;
+
+    return `M-${year}-${String(nextSeq).padStart(3, "0")}`;
+  }
 }
 
 /**

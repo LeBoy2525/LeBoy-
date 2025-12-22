@@ -265,13 +265,20 @@ export async function POST(req: Request) {
 
         // Set initial internal state: ASSIGNED_TO_PROVIDER (mandat assigné, en attente d'estimation)
         console.log(`[${traceId}] 📝 Action DB: UPDATE Mission internalState → ASSIGNED_TO_PROVIDER`);
-        await updateMissionInternalState(mission.id, "ASSIGNED_TO_PROVIDER", userEmail || "admin@icd.ca");
-        
-        // Vérifier que le statut a bien été mis à jour
-        const missionAfterUpdate = await (await import("@/lib/dataAccess")).getMissionById(mission.id);
-        console.log(`[${traceId}] ✅ Mission après update:`);
-        console.log(`[${traceId}]   - internalState: ${missionAfterUpdate?.internalState}`);
-        console.log(`[${traceId}]   - status: ${missionAfterUpdate?.status}`);
+        const dbMissionId = (mission as any).dbId;
+        if (!dbMissionId) {
+          console.error(`[${traceId}] ❌ Mission dbId (UUID) manquant après création`);
+        } else {
+          await updateMissionInternalState(dbMissionId, "ASSIGNED_TO_PROVIDER", userEmail || "admin@icd.ca");
+
+          // (optionnel) recharger via repo Prisma plutôt que getMissionById numérique
+          const { getMissionById: getMissionByIdDB } = await import("@/repositories/missionsRepo");
+          const missionAfterUpdate = await getMissionByIdDB(dbMissionId);
+
+          console.log(`[${traceId}] ✅ Mission après update:`);
+          console.log(`[${traceId}]   - internalState: ${missionAfterUpdate?.internalState}`);
+          console.log(`[${traceId}]   - status: ${missionAfterUpdate?.status}`);
+        }
         
         missionsCreees.push({ mission, prestataireId: prestataireIdUUID });
         console.log(`[${traceId}] ✅ Mission créée et assignée: ${mission.ref} pour prestataire UUID ${prestataireIdUUID}`);
@@ -337,8 +344,11 @@ export async function POST(req: Request) {
       for (const { mission, prestataireId } of missionsCreees) {
         try {
           // Vérifier si la mission a déjà été notifiée (éviter double-envoi)
-          const { getMissionById } = await import("@/lib/dataAccess");
-          const missionCheck = await getMissionById(mission.id);
+          const dbMissionId = (mission as any).dbId;
+          if (!dbMissionId) continue;
+          
+          const { getMissionById: getMissionByIdDB } = await import("@/repositories/missionsRepo");
+          const missionCheck = await getMissionByIdDB(dbMissionId);
           
           if (missionCheck?.notifiedProviderAt) {
             console.log(`[${traceId}] ⚠️ Mission ${mission.ref} déjà notifiée le ${missionCheck.notifiedProviderAt}, skip email`);
