@@ -202,7 +202,7 @@ export function calculatePropositionScore(
  */
 export function rankPropositions(
   propositions: PropositionPrestataire[],
-  getPrestataireNoteMoyenne: (prestataireId: number) => number
+  getPrestataireNoteMoyenne: (prestataireId: string) => number
 ): PropositionScore[] {
   const scores = propositions.map((prop) =>
     calculatePropositionScore(prop, propositions, getPrestataireNoteMoyenne(prop.prestataireId))

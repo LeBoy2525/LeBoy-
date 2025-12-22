@@ -24,11 +24,12 @@ export async function GET(
     }
 
     const resolvedParams = await params;
-    const demandeId = parseInt(resolvedParams.id);
+    const demandeId = resolvedParams.id; // UUID string (pas de parseInt)
     
-    if (isNaN(demandeId)) {
+    // Valider que c'est un UUID (format basique)
+    if (!demandeId || typeof demandeId !== "string" || demandeId.length < 30) {
       return NextResponse.json(
-        { error: "ID invalide." },
+        { error: "UUID invalide." },
         { status: 400 }
       );
     }
@@ -46,22 +47,22 @@ export async function GET(
     const propositions = await getPropositionsByDemandeId(demandeId);
 
     // Fonction pour obtenir la note moyenne d'un prestataire
-    const getPrestataireNoteMoyenne = async (prestataireId: number): Promise<number> => {
-      // Pour obtenir la note moyenne, on doit trouver le prestataire depuis le JSON store
-      // car le modèle Prisma Prestataire n'a pas encore ce champ
-      const { prestatairesStore } = await import("@/lib/prestatairesStore");
-      const prestataire = prestatairesStore.find((p) => p.id === prestataireId);
+    const getPrestataireNoteMoyenne = async (prestataireId: string): Promise<number> => {
+      // Utiliser getPrestataireById de dataAccess qui gère déjà la conversion
+      const { getPrestataireById } = await import("@/lib/dataAccess");
+      const prestataire = await getPrestataireById(prestataireId);
       return prestataire?.noteMoyenne || 0;
     };
 
     // Classer les propositions par score
-    const rankedPropositions = rankPropositions(propositions, (id: number) => {
+    const rankedPropositions = rankPropositions(propositions, (id: string) => {
       // Pour la compatibilité synchrone, on utilise une valeur par défaut
       // Dans un vrai cas, on devrait attendre la promesse, mais rankPropositions est synchrone
       return 0; // Valeur par défaut, sera remplacée après
     });
 
     // Enrichir avec les informations du prestataire
+    const { getPrestataireById } = await import("@/lib/dataAccess");
     const enrichedPropositions = await Promise.all(rankedPropositions.map(async (scoreData) => {
       // Obtenir la note moyenne réelle
       const noteMoyenne = await getPrestataireNoteMoyenne(scoreData.proposition.prestataireId);
@@ -75,9 +76,8 @@ export async function GET(
         noteMoyenne
       );
 
-      // Trouver le prestataire depuis le JSON store (car on a besoin de noteMoyenne, nombreMissions, etc.)
-      const { prestatairesStore } = await import("@/lib/prestatairesStore");
-      const prestataire = prestatairesStore.find((p) => p.id === scoreData.proposition.prestataireId);
+      // Trouver le prestataire depuis dataAccess (utilise UUID strings maintenant)
+      const prestataire = await getPrestataireById(scoreData.proposition.prestataireId);
 
       return {
         ...scoreDataRecalculated,
@@ -90,9 +90,9 @@ export async function GET(
               email: prestataire.email,
               phone: prestataire.phone,
               ville: prestataire.ville,
-              noteMoyenne: (prestataire as any).noteMoyenne || 0,
-              nombreMissions: (prestataire as any).nombreMissions || 0,
-              tauxReussite: (prestataire as any).tauxReussite || 0,
+              noteMoyenne: prestataire.noteMoyenne || 0,
+              nombreMissions: prestataire.nombreMissions || 0,
+              tauxReussite: prestataire.tauxReussite || 0,
             }
           : null,
       };

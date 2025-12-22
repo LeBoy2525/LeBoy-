@@ -22,11 +22,12 @@ export async function POST(req: Request, { params }: RouteParams) {
     }
 
     const resolvedParams = await params;
-    const demandeId = parseInt(resolvedParams.id);
+    const demandeId = resolvedParams.id; // UUID string (pas de parseInt)
     
-    if (isNaN(demandeId)) {
+    // Valider que c'est un UUID (format basique)
+    if (!demandeId || typeof demandeId !== "string" || demandeId.length < 30) {
       return NextResponse.json(
-        { error: "ID de demande invalide." },
+        { error: "UUID de demande invalide." },
         { status: 400 }
       );
     }

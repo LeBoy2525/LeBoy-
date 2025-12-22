@@ -152,14 +152,14 @@ export default function AdminDemandeDetailPage() {
   const router = useRouter();
   
   const idParam = params?.id;
-  const id = idParam ? parseInt(Array.isArray(idParam) ? idParam[0] : idParam) : NaN;
+  const id = idParam ? (Array.isArray(idParam) ? idParam[0] : idParam) : null; // UUID string (pas de parseInt)
 
   const [demande, setDemande] = useState<DemandeICD | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [matches, setMatches] = useState<any[]>([]);
   const [otherPrestataires, setOtherPrestataires] = useState<any[]>([]);
-  const [selectedPrestataires, setSelectedPrestataires] = useState<number[]>([]);
+  const [selectedPrestataires, setSelectedPrestataires] = useState<string[]>([]); // UUID strings maintenant
   const [demandeFiles, setDemandeFiles] = useState<any[]>([]);
   const [shareFiles, setShareFiles] = useState(false);
   const [shareMode, setShareMode] = useState<"all" | "partial">("all");
@@ -210,7 +210,7 @@ export default function AdminDemandeDetailPage() {
 
   useEffect(() => {
     async function fetchDemande() {
-      if (!id || isNaN(id)) {
+      if (!id || typeof id !== "string") {
         setLoading(false);
         return;
       }
@@ -234,7 +234,7 @@ export default function AdminDemandeDetailPage() {
     }
 
     async function fetchMissions() {
-      if (!id || isNaN(id)) return;
+      if (!id || typeof id !== "string") return;
       try {
         const res = await fetch(`/api/admin/demandes/${id}/missions`, { cache: "no-store" });
         if (res.ok) {
@@ -426,7 +426,7 @@ export default function AdminDemandeDetailPage() {
     setShowAssignModal(true);
   };
 
-  const handleCreateMission = async (prestataireIds: number[]) => {
+  const handleCreateMission = async (prestataireIds: string[]) => { // UUID strings maintenant
     if (!demande) return;
 
     if (!prestataireIds || prestataireIds.length === 0) {
@@ -1206,10 +1206,9 @@ export default function AdminDemandeDetailPage() {
                 ) : (
                   <div className="space-y-3">
                     {matches.map((match) => {
-                      const prestataireId =
-                        typeof match.prestataire.id === "string"
-                          ? parseInt(match.prestataire.id)
-                          : match.prestataire.id;
+                      const prestataireId = typeof match.prestataire.id === "string" 
+                        ? match.prestataire.id 
+                        : String(match.prestataire.id); // UUID string directement
 
                       return (
                         <div
@@ -1367,10 +1366,9 @@ export default function AdminDemandeDetailPage() {
                   ) : (
                     <div className="space-y-3">
                       {otherPrestataires.map((match) => {
-                      const prestataireId =
-                        typeof match.prestataire.id === "string"
-                          ? parseInt(match.prestataire.id)
-                          : match.prestataire.id;
+                      const prestataireId = typeof match.prestataire.id === "string" 
+                        ? match.prestataire.id 
+                        : String(match.prestataire.id); // UUID string directement
 
                       return (
                         <div

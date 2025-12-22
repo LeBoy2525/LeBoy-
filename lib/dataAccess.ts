@@ -880,38 +880,25 @@ async function getDemandeByRefJSON(ref: string): Promise<DemandeICD | null> {
  * Supprime une demande (soft delete)
  * Bascule automatiquement entre JSON et DB selon USE_DB
  */
-export async function softDeleteDemande(id: number, deletedBy: string): Promise<DemandeICD | null> {
-  if (!id) return null;
+export async function softDeleteDemande(id: string, deletedBy: string): Promise<DemandeICD | null> {
+  if (!id || typeof id !== "string") return null;
 
   if (USE_DB) {
     try {
-      const { softDeleteDemande: softDeleteDemandeDB, getAllDemandes: getAllDemandesDB } = await import("@/repositories/demandesRepo");
+      const { softDeleteDemande: softDeleteDemandeDB } = await import("@/repositories/demandesRepo");
       
-      // Trouver l'UUID de la demande
-      const allDemandes = await getAllDemandesDB();
-      const demandeDB = allDemandes.find((d: any) => {
-        if (typeof d.id === "string" && d.id.includes("-")) {
-          const hash = d.id.split("").reduce((acc: number, char: string) => {
-            return ((acc << 5) - acc) + char.charCodeAt(0);
-          }, 0);
-          const idNumber = Math.abs(hash) % 1000000;
-          return idNumber === id;
-        }
-        return parseInt(String(d.id)) === id;
-      });
-
-      if (!demandeDB) return null;
-
-      await softDeleteDemandeDB(demandeDB.id, deletedBy);
+      // Utiliser directement l'UUID
+      await softDeleteDemandeDB(id, deletedBy);
       
       // Récupérer la demande mise à jour
       return await getDemandeById(id);
     } catch (error) {
       console.error("Erreur softDeleteDemande (DB):", error);
-      return softDeleteDemandeJSON(id, deletedBy);
+      return null;
     }
   } else {
-    return softDeleteDemandeJSON(id, deletedBy);
+    // JSON utilise des IDs numériques, donc pas de fallback direct avec UUID
+    return null;
   }
 }
 
@@ -919,38 +906,25 @@ export async function softDeleteDemande(id: number, deletedBy: string): Promise<
  * Restaure une demande supprimée
  * Bascule automatiquement entre JSON et DB selon USE_DB
  */
-export async function restoreDemande(id: number): Promise<DemandeICD | null> {
-  if (!id) return null;
+export async function restoreDemande(id: string): Promise<DemandeICD | null> {
+  if (!id || typeof id !== "string") return null;
 
   if (USE_DB) {
     try {
-      const { restoreDemande: restoreDemandeDB, getAllDemandes: getAllDemandesDB } = await import("@/repositories/demandesRepo");
+      const { restoreDemande: restoreDemandeDB } = await import("@/repositories/demandesRepo");
       
-      // Trouver l'UUID de la demande
-      const allDemandes = await getAllDemandesDB();
-      const demandeDB = allDemandes.find((d: any) => {
-        if (typeof d.id === "string" && d.id.includes("-")) {
-          const hash = d.id.split("").reduce((acc: number, char: string) => {
-            return ((acc << 5) - acc) + char.charCodeAt(0);
-          }, 0);
-          const idNumber = Math.abs(hash) % 1000000;
-          return idNumber === id;
-        }
-        return parseInt(String(d.id)) === id;
-      });
-
-      if (!demandeDB) return null;
-
-      await restoreDemandeDB(demandeDB.id);
+      // Utiliser directement l'UUID
+      await restoreDemandeDB(id);
       
       // Récupérer la demande mise à jour
       return await getDemandeById(id);
     } catch (error) {
       console.error("Erreur restoreDemande (DB):", error);
-      return restoreDemandeJSON(id);
+      return null;
     }
   } else {
-    return restoreDemandeJSON(id);
+    // JSON utilise des IDs numériques, donc pas de fallback direct avec UUID
+    return null;
   }
 }
 
@@ -959,32 +933,18 @@ export async function restoreDemande(id: number): Promise<DemandeICD | null> {
  * Bascule automatiquement entre JSON et DB selon USE_DB
  */
 export async function rejectDemande(
-  id: number,
+  id: string,
   rejectedBy: string,
   raisonRejet?: string
 ): Promise<DemandeICD | null> {
-  if (!id) return null;
+  if (!id || typeof id !== "string") return null;
 
   if (USE_DB) {
     try {
-      const { updateDemande: updateDemandeDB, getAllDemandes: getAllDemandesDB } = await import("@/repositories/demandesRepo");
+      const { updateDemande: updateDemandeDB } = await import("@/repositories/demandesRepo");
       
-      // Trouver l'UUID de la demande
-      const allDemandes = await getAllDemandesDB();
-      const demandeDB = allDemandes.find((d: any) => {
-        if (typeof d.id === "string" && d.id.includes("-")) {
-          const hash = d.id.split("").reduce((acc: number, char: string) => {
-            return ((acc << 5) - acc) + char.charCodeAt(0);
-          }, 0);
-          const idNumber = Math.abs(hash) % 1000000;
-          return idNumber === id;
-        }
-        return parseInt(String(d.id)) === id;
-      });
-
-      if (!demandeDB) return null;
-
-      await updateDemandeDB(demandeDB.id, {
+      // Utiliser directement l'UUID
+      await updateDemandeDB(id, {
         statut: "rejetee",
         rejeteeAt: new Date().toISOString(),
         rejeteeBy: rejectedBy,
@@ -995,10 +955,11 @@ export async function rejectDemande(
       return await getDemandeById(id);
     } catch (error) {
       console.error("Erreur rejectDemande (DB):", error);
-      return rejectDemandeJSON(id, rejectedBy, raisonRejet);
+      return null;
     }
   } else {
-    return rejectDemandeJSON(id, rejectedBy, raisonRejet);
+    // JSON utilise des IDs numériques, donc pas de fallback direct avec UUID
+    return null;
   }
 }
 
@@ -1880,44 +1841,24 @@ export async function getPropositionById(id: number): Promise<PropositionPrestat
 /**
  * Récupérer toutes les propositions pour une demande
  */
-export async function getPropositionsByDemandeId(demandeId: number): Promise<PropositionPrestataire[]> {
-  if (!demandeId) return [];
+export async function getPropositionsByDemandeId(demandeId: string): Promise<PropositionPrestataire[]> {
+  if (!demandeId || typeof demandeId !== "string") return [];
 
   if (USE_DB) {
     try {
       const { getPropositionsByDemandeId: getPropositionsByDemandeIdDB } = await import("@/repositories/propositionsRepo");
-      const { getDemandeById } = await import("@/lib/dataAccess");
       
-      // Récupérer la demande pour obtenir son UUID
-      const demande = await getDemandeById(demandeId);
-      if (!demande) return [];
-
-      // Convertir l'ID numérique en UUID
-      // On doit trouver la demande dans la DB pour obtenir son UUID
-      const { getAllDemandes } = await import("@/repositories/demandesRepo");
-      const allDemandes = await getAllDemandes();
-      const demandeDB = allDemandes.find((d: any) => {
-        // Convertir l'UUID de la demande en nombre pour comparer
-        if (typeof d.id === "string" && d.id.includes("-")) {
-          const hash = d.id.split("").reduce((acc: number, char: string) => {
-            return ((acc << 5) - acc) + char.charCodeAt(0);
-          }, 0);
-          const idNumber = Math.abs(hash) % 1000000;
-          return idNumber === demandeId;
-        }
-        return parseInt(String(d.id)) === demandeId;
-      });
-
-      if (!demandeDB) return [];
-
-      const propositions = await getPropositionsByDemandeIdDB(demandeDB.id);
+      // Utiliser directement l'UUID pour chercher les propositions
+      const propositions = await getPropositionsByDemandeIdDB(demandeId) as any[];
+      
       return propositions.map(convertPrismaPropositionToJSON);
     } catch (error) {
       console.error("Erreur getPropositionsByDemandeId (DB):", error);
-      return getPropositionsByDemandeIdJSON(demandeId);
+      return [];
     }
   } else {
-    return getPropositionsByDemandeIdJSON(demandeId);
+    // JSON utilise des IDs numériques, donc pas de fallback direct avec UUID
+    return [];
   }
 }
 
@@ -2031,22 +1972,40 @@ export async function createProposition(
  * Mettre à jour le statut d'une proposition
  */
 export async function updatePropositionStatut(
-  id: number,
+  id: string,
   statut: "en_attente" | "acceptee" | "refusee",
   adminEmail: string,
-  missionId?: number | null,
+  missionId?: string | null,
   raisonRefus?: string
 ): Promise<PropositionPrestataire | null> {
+  if (!id || typeof id !== "string") return null;
+
   if (USE_DB) {
     try {
-      // Pour l'instant, on utilise le fallback JSON car la conversion ID <-> UUID est complexe
-      return updatePropositionStatutJSON(id, statut, adminEmail, missionId, raisonRefus);
+      const { updatePropositionStatus: updatePropositionStatusDB } = await import("@/repositories/propositionsRepo");
+      
+      // Utiliser directement l'UUID
+      await updatePropositionStatusDB(id, {
+        statut,
+        accepteeAt: statut === "acceptee" ? new Date().toISOString() : null,
+        refuseeAt: statut === "refusee" ? new Date().toISOString() : null,
+        accepteeBy: statut === "acceptee" ? adminEmail : null,
+        refuseeBy: statut === "refusee" ? adminEmail : null,
+        raisonRefus: raisonRefus || null,
+        missionId: missionId || null,
+      });
+      
+      // Récupérer la proposition mise à jour
+      const { getPropositionById } = await import("@/repositories/propositionsRepo");
+      const proposition = await getPropositionById(id);
+      return proposition ? convertPrismaPropositionToJSON(proposition) : null;
     } catch (error) {
       console.error("Erreur updatePropositionStatut (DB):", error);
-      return updatePropositionStatutJSON(id, statut, adminEmail, missionId, raisonRefus);
+      return null;
     }
   } else {
-    return updatePropositionStatutJSON(id, statut, adminEmail, missionId, raisonRefus);
+    // JSON utilise des IDs numériques, donc pas de fallback direct avec UUID
+    return null;
   }
 }
 
@@ -2200,20 +2159,32 @@ export async function updatePrestataire(
  * Mettre à jour le statut d'une demande
  */
 export async function updateDemandeStatus(
-  demandeId: number,
+  demandeId: string,
   newStatus: "en_attente" | "rejetee" | "acceptee",
   raisonRejet?: string
 ): Promise<DemandeICD | null> {
+  if (!demandeId || typeof demandeId !== "string") return null;
+
   if (USE_DB) {
     try {
-      // Pour l'instant, on utilise le fallback JSON car la conversion ID <-> UUID est complexe
-      return updateDemandeStatusJSON(demandeId, newStatus, raisonRejet);
+      const { updateDemande: updateDemandeDB } = await import("@/repositories/demandesRepo");
+      
+      // Utiliser directement l'UUID
+      await updateDemandeDB(demandeId, {
+        statut: newStatus,
+        rejeteeAt: newStatus === "rejetee" ? new Date().toISOString() : null,
+        raisonRejet: raisonRejet || null,
+      });
+      
+      // Récupérer la demande mise à jour
+      return await getDemandeById(demandeId);
     } catch (error) {
       console.error("Erreur updateDemandeStatus (DB):", error);
-      return updateDemandeStatusJSON(demandeId, newStatus, raisonRejet);
+      return null;
     }
   } else {
-    return updateDemandeStatusJSON(demandeId, newStatus, raisonRejet);
+    // JSON utilise des IDs numériques, donc pas de fallback direct avec UUID
+    return null;
   }
 }
 

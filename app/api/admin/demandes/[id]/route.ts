@@ -27,10 +27,12 @@ export async function DELETE(_req: Request, { params }: RouteParams) {
     }
 
     const resolvedParams = await params;
-    const demandeId = parseInt(resolvedParams.id);
-    if (isNaN(demandeId)) {
+    const demandeId = resolvedParams.id; // UUID string (pas de parseInt)
+    
+    // Valider que c'est un UUID (format basique)
+    if (!demandeId || typeof demandeId !== "string" || demandeId.length < 30) {
       return NextResponse.json(
-        { error: "ID invalide." },
+        { error: "UUID invalide." },
         { status: 400 }
       );
     }
@@ -54,7 +56,7 @@ export async function DELETE(_req: Request, { params }: RouteParams) {
     // Les demandes acceptées avec des missions en cours ne peuvent pas être supprimées directement
     if (demande.statut === "acceptee") {
       // Vérifier s'il y a des missions actives (non terminées)
-      const missions = await getMissionsByDemandeId(demandeId);
+      const missions = await getMissionsByDemandeId(demandeId); // demandeId est maintenant un UUID string
       
       // Une mission est considérée comme active si elle n'est pas terminée, pas supprimée, et pas archivée
       const hasActiveMissions = missions.some((m) => {
@@ -120,10 +122,12 @@ export async function POST(_req: Request, { params }: RouteParams) {
     }
 
     const resolvedParams = await params;
-    const demandeId = parseInt(resolvedParams.id);
-    if (isNaN(demandeId)) {
+    const demandeId = resolvedParams.id; // UUID string (pas de parseInt)
+    
+    // Valider que c'est un UUID (format basique)
+    if (!demandeId || typeof demandeId !== "string" || demandeId.length < 30) {
       return NextResponse.json(
-        { error: "ID invalide." },
+        { error: "UUID invalide." },
         { status: 400 }
       );
     }
@@ -190,10 +194,12 @@ export async function PATCH(req: Request, { params }: RouteParams) {
     }
 
     const resolvedParams = await params;
-    const demandeId = parseInt(resolvedParams.id);
-    if (isNaN(demandeId)) {
+    const demandeId = resolvedParams.id; // UUID string (pas de parseInt)
+    
+    // Valider que c'est un UUID (format basique)
+    if (!demandeId || typeof demandeId !== "string" || demandeId.length < 30) {
       return NextResponse.json(
-        { error: "ID invalide." },
+        { error: "UUID invalide." },
         { status: 400 }
       );
     }
@@ -308,16 +314,17 @@ export async function GET(_req: Request, { params }: RouteParams) {
     }
 
     const resolvedParams = await params;
-    const id = parseInt(resolvedParams.id);
+    const demandeId = resolvedParams.id; // UUID string (pas de parseInt)
     
-    if (isNaN(id)) {
+    // Valider que c'est un UUID (format basique)
+    if (!demandeId || typeof demandeId !== "string" || demandeId.length < 30) {
       return NextResponse.json(
-        { error: "ID invalide." },
+        { error: "UUID invalide." },
         { status: 400 }
       );
     }
 
-    const demande = await getDemandeById(id);
+    const demande = await getDemandeById(demandeId);
     
     if (!demande) {
       return NextResponse.json(

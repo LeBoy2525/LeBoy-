@@ -31,10 +31,12 @@ export async function POST(req: Request, { params }: RouteParams) {
     }
 
     const resolvedParams = await params;
-    const demandeId = parseInt(resolvedParams.id);
-    if (isNaN(demandeId)) {
+    const demandeId = resolvedParams.id; // UUID string (pas de parseInt)
+    
+    // Valider que c'est un UUID (format basique)
+    if (!demandeId || typeof demandeId !== "string" || demandeId.length < 30) {
       return NextResponse.json(
-        { error: "ID de demande invalide." },
+        { error: "UUID de demande invalide." },
         { status: 400 }
       );
     }
@@ -42,15 +44,15 @@ export async function POST(req: Request, { params }: RouteParams) {
     const body = await req.json();
     const { missionId } = body;
 
-    if (!missionId || isNaN(parseInt(String(missionId)))) {
+    // missionId est maintenant un UUID string
+    if (!missionId || typeof missionId !== "string" || missionId.length < 30) {
       return NextResponse.json(
-        { error: "ID de mission invalide." },
+        { error: "UUID de mission invalide." },
         { status: 400 }
       );
     }
 
-    const missionIdNum = parseInt(String(missionId));
-    const mission = await getMissionById(missionIdNum);
+    const mission = await getMissionById(missionId);
 
     if (!mission) {
       return NextResponse.json(
@@ -143,7 +145,7 @@ export async function POST(req: Request, { params }: RouteParams) {
     }
 
     if (winningProposition && winningProposition.statut !== "acceptee") {
-      await updatePropositionStatut(winningProposition.id, "acceptee", userEmail, missionIdNum);
+      await updatePropositionStatut(winningProposition.id, "acceptee", userEmail, missionId);
     }
 
     // Refuser toutes les autres propositions
@@ -159,7 +161,7 @@ export async function POST(req: Request, { params }: RouteParams) {
     // Archiver les missions des prestataires non sélectionnés
     const now = new Date().toISOString();
     for (const m of allMissionsForDemande) {
-      if (m.id !== missionIdNum) {
+      if (m.id !== missionId) {
         // Archiver la mission du prestataire non sélectionné
         m.archived = true;
         m.archivedAt = now;
