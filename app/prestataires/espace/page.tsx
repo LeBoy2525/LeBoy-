@@ -68,9 +68,23 @@ export default function EspacePrestatairePage() {
   useEffect(() => {
     async function fetchMissions() {
       try {
+        // Ajouter un timestamp pour éviter le cache
+        const timestamp = Date.now();
         const [resMissions, resArchived] = await Promise.all([
-          fetch("/api/prestataires/espace/missions", { cache: "no-store" }),
-          fetch("/api/prestataires/espace/missions/archived", { cache: "no-store" }),
+          fetch(`/api/prestataires/espace/missions?t=${timestamp}`, {
+            cache: "no-store",
+            headers: {
+              "Cache-Control": "no-cache",
+              "Pragma": "no-cache",
+            },
+          }),
+          fetch(`/api/prestataires/espace/missions/archived?t=${timestamp}`, {
+            cache: "no-store",
+            headers: {
+              "Cache-Control": "no-cache",
+              "Pragma": "no-cache",
+            },
+          }),
         ]);
         
         const dataMissions = await resMissions.json();

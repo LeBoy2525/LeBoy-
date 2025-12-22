@@ -49,7 +49,14 @@ export async function GET() {
           nomEntreprise: prestataire.nomEntreprise,
         },
       },
-      { status: 200 }
+      { 
+        status: 200,
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+          "Pragma": "no-cache",
+          "Expires": "0",
+        },
+      }
     );
   } catch (error) {
     console.error("Erreur /api/prestataires/espace/missions/archived:", error);

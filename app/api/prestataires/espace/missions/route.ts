@@ -39,9 +39,22 @@ export async function GET() {
     );
     
     console.log(`[API MISSIONS] ✅ Missions après filtrage (non supprimées, non archivées): ${missions.length}`);
+    console.log(`[API MISSIONS] 🔍 Prestataire ID numérique attendu: ${prestataire.id}`);
     missions.forEach((m) => {
-      console.log(`[API MISSIONS]   - ${m.ref} (${m.status}, prestataireId: ${m.prestataireId})`);
+      const match = m.prestataireId === prestataire.id;
+      console.log(`[API MISSIONS]   - ${m.ref} (${m.status}) - prestataireId: ${m.prestataireId} ${match ? "✅ MATCH" : "❌ NO MATCH (sera filtré)"}`);
     });
+    
+    // Vérifier aussi les missions qui ne matchent pas le prestataireId
+    const missionsNonMatch = allMissions.filter(
+      (m) => m.prestataireId !== prestataire.id && !m.deleted && !m.archived
+    );
+    if (missionsNonMatch.length > 0) {
+      console.warn(`[API MISSIONS] ⚠️ ${missionsNonMatch.length} mission(s) avec prestataireId différent:`);
+      missionsNonMatch.forEach((m) => {
+        console.warn(`[API MISSIONS]   - ${m.ref} - prestataireId: ${m.prestataireId} (attendu: ${prestataire.id})`);
+      });
+    }
 
     return NextResponse.json(
       {

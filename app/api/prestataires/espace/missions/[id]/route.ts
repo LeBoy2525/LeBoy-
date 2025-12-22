@@ -62,7 +62,17 @@ export async function GET(_req: Request, { params }: RouteParams) {
     }
 
     console.log("✅ Accès autorisé, retour de la mission");
-    return NextResponse.json({ mission }, { status: 200 });
+    return NextResponse.json(
+      { mission },
+      {
+        status: 200,
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+          "Pragma": "no-cache",
+          "Expires": "0",
+        },
+      }
+    );
   } catch (error) {
     console.error("Erreur /api/prestataires/espace/missions/[id]:", error);
     return NextResponse.json(

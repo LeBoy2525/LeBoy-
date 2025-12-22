@@ -32,7 +32,14 @@ export async function GET() {
 
     return NextResponse.json(
       { propositions },
-      { status: 200 }
+      {
+        status: 200,
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+          "Pragma": "no-cache",
+          "Expires": "0",
+        },
+      }
     );
   } catch (error) {
     console.error("Erreur /api/prestataires/espace/propositions:", error);

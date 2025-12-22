@@ -1364,8 +1364,10 @@ export async function getMissionsByPrestataire(prestataireId: number): Promise<M
       
       const convertedMissions = missions.map(convertPrismaMissionToJSON);
       console.log(`[getMissionsByPrestataire] ✅ Missions converties: ${convertedMissions.length}`);
+      console.log(`[getMissionsByPrestataire] 🔍 Prestataire ID numérique recherché: ${prestataireId}`);
       convertedMissions.forEach((m: Mission, idx: number) => {
-        console.log(`[getMissionsByPrestataire]   ${idx + 1}. Mission ${m.ref} - prestataireId converti: ${m.prestataireId}`);
+        const match = m.prestataireId === prestataireId;
+        console.log(`[getMissionsByPrestataire]   ${idx + 1}. Mission ${m.ref} - prestataireId converti: ${m.prestataireId} ${match ? "✅ MATCH" : "❌ NO MATCH"}`);
       });
       
       return convertedMissions;
@@ -1679,14 +1681,18 @@ function convertPrismaMissionToJSON(mission: any): Mission {
   let prestataireIdNumber: number | undefined = undefined;
   if (mission.prestataireId) {
     if (typeof mission.prestataireId === "string" && mission.prestataireId.includes("-")) {
-      // C'est un UUID, convertir en ID numérique
+      // C'est un UUID, convertir en ID numérique avec la même fonction que calculateUUIDHash
       const hash = mission.prestataireId.split("").reduce((acc: number, char: string) => {
         return ((acc << 5) - acc) + char.charCodeAt(0);
       }, 0);
       prestataireIdNumber = Math.abs(hash) % 1000000;
+      console.log(`[convertPrismaMissionToJSON] 🔄 Conversion prestataireId UUID ${mission.prestataireId.substring(0, 8)}... → ID numérique: ${prestataireIdNumber}`);
     } else {
       prestataireIdNumber = parseInt(String(mission.prestataireId)) || undefined;
+      console.log(`[convertPrismaMissionToJSON] ℹ️ prestataireId déjà numérique: ${prestataireIdNumber}`);
     }
+  } else {
+    console.log(`[convertPrismaMissionToJSON] ⚠️ Mission ${mission.ref} n'a pas de prestataireId`);
   }
 
   return {
