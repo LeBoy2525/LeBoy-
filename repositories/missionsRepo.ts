@@ -386,3 +386,21 @@ export async function deleteMission(id: string, deletedBy: string) {
   });
 }
 
+export async function missionExistsForDemandeAndPrestataire(
+  demandeId: string,
+  prestataireId: string
+): Promise<boolean> {
+  const db = ensurePrisma();
+
+  const count = await db.mission.count({
+    where: {
+      demandeId,
+      prestataireId,
+      deleted: false,
+      archived: false,
+    },
+  });
+
+  return count > 0;
+}
+

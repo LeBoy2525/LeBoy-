@@ -1285,17 +1285,19 @@ export async function getMissionById(id: string): Promise<Mission | null> {
  * Vérifie si une mission existe pour une demande et un prestataire
  * Bascule automatiquement entre JSON et DB selon USE_DB
  */
-export async function missionExistsForDemandeAndPrestataire(demandeId: string, prestataireId: string): Promise<boolean> {
-  if (USE_DB) {
-    try {
-      const missions = await getMissionsByDemandeId(demandeId);
-      return missions.some((m) => m.prestataireId === prestataireId);
-    } catch (error) {
-      console.error("Erreur missionExistsForDemandeAndPrestataire (DB):", error);
-      return false;
-    }
-  } else {
-    // JSON utilise des IDs numériques, donc pas de fallback direct avec UUID
+export async function missionExistsForDemandeAndPrestataire(
+  demandeId: string,
+  prestataireId: string
+): Promise<boolean> {
+  if (!USE_DB) return false;
+
+  try {
+    if (!demandeId || !prestataireId) return false;
+
+    const { missionExistsForDemandeAndPrestataire: existsDB } = await import("@/repositories/missionsRepo");
+    return await existsDB(demandeId, prestataireId);
+  } catch (error) {
+    console.error("Erreur missionExistsForDemandeAndPrestataire (DB):", error);
     return false;
   }
 }

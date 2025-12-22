@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { getPrestataireByEmail, getMissionById } from "@/lib/dataAccess";
+import { getPrestataireByEmail } from "@/lib/dataAccess";
+import { getMissionById } from "@/repositories/missionsRepo";
+import { convertPrismaMissionToJSON } from "@/lib/dataAccess";
 
 type RouteParams = {
-  params: Promise<{ id: string }>;
+  params: { id: string };
 };
+
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export async function GET(_req: Request, { params }: RouteParams) {
   try {
@@ -12,76 +17,48 @@ export async function GET(_req: Request, { params }: RouteParams) {
     const userEmail = cookieStore.get("icd_user_email")?.value;
 
     if (!userEmail) {
-      return NextResponse.json(
-        { error: "Non authentifié." },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
     }
 
-    const resolvedParams = await params;
-    const missionUuid = resolvedParams.id; // UUID string
+    const missionUuid = params.id;
 
-    // Valider que c'est un UUID (format basique)
-    if (!missionUuid || typeof missionUuid !== "string" || missionUuid.length < 30) {
-      return NextResponse.json(
-        { error: "UUID invalide." },
-        { status: 400 }
-      );
+    if (!missionUuid || typeof missionUuid !== "string" || !UUID_REGEX.test(missionUuid)) {
+      return NextResponse.json({ error: "UUID invalide." }, { status: 400 });
     }
 
-    console.log("🔍 Recherche mission UUID:", missionUuid);
-
-    // Utiliser getMissionById de dataAccess qui gère déjà la conversion
-    const mission = await getMissionById(missionUuid);
-    if (!mission) {
-      console.log("❌ Mission non trouvée pour UUID:", missionUuid);
-      return NextResponse.json(
-        { error: "Mission non trouvée." },
-        { status: 404 }
-      );
+    // 1) Mission UUID direct
+    const missionPrisma = await getMissionById(missionUuid);
+    if (!missionPrisma) {
+      return NextResponse.json({ error: "Mission non trouvée." }, { status: 404 });
     }
 
-    console.log("✅ Mission trouvée:", mission.ref, "prestataireId:", mission.prestataireId);
-
-    // Vérifier que le prestataire a accès à cette mission
+    // 2) Prestataire connecté
     const prestataire = await getPrestataireByEmail(userEmail);
-
     if (!prestataire) {
-      console.log("❌ Prestataire non trouvé pour email:", userEmail);
-      return NextResponse.json(
-        { error: "Prestataire non trouvé." },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Prestataire non trouvé." }, { status: 404 });
     }
 
-    console.log("✅ Prestataire trouvé:", prestataire.ref, "UUID:", prestataire.id);
-
-    // Vérifier l'accès avec les UUID strings
-    if (mission.prestataireId !== prestataire.id) {
-      console.log("❌ Accès refusé - mission.prestataireId:", mission.prestataireId, "prestataire.id:", prestataire.id);
-      return NextResponse.json(
-        { error: "Accès non autorisé." },
-        { status: 403 }
-      );
+    // 3) Contrôle d'accès: comparer les UUID (pas les IDs numériques)
+    if (!missionPrisma.prestataireId || missionPrisma.prestataireId !== prestataire.id) {
+      return NextResponse.json({ error: "Accès non autorisé." }, { status: 403 });
     }
 
-    console.log("✅ Accès autorisé, retour de la mission");
+    // 4) Réponse
+    const mission = convertPrismaMissionToJSON(missionPrisma);
+
     return NextResponse.json(
       { mission },
       {
         status: 200,
         headers: {
           "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
-          "Pragma": "no-cache",
-          "Expires": "0",
+          Pragma: "no-cache",
+          Expires: "0",
         },
       }
     );
   } catch (error) {
     console.error("Erreur /api/prestataires/espace/missions/[id]:", error);
-    return NextResponse.json(
-      { error: "Erreur serveur." },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Erreur serveur." }, { status: 500 });
   }
 }
