@@ -350,8 +350,10 @@ export async function POST(req: Request) {
           const { getMissionById: getMissionByIdDB } = await import("@/repositories/missionsRepo");
           const missionCheck = await getMissionByIdDB(dbMissionId);
           
-          if (missionCheck?.notifiedProviderAt) {
-            console.log(`[${traceId}] ⚠️ Mission ${mission.ref} déjà notifiée le ${missionCheck.notifiedProviderAt}, skip email`);
+          // Vérifier si la mission a déjà été notifiée (notifiedProviderAt existe dans Prisma mais pas dans le type TS)
+          const notifiedAt = (missionCheck as any)?.notifiedProviderAt;
+          if (notifiedAt) {
+            console.log(`[${traceId}] ⚠️ Mission ${mission.ref} déjà notifiée le ${notifiedAt}, skip email`);
             continue;
           }
           
