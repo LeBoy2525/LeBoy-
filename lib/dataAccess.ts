@@ -1681,12 +1681,9 @@ function convertPrismaMissionToJSON(mission: any): Mission {
   let prestataireIdNumber: number | undefined = undefined;
   if (mission.prestataireId) {
     if (typeof mission.prestataireId === "string" && mission.prestataireId.includes("-")) {
-      // C'est un UUID, convertir en ID numérique avec la même fonction que calculateUUIDHash
-      const hash = mission.prestataireId.split("").reduce((acc: number, char: string) => {
-        return ((acc << 5) - acc) + char.charCodeAt(0);
-      }, 0);
-      prestataireIdNumber = Math.abs(hash) % 1000000;
-      console.log(`[convertPrismaMissionToJSON] 🔄 Conversion prestataireId UUID ${mission.prestataireId.substring(0, 8)}... → ID numérique: ${prestataireIdNumber}`);
+      // C'est un UUID, utiliser la fonction calculateUUIDHash pour garantir la cohérence
+      prestataireIdNumber = calculateUUIDHash(mission.prestataireId);
+      console.log(`[convertPrismaMissionToJSON] 🔄 Conversion prestataireId UUID ${mission.prestataireId.substring(0, 8)}... → ID numérique: ${prestataireIdNumber} (hash calculé)`);
     } else {
       prestataireIdNumber = parseInt(String(mission.prestataireId)) || undefined;
       console.log(`[convertPrismaMissionToJSON] ℹ️ prestataireId déjà numérique: ${prestataireIdNumber}`);

@@ -79,25 +79,78 @@ export async function getMissionsByPrestataire(prestataireId: string) {
   
   console.log(`[missionsRepo] ✅ Prestataire trouvé: ${prestataire.email} (${prestataire.ref})`);
   
-  const missions = await db.mission.findMany({
+  // Rechercher toutes les missions avec ce prestataireId (même celles supprimées pour diagnostic)
+  const allMissionsRaw = await db.mission.findMany({
     where: {
       prestataireId,
-      deleted: false,
     },
     orderBy: {
       createdAt: "desc",
     },
-    // Temporairement retirer les includes pour éviter l'erreur de colonne manquante
-    // include: {
-    //   demande: true,
-    //   prestataire: true,
-    // },
+    select: {
+      id: true,
+      ref: true,
+      prestataireId: true,
+      status: true,
+      deleted: true,
+      archived: true,
+      internalState: true,
+      createdAt: true,
+    },
   });
   
-  console.log(`[missionsRepo] 📋 Missions trouvées dans DB: ${missions.length}`);
-  missions.forEach((m, idx) => {
-    console.log(`[missionsRepo]   ${idx + 1}. ${m.ref} - prestataireId DB: ${m.prestataireId}, status: ${m.status}, deleted: ${m.deleted}`);
+  console.log(`[missionsRepo] 🔍 Recherche missions avec prestataireId UUID: ${prestataireId}`);
+  console.log(`[missionsRepo] 📋 Total missions trouvées (y compris supprimées): ${allMissionsRaw.length}`);
+  
+  // Afficher toutes les missions trouvées pour diagnostic
+  allMissionsRaw.forEach((m, idx) => {
+    console.log(`[missionsRepo]   ${idx + 1}. ${m.ref} - prestataireId: ${m.prestataireId}, status: ${m.status}, deleted: ${m.deleted}, archived: ${m.archived}, internalState: ${m.internalState}`);
   });
+  
+  // Filtrer uniquement les missions non supprimées et non archivées
+  const missions = allMissionsRaw.filter(m => !m.deleted && !m.archived);
+  
+  console.log(`[missionsRepo] ✅ Missions non supprimées et non archivées: ${missions.length}`);
+  
+  // Si aucune mission trouvée, vérifier s'il y a des missions avec un prestataireId différent
+  if (missions.length === 0 && allMissionsRaw.length > 0) {
+    console.warn(`[missionsRepo] ⚠️ ${allMissionsRaw.length} mission(s) trouvée(s) mais toutes supprimées/archivées`);
+    allMissionsRaw.forEach((m, idx) => {
+      console.warn(`[missionsRepo]   ${idx + 1}. ${m.ref} - deleted: ${m.deleted}, archived: ${m.archived}`);
+    });
+  } else if (allMissionsRaw.length === 0) {
+    console.warn(`[missionsRepo] ⚠️ Aucune mission trouvée pour prestataireId: ${prestataireId}`);
+    console.warn(`[missionsRepo] 🔍 Vérification des missions existantes dans la DB...`);
+    
+    // Récupérer quelques missions pour voir leur prestataireId
+    const sampleMissions = await db.mission.findMany({
+      take: 10,
+      orderBy: { createdAt: "desc" },
+      select: {
+        ref: true,
+        prestataireId: true,
+        deleted: true,
+        archived: true,
+      },
+    });
+    
+    console.warn(`[missionsRepo] 📊 Échantillon de missions dans la DB (10 dernières):`);
+    sampleMissions.forEach((m, idx) => {
+      const match = m.prestataireId === prestataireId;
+      console.warn(`[missionsRepo]   ${idx + 1}. ${m.ref} - prestataireId: ${m.prestataireId || "NULL"} ${match ? "✅ MATCH" : "❌ DIFFÉRENT"} (deleted: ${m.deleted}, archived: ${m.archived})`);
+    });
+    
+    // Vérifier aussi s'il y a des missions avec prestataireId NULL
+    const missionsWithNullPrestataire = await db.mission.count({
+      where: {
+        prestataireId: null,
+        deleted: false,
+      },
+    });
+    if (missionsWithNullPrestataire > 0) {
+      console.warn(`[missionsRepo] ⚠️ ${missionsWithNullPrestataire} mission(s) avec prestataireId NULL trouvée(s)`);
+    }
+  }
   
   return missions;
 }
@@ -130,7 +183,11 @@ export async function createMission(data: Omit<Mission, "id">) {
     ? (typeof data.prestataireId === "string" ? data.prestataireId : String(data.prestataireId))
     : null;
   
-  console.log(`[missionsRepo] createMission appelé avec demandeId: ${demandeIdStr}, prestataireId: ${prestataireIdStr}`);
+  console.log(`[missionsRepo] createMission appelé avec:`);
+  console.log(`[missionsRepo]   - demandeId: ${demandeIdStr} (type: ${typeof demandeIdStr})`);
+  console.log(`[missionsRepo]   - prestataireId: ${prestataireIdStr} (type: ${typeof prestataireIdStr}, null: ${prestataireIdStr === null})`);
+  console.log(`[missionsRepo]   - clientEmail: ${data.clientEmail}`);
+  console.log(`[missionsRepo]   - ref fournie: ${data.ref || "non fournie"}`);
   
   const db = ensurePrisma();
   
@@ -144,10 +201,17 @@ export async function createMission(data: Omit<Mission, "id">) {
     // Générer atomiquement via le compteur DB
     const { generateMissionRef } = await import("@/lib/missionRef");
     refToUse = await generateMissionRef(db);
+    console.log(`[missionsRepo] ✅ Ref générée atomiquement: ${refToUse}`);
+  }
+  
+  // Vérifier que prestataireIdStr est bien un UUID valide
+  if (prestataireIdStr && !prestataireIdStr.includes("-")) {
+    console.error(`[missionsRepo] ❌ ERREUR: prestataireIdStr n'est pas un UUID valide: ${prestataireIdStr}`);
+    console.error(`[missionsRepo]   Type reçu: ${typeof data.prestataireId}, valeur: ${data.prestataireId}`);
   }
   
   return withRetry(async () => {
-    return db.mission.create({
+    const missionCreated = await db.mission.create({
       data: {
         ref: refToUse,
         demandeId: demandeIdStr,
