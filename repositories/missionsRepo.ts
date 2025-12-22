@@ -194,6 +194,8 @@ export async function createMission(data: Omit<Mission, "id">) {
   console.log(`[missionsRepo]   - prestataireId: ${prestataireIdStr} (type: ${typeof prestataireIdStr}, null: ${prestataireIdStr === null})`);
   console.log(`[missionsRepo]   - clientEmail: ${data.clientEmail}`);
   console.log(`[missionsRepo]   - ref fournie: ${data.ref || "non fournie"}`);
+  console.log(`[missionsRepo]   - dateAssignation: ${data.dateAssignation || "null/undefined"} (type: ${typeof data.dateAssignation})`);
+  console.log(`[missionsRepo]   - dateLimiteProposition: ${data.dateLimiteProposition || "null/undefined"} (type: ${typeof data.dateLimiteProposition})`);
   
   const db = ensurePrisma();
   
@@ -298,6 +300,8 @@ export async function createMission(data: Omit<Mission, "id">) {
     console.log(`[missionsRepo]   - prestataireId: ${missionCreated.prestataireId || "NULL ⚠️"}`);
     console.log(`[missionsRepo]   - internalState: ${missionCreated.internalState}`);
     console.log(`[missionsRepo]   - status: ${missionCreated.status}`);
+    console.log(`[missionsRepo]   - dateAssignation: ${missionCreated.dateAssignation ? missionCreated.dateAssignation.toISOString() : "NULL ⚠️"}`);
+    console.log(`[missionsRepo]   - dateLimiteProposition: ${missionCreated.dateLimiteProposition ? missionCreated.dateLimiteProposition.toISOString() : "NULL ⚠️"}`);
     console.log(`[missionsRepo]   - deleted: ${missionCreated.deleted}`);
     console.log(`[missionsRepo]   - archived: ${missionCreated.archived}`);
     

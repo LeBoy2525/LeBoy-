@@ -19,7 +19,14 @@ export async function GET() {
           authenticated: false,
           user: null,
         },
-        { status: 200 }
+        {
+          status: 200,
+          headers: {
+            "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0",
+          },
+        }
       );
     }
 
@@ -31,7 +38,14 @@ export async function GET() {
           authenticated: false,
           user: null,
         },
-        { status: 200 }
+        {
+          status: 200,
+          headers: {
+            "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0",
+          },
+        }
       );
     }
 
@@ -91,7 +105,14 @@ export async function GET() {
           prestataireId,
         },
       },
-      { status: 200 }
+      {
+        status: 200,
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+          "Pragma": "no-cache",
+          "Expires": "0",
+        },
+      }
     );
   } catch (error) {
     console.error("Erreur dans /api/auth/me:", error);
@@ -102,7 +123,14 @@ export async function GET() {
         user: null,
         error: error instanceof Error ? error.message : "Erreur inconnue",
       },
-      { status: 200 } // Retourner 200 même en cas d'erreur pour ne pas bloquer le site
+      {
+        status: 200, // Retourner 200 même en cas d'erreur pour ne pas bloquer le site
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+          "Pragma": "no-cache",
+          "Expires": "0",
+        },
+      }
     );
   }
 }

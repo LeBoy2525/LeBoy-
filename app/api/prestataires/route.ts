@@ -24,7 +24,14 @@ export async function GET() {
           rejetes: allPrestataires.filter((p) => p.statut === "rejete" && !p.deletedAt).length,
         },
       },
-      { status: 200 }
+      {
+        status: 200,
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+          "Pragma": "no-cache",
+          "Expires": "0",
+        },
+      }
     );
   } catch (error) {
     console.error("Erreur /api/prestataires:", error);

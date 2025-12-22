@@ -283,7 +283,17 @@ export async function GET(
     }
 
     console.log(`[API GET] ✅ Prestataire trouvé: ${prestataire.email}`);
-    return NextResponse.json({ prestataire }, { status: 200 });
+    return NextResponse.json(
+      { prestataire },
+      {
+        status: 200,
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+          "Pragma": "no-cache",
+          "Expires": "0",
+        },
+      }
+    );
   } catch (error: any) {
     console.error("❌ Erreur /api/admin/prestataires/[id] GET:", error);
     console.error("   Message:", error?.message);

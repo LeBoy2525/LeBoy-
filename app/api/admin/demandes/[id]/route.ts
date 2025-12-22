@@ -326,7 +326,17 @@ export async function GET(_req: Request, { params }: RouteParams) {
       );
     }
 
-    return NextResponse.json({ demande }, { status: 200 });
+    return NextResponse.json(
+      { demande },
+      {
+        status: 200,
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+          "Pragma": "no-cache",
+          "Expires": "0",
+        },
+      }
+    );
   } catch (error) {
     console.error("Erreur /api/admin/demandes/[id]:", error);
     return NextResponse.json(
