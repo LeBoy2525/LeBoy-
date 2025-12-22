@@ -11,15 +11,30 @@ export function VersionChecker() {
   const [isChecking, setIsChecking] = useState(false);
 
   useEffect(() => {
-    // Vérifier la version au chargement initial
-    checkVersion();
+    // Mode test : vérifier si on doit forcer l'affichage (pour tester)
+    const urlParams = new URLSearchParams(window.location.search);
+    const testMode = urlParams.get("test-update") === "true";
+    
+    if (testMode) {
+      console.log("[VersionChecker] 🧪 Mode test activé - affichage forcé de la notification");
+      setShowReload(true);
+      return;
+    }
+
+    // Vérifier la version au chargement initial (après un court délai pour laisser le temps au localStorage)
+    const initialDelay = setTimeout(() => {
+      checkVersion();
+    }, 1000);
 
     // Vérifier la version toutes les 60 secondes (1 minute)
     const interval = setInterval(() => {
       checkVersion();
     }, 60000);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearTimeout(initialDelay);
+      clearInterval(interval);
+    };
   }, []);
 
   async function checkVersion() {
