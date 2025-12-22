@@ -90,6 +90,7 @@ export async function getMissionsByPrestataire(prestataireId: string) {
   console.log(`[${traceId}]   })`);
   
   // Rechercher toutes les missions avec ce prestataireId (même celles supprimées pour diagnostic)
+  // IMPORTANT: Retourner tous les champs nécessaires, notamment demandeId, dateAssignation, dateLimiteProposition
   const allMissionsRaw = await db.mission.findMany({
     where: {
       prestataireId,
@@ -97,16 +98,9 @@ export async function getMissionsByPrestataire(prestataireId: string) {
     orderBy: {
       createdAt: "desc",
     },
-    select: {
-      id: true,
-      ref: true,
-      prestataireId: true,
-      status: true,
-      deleted: true,
-      archived: true,
-      internalState: true,
-      createdAt: true,
-    },
+    // Retourner tous les champs nécessaires pour les routes prestataire
+    // Notamment: demandeId, dateAssignation, dateLimiteProposition pour demandes-disponibles
+    // Et archivedAt, archivedBy pour la route archived
   });
   
   console.log(`[${traceId}] [missionsRepo] 📋 Résultat query: ${allMissionsRaw.length} mission(s) trouvée(s)`);

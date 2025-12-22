@@ -37,6 +37,9 @@ export async function GET() {
     const missionsAssignees = await getMissionsByPrestataire(prestataire.id);
     const demandeIdsAvecMission = new Set(missionsAssignees.map((m) => m.demandeId));
 
+    // Optimisation: créer une Map des missions par demandeId pour éviter les find() répétitifs
+    const missionByDemandeId = new Map(missionsAssignees.map((m) => [m.demandeId, m]));
+
     // Date actuelle pour vérifier le délai de 24h
     const maintenant = new Date();
 
@@ -64,8 +67,10 @@ export async function GET() {
         // Vérifier qu'une mission a été assignée pour cette demande
         if (!demandeIdsAvecMission.has(demande.id)) return false;
 
+        // Utiliser la Map pour récupérer la mission (optimisation)
+        const mission = missionByDemandeId.get(demande.id);
+        
         // Vérifier que le délai de 24h n'est pas dépassé
-        const mission = missionsAssignees.find((m) => m.demandeId === demande.id);
         if (mission && mission.dateLimiteProposition) {
           const dateLimite = new Date(mission.dateLimiteProposition);
           if (maintenant > dateLimite) {
@@ -97,7 +102,8 @@ export async function GET() {
         return prestataire.specialites.includes(specialiteDemande as any);
       })
       .map((demande) => {
-        const mission = missionsAssignees.find((m) => m.demandeId === demande.id);
+        // Utiliser la Map pour récupérer la mission (optimisation)
+        const mission = missionByDemandeId.get(demande.id);
         return {
           id: demande.id,
           ref: demande.ref,
