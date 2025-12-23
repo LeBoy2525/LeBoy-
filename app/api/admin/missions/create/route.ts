@@ -221,11 +221,17 @@ export async function POST(req: Request) {
           dateLimiteProposition: dateLimiteProposition.toISOString(),
         });
 
+        // Extraire dbId (UUID Prisma) immédiatement après création
+        const dbMissionId = (mission as any).dbId;
+        if (!dbMissionId) {
+          console.error(`[${traceId}] ❌ Mission dbId (UUID) manquant après création`);
+        }
+
         // ============================================
         // DIAGNOSTIC 2: RÉSULTAT DB RENVOYÉ
         // ============================================
         console.log(`[${traceId}] ✅ Mission créée dans DB:`);
-        console.log(`[${traceId}]   - id: ${mission.id} (type: ${typeof mission.id})`);
+        console.log(`[${traceId}]   - dbId (UUID): ${dbMissionId || 'MANQUANT'} (type: ${typeof dbMissionId})`);
         console.log(`[${traceId}]   - ref: ${mission.ref}`);
         console.log(`[${traceId}]   - demandeId: ${mission.demandeId} (type: ${typeof mission.demandeId})`);
         console.log(`[${traceId}]   - prestataireId: ${mission.prestataireId} (type: ${typeof mission.prestataireId})`);
@@ -234,22 +240,9 @@ export async function POST(req: Request) {
         console.log(`[${traceId}]   - deleted: ${mission.deleted}`);
         console.log(`[${traceId}]   - archived: ${mission.archived}`);
         
-        // Vérifier cohérence des UUIDs
-        if (mission.demandeId !== demandeIdUUID) {
-          console.error(`[${traceId}] ❌ ERREUR: demandeId mismatch!`);
-          console.error(`[${traceId}]   Attendu: ${demandeIdUUID} (type: ${typeof demandeIdUUID})`);
-          console.error(`[${traceId}]   Reçu: ${mission.demandeId} (type: ${typeof mission.demandeId})`);
-        } else {
-          console.log(`[${traceId}] ✅ demandeId cohérent: ${mission.demandeId}`);
-        }
-        
-        if (mission.prestataireId !== prestataireIdUUID) {
-          console.error(`[${traceId}] ❌ ERREUR: prestataireId mismatch!`);
-          console.error(`[${traceId}]   Attendu: ${prestataireIdUUID} (type: ${typeof prestataireIdUUID})`);
-          console.error(`[${traceId}]   Reçu: ${mission.prestataireId} (type: ${typeof mission.prestataireId})`);
-        } else {
-          console.log(`[${traceId}] ✅ prestataireId cohérent: ${mission.prestataireId}`);
-        }
+        // Log des UUIDs (sans comparaison car mission.id peut être un hash numérique côté JSON)
+        console.log(`[${traceId}] ✅ Mission dbId(UUID): ${dbMissionId}`);
+        console.log(`[${traceId}] ✅ Mission ref: ${mission.ref}`);
 
         // Ajouter les fichiers partagés si fournis (safe access)
         if (safeSharedFiles.length > 0) {
@@ -265,7 +258,6 @@ export async function POST(req: Request) {
 
         // Set initial internal state: ASSIGNED_TO_PROVIDER (mandat assigné, en attente d'estimation)
         console.log(`[${traceId}] 📝 Action DB: UPDATE Mission internalState → ASSIGNED_TO_PROVIDER`);
-        const dbMissionId = (mission as any).dbId;
         if (!dbMissionId) {
           console.error(`[${traceId}] ❌ Mission dbId (UUID) manquant après création`);
         } else {
@@ -291,8 +283,10 @@ export async function POST(req: Request) {
       }
     }
 
-    // Sauvegarder les modifications et attendre la sauvegarde
-    await saveMissions();
+    // Sauvegarder les modifications seulement si on n'utilise pas la DB
+    if (process.env.USE_DB !== "true") {
+      await saveMissions();
+    }
     
     // Attendre un peu pour s'assurer que la DB est à jour (pour Prisma)
     await new Promise(resolve => setTimeout(resolve, 100));
@@ -376,7 +370,7 @@ export async function POST(req: Request) {
               serviceType: mission.serviceType,
               lieu: mission.lieu || "Non spécifié",
               platformUrl,
-              missionId: mission.id,
+              missionId: dbMissionId,
               dateLimite: dateLimiteProposition.toISOString(),
             },
             "fr"
@@ -387,7 +381,7 @@ export async function POST(req: Request) {
             try {
               const { updateMission } = await import("@/repositories/missionsRepo");
               await updateMission(dbMissionId, {
-                notifiedProviderAt: new Date(),
+                notifiedProviderAt: new Date().toISOString(),
               } as any);
               console.log(`[${traceId}] ✅ Email envoyé et mission marquée comme notifiée pour prestataire ${prestataireId}, mission ${mission.ref}`);
             } catch (updateError: any) {

@@ -375,7 +375,7 @@ function MissionCard({ mission, t, lang }: { mission: Mission; t: any; lang: "fr
         </div>
         <div className="flex flex-col gap-2 ml-4">
           <Link
-            href={`/prestataires/espace/mission/${mission.uuid}`}
+            href={`/prestataires/espace/mission/${(mission as any).dbId || mission.id}`}
             className="px-4 py-2 text-xs font-semibold text-[#0A1B2A] border border-[#0A1B2A] rounded-md hover:bg-[#0A1B2A] hover:text-white transition"
           >
             {t.voirDetails}
@@ -388,7 +388,8 @@ function MissionCard({ mission, t, lang }: { mission: Mission; t: any; lang: "fr
                 e.stopPropagation();
                 if (confirm(t.archiverConfirmation)) {
                   try {
-                    const res = await fetch(`/api/prestataires/espace/missions/${mission.id}/archive`, {
+                    const missionId = (mission as any).dbId || mission.id;
+                    const res = await fetch(`/api/prestataires/espace/missions/${missionId}/archive`, {
                       method: "POST",
                     });
                     if (res.ok) {
@@ -413,7 +414,8 @@ function MissionCard({ mission, t, lang }: { mission: Mission; t: any; lang: "fr
                 e.stopPropagation();
                 if (confirm(t.supprimerConfirmation)) {
                   try {
-                    const res = await fetch(`/api/prestataires/espace/missions/${mission.id}/archive`, {
+                    const missionId = (mission as any).dbId || mission.id;
+                    const res = await fetch(`/api/prestataires/espace/missions/${missionId}/archive`, {
                       method: "DELETE",
                     });
                     if (res.ok) {
@@ -455,7 +457,8 @@ function ArchivedMissionCard({ mission, t, lang, onRestore }: { mission: Mission
     if (!confirm(t.restaurerConfirmation)) return;
     
     try {
-      const res = await fetch(`/api/prestataires/espace/missions/${mission.id}/restore`, {
+      const missionId = (mission as any).dbId || mission.id;
+      const res = await fetch(`/api/prestataires/espace/missions/${missionId}/restore`, {
         method: "POST",
       });
       const data = await res.json();
@@ -507,7 +510,7 @@ function ArchivedMissionCard({ mission, t, lang, onRestore }: { mission: Mission
         </div>
         <div className="flex flex-col gap-2 ml-4">
           <Link
-            href={`/prestataires/espace/mission/${mission.uuid}`}
+            href={`/prestataires/espace/mission/${(mission as any).dbId || mission.id}`}
             className="px-4 py-2 text-xs font-semibold text-[#0A1B2A] border border-[#0A1B2A] rounded-md hover:bg-[#0A1B2A] hover:text-white transition"
           >
             {t.voirDetails}

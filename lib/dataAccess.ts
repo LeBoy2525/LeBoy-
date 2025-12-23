@@ -1016,8 +1016,8 @@ export async function requestModificationDemande(
         messageModification: messageModification,
       });
       
-      // Récupérer la demande mise à jour
-      return await getDemandeById(id);
+      // Récupérer la demande mise à jour (utiliser l'UUID trouvé)
+      return await getDemandeById(demandeDB.id);
     } catch (error) {
       console.error("Erreur requestModificationDemande (DB):", error);
       return requestModificationDemandeJSON(id, requestedBy, messageModification);
@@ -1066,8 +1066,8 @@ export async function resubmitDemande(id: number): Promise<DemandeICD | null> {
         messageModification: null,
       });
       
-      // Récupérer la demande mise à jour
-      return await getDemandeById(id);
+      // Récupérer la demande mise à jour (utiliser l'UUID trouvé)
+      return await getDemandeById(demandeDB.id);
     } catch (error) {
       console.error("Erreur resubmitDemande (DB):", error);
       return resubmitDemandeJSON(id);
@@ -1463,9 +1463,7 @@ export async function createMission(
       const json = convertPrismaMissionToJSON(mission) as any;
       
       // conserver l'UUID Prisma pour toutes les opérations DB (update/findUnique)
-      json.dbId = mission.id;
-      
-      return json;
+      return { ...(json as any), dbId: mission.id };
     } catch (error) {
       logPrismaError("createMission", error, { context: "DB" });
       return createMissionJSON(data);
@@ -1489,6 +1487,7 @@ export function convertPrismaMissionToJSON(mission: any): Mission {
 
   return {
     id: missionId, // UUID Prisma directement
+    ...({ dbId: missionId } as any), // UUID Prisma pour les opérations DB (même valeur que id)
     ref: mission.ref,
     createdAt: mission.createdAt.toISOString(),
     demandeId: demandeId, // UUID directement
@@ -1637,18 +1636,22 @@ export async function updateMissionInternalState(
  * Bascule automatiquement entre JSON et DB selon USE_DB
  */
 export async function addMissionUpdate(
-  missionId: number,
+  missionId: number | string,
   update: Omit<MissionUpdate, "id" | "missionId" | "createdAt">
 ): Promise<MissionUpdate | null> {
   if (USE_DB) {
     try {
       const { updateMission: updateMissionDB } = await import("@/repositories/missionsRepo");
-      const mission = await getMissionById(missionId);
+      // Convertir missionId en string si c'est un number
+      const missionIdStr = typeof missionId === "string" ? missionId : String(missionId);
+      const mission = await getMissionById(missionIdStr);
       
       if (!mission) return null;
 
       // Utiliser la logique JSON pour ajouter la mise à jour
-      const result = await addMissionUpdateJSON(missionId, update);
+      // Note: addMissionUpdateJSON attend un number, donc on convertit si nécessaire
+      const missionIdNum = typeof missionId === "number" ? missionId : (parseInt(String(missionId)) || 0);
+      const result = await addMissionUpdateJSON(missionIdNum, update);
       
       if (!result) return null;
 
@@ -1670,7 +1673,7 @@ export async function addMissionUpdate(
         });
 
         if (missionDB) {
-          const updatedMission = await getMissionById(missionId);
+          const updatedMission = await getMissionById(missionIdStr);
           if (updatedMission) {
             await updateMissionDB(missionDB.id, { 
               updates: updatedMission.updates ? JSON.parse(JSON.stringify(updatedMission.updates)) : []
@@ -1685,10 +1688,12 @@ export async function addMissionUpdate(
       return result;
     } catch (error) {
       console.error("Erreur addMissionUpdate (DB):", error);
-      return addMissionUpdateJSON(missionId, update);
+      const missionIdNum = typeof missionId === "number" ? missionId : (parseInt(String(missionId)) || 0);
+      return addMissionUpdateJSON(missionIdNum, update);
     }
   } else {
-    return addMissionUpdateJSON(missionId, update);
+    const missionIdNum = typeof missionId === "number" ? missionId : (parseInt(String(missionId)) || 0);
+    return addMissionUpdateJSON(missionIdNum, update);
   }
 }
 
@@ -1772,7 +1777,7 @@ async function checkAndAutoCloseMissionsJSON(): Promise<number> {
  * Bascule automatiquement entre JSON et DB selon USE_DB
  */
 export async function updateMissionStatus(
-  id: number,
+  id: number | string,
   status: string,
   authorEmail: string
 ): Promise<Mission | null> {
@@ -1812,7 +1817,9 @@ export async function updateMissionStatus(
       break;
   }
 
-  return updateMissionInternalState(id, internalState, authorEmail);
+  // Convertir id en string si c'est un number
+  const idStr = typeof id === "string" ? id : String(id);
+  return updateMissionInternalState(idStr, internalState, authorEmail);
 }
 
 // ==================== PROPOSITIONS ====================
@@ -1945,14 +1952,19 @@ export async function createProposition(
       const { getAllDemandes } = await import("@/repositories/demandesRepo");
       const allDemandes = await getAllDemandes();
       const demandeDB = allDemandes.find((d: any) => {
+        // Si data.demandeId est un UUID string, comparer directement
+        if (typeof data.demandeId === "string" && data.demandeId.includes("-")) {
+          return d.id === data.demandeId;
+        }
+        // Sinon, c'est un ID numérique (legacy) - convertir UUID en number pour comparaison
         if (typeof d.id === "string" && d.id.includes("-")) {
           const hash = d.id.split("").reduce((acc: number, char: string) => {
             return ((acc << 5) - acc) + char.charCodeAt(0);
           }, 0);
           const idNumber = Math.abs(hash) % 1000000;
-          return idNumber === data.demandeId;
+          return idNumber === Number(data.demandeId);
         }
-        return parseInt(String(d.id)) === data.demandeId;
+        return parseInt(String(d.id)) === Number(data.demandeId);
       });
 
       if (!demandeDB) {
@@ -1963,14 +1975,19 @@ export async function createProposition(
       const { getAllPrestataires } = await import("@/repositories/prestatairesRepo");
       const allPrestataires = await getAllPrestataires();
       const prestataireDB = allPrestataires.find((p: any) => {
+        // Si data.prestataireId est un UUID string, comparer directement
+        if (typeof data.prestataireId === "string" && data.prestataireId.includes("-")) {
+          return p.id === data.prestataireId;
+        }
+        // Sinon, c'est un ID numérique (legacy) - convertir UUID en number pour comparaison
         if (typeof p.id === "string" && p.id.includes("-")) {
           const hash = p.id.split("").reduce((acc: number, char: string) => {
             return ((acc << 5) - acc) + char.charCodeAt(0);
           }, 0);
           const idNumber = Math.abs(hash) % 1000000;
-          return idNumber === data.prestataireId;
+          return idNumber === Number(data.prestataireId);
         }
-        return parseInt(String(p.id)) === data.prestataireId;
+        return parseInt(String(p.id)) === Number(data.prestataireId);
       });
 
       if (!prestataireDB) {
@@ -2023,8 +2040,8 @@ export async function updatePropositionStatut(
       // Utiliser directement l'UUID
       await updatePropositionStatusDB(id, {
         statut,
-        accepteeAt: statut === "acceptee" ? new Date().toISOString() : null,
-        refuseeAt: statut === "refusee" ? new Date().toISOString() : null,
+        accepteeAt: statut === "acceptee" ? new Date() : null,
+        refuseeAt: statut === "refusee" ? new Date() : null,
         accepteeBy: statut === "acceptee" ? adminEmail : null,
         refuseeBy: statut === "refusee" ? adminEmail : null,
         raisonRefus: raisonRefus || null,
@@ -2049,8 +2066,8 @@ export async function updatePropositionStatut(
  * Vérifier si une proposition existe pour une demande et un prestataire
  */
 export async function propositionExistsForDemandeAndPrestataire(
-  demandeId: number,
-  prestataireId: number
+  demandeId: number | string,
+  prestataireId: number | string
 ): Promise<boolean> {
   if (USE_DB) {
     try {
@@ -2100,30 +2117,40 @@ async function updatePropositionStatutJSON(
 }
 
 async function propositionExistsForDemandeAndPrestataireJSON(
-  demandeId: number,
-  prestataireId: number
+  demandeId: number | string,
+  prestataireId: number | string
 ): Promise<boolean> {
   const { getPropositionsByPrestataireId: getPropositionsByPrestataireIdStore } = await import("./propositionsStore");
-  const propositions = getPropositionsByPrestataireIdStore(prestataireId);
-  return propositions.some((p) => p.demandeId === demandeId && p.statut === "en_attente");
+  // Note: getPropositionsByPrestataireIdStore attend un number (legacy), mais les IDs sont maintenant des strings
+  // On convertit temporairement pour compatibilité
+  const prestataireIdNum = typeof prestataireId === "number" ? prestataireId : (parseInt(String(prestataireId)) || 0);
+  const propositions = getPropositionsByPrestataireIdStore(prestataireIdNum);
+  const demandeIdStr = typeof demandeId === "string" ? demandeId : String(demandeId);
+  return propositions.some((p) => String(p.demandeId) === demandeIdStr && p.statut === "en_attente");
 }
 
-async function getPrestataireNoteMoyenneFromDB(prestataireId: number): Promise<number> {
+async function getPrestataireNoteMoyenneFromDB(prestataireId: number | string): Promise<number> {
   const { getAllPrestataires } = await import("@/repositories/prestatairesRepo");
   const { USE_DB } = await import("@/lib/dbFlag");
   
   if (USE_DB) {
     try {
       const allPrestataires = await getAllPrestataires();
+      const prestataireIdStr = typeof prestataireId === "string" ? prestataireId : String(prestataireId);
       const prestataire = allPrestataires.find((p: any) => {
+        // Si prestataireId est un UUID string, comparer directement
+        if (typeof prestataireId === "string" && prestataireId.includes("-")) {
+          return p.id === prestataireId;
+        }
+        // Sinon, c'est un ID numérique (legacy) - convertir UUID en number pour comparaison
         if (typeof p.id === "string" && p.id.includes("-")) {
           const hash = p.id.split("").reduce((acc: number, char: string) => {
             return ((acc << 5) - acc) + char.charCodeAt(0);
           }, 0);
           const idNumber = Math.abs(hash) % 1000000;
-          return idNumber === prestataireId;
+          return idNumber === Number(prestataireId);
         }
-        return parseInt(String(p.id)) === prestataireId;
+        return parseInt(String(p.id)) === Number(prestataireId);
       });
       // Le modèle Prisma Prestataire n'a pas noteMoyenne, donc on retourne 0
       // On devrait charger depuis le JSON store pour obtenir cette valeur
@@ -2134,7 +2161,8 @@ async function getPrestataireNoteMoyenneFromDB(prestataireId: number): Promise<n
     }
   } else {
     const { prestatairesStore } = await import("@/lib/prestatairesStore");
-    const prestataire = prestatairesStore.find((p) => p.id === prestataireId);
+    const prestataireIdStr = typeof prestataireId === "string" ? prestataireId : String(prestataireId);
+    const prestataire = prestatairesStore.find((p) => String(p.id) === prestataireIdStr);
     return prestataire?.noteMoyenne || 0;
   }
 }
@@ -2143,7 +2171,7 @@ async function getPrestataireNoteMoyenneFromDB(prestataireId: number): Promise<n
  * Mettre à jour un prestataire
  */
 export async function updatePrestataire(
-  id: number,
+  id: number | string,
   updates: Partial<Prestataire>
 ): Promise<Prestataire | null> {
   console.log(`[dataAccess] updatePrestataire appelé avec ID numérique: ${id}`);
@@ -2152,31 +2180,42 @@ export async function updatePrestataire(
   
   if (USE_DB) {
     try {
-      // Trouver directement le prestataire Prisma par ID numérique
-      const prestatairePrisma = await findPrestatairePrismaByNumericId(id);
+      // Convertir id en string si c'est un number
+      const idStr = typeof id === "string" ? id : String(id);
       
-      if (!prestatairePrisma) {
-        console.error(`[dataAccess] ❌ Prestataire Prisma non trouvé pour ID numérique: ${id}`);
-        
-        // Diagnostic
+      // Si c'est un UUID, chercher directement
+      let prestatairePrisma: any = null;
+      const idIsUUID = typeof id === "string" && id.includes("-");
+      if (idIsUUID) {
+        const { getPrestataireById: getPrestataireByIdDB } = await import("@/repositories/prestatairesRepo");
+        prestatairePrisma = await getPrestataireByIdDB(idStr);
+      } else {
+        // Sinon, chercher par ID numérique (legacy)
         const { getAllPrestataires: getAllPrestatairesDB } = await import("@/repositories/prestatairesRepo");
         const allPrestataires = await getAllPrestatairesDB() as any[];
-        console.error(`[dataAccess] Diagnostic - Total prestataires: ${allPrestataires.length}`);
-        allPrestataires.slice(0, 5).forEach((p: any, idx: number) => {
+        prestatairePrisma = allPrestataires.find((p: any) => {
           if (typeof p.id === "string" && p.id.includes("-")) {
-            const numericId = calculateUUIDHash(p.id);
-            console.error(`[dataAccess]   ${idx + 1}. UUID: ${p.id} → ID numérique: ${numericId}, Email: ${p.email}`);
+            const hash = p.id.split("").reduce((acc: number, char: string) => {
+              return ((acc << 5) - acc) + char.charCodeAt(0);
+            }, 0);
+            const idNumber = Math.abs(hash) % 1000000;
+            return idNumber === Number(id);
           }
+          return parseInt(String(p.id)) === Number(id);
         });
-        
+      }
+      
+      if (!prestatairePrisma) {
+        console.error(`[dataAccess] ❌ Prestataire Prisma non trouvé pour ID: ${id}`);
         return null;
       }
       
       console.log(`[dataAccess] ✅ Prestataire Prisma trouvé: ${prestatairePrisma.id} (UUID), Email: ${prestatairePrisma.email}`);
       
-      // Mettre à jour via Prisma
+      // Mettre à jour via Prisma (utiliser l'UUID trouvé)
       const { updatePrestataire: updatePrestataireDB } = await import("@/repositories/prestatairesRepo");
-      const updated = await updatePrestataireDB(prestatairePrisma.id, updates);
+      const prestataireIdUUID = typeof prestatairePrisma.id === "string" ? prestatairePrisma.id : String(prestatairePrisma.id);
+      const updated = await updatePrestataireDB(prestataireIdUUID, updates);
       
       console.log(`[dataAccess] ✅ Prestataire mis à jour via Prisma: ${updated.email}`);
       
@@ -2184,10 +2223,14 @@ export async function updatePrestataire(
     } catch (error) {
       console.error("Erreur updatePrestataire (DB):", error);
       console.error("Stack:", (error as Error).stack);
-      return updatePrestataireJSON(id, updates);
+      // updatePrestataireJSON attend un number, convertir si nécessaire
+      const idNum = typeof id === "number" ? id : (parseInt(String(id)) || 0);
+      return updatePrestataireJSON(idNum, updates);
     }
   } else {
-    return updatePrestataireJSON(id, updates);
+    // updatePrestataireJSON attend un number, convertir si nécessaire
+    const idNum = typeof id === "number" ? id : (parseInt(String(id)) || 0);
+    return updatePrestataireJSON(idNum, updates);
   }
 }
 
