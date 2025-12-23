@@ -54,6 +54,10 @@ export default function MissionDetailPage() {
   const [mission, setMission] = useState<Mission | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentUserEmail, setCurrentUserEmail] = useState<string>("");
+  
+  // Extraire l'UUID de la mission depuis l'URL (params.id)
+  const idParam = params?.id;
+  const missionUuid = idParam ? (Array.isArray(idParam) ? idParam[0] : idParam) : null;
 
   useEffect(() => {
     // Récupérer l'email de l'utilisateur
@@ -458,7 +462,7 @@ export default function MissionDetailPage() {
           {mission.internalState === "IN_PROGRESS" && !showProofModal && (
             <div className="pt-4 border-t border-[#E2E2E8]">
               <MissionProofUpload
-                missionId={mission.id}
+                missionId={missionUuid || (mission as any)?.dbId || mission.id}
                 lang={lang}
                 existingProofs={mission.proofs || []}
                 onUploadSuccess={async () => {
@@ -518,7 +522,7 @@ export default function MissionDetailPage() {
           {/* Modal d'estimation */}
           {showEstimationModal && (
             <EstimationFormModal
-              missionId={mission.id}
+              missionId={missionUuid || (mission as any)?.dbId || mission.id}
               lang={lang}
               onClose={() => setShowEstimationModal(false)}
               onSuccess={async () => {
@@ -560,7 +564,7 @@ export default function MissionDetailPage() {
                 </div>
                 <div className="p-6">
                   <MissionProofUpload
-                    missionId={mission.id}
+                    missionId={missionUuid || (mission as any)?.dbId || mission.id}
                     lang={lang}
                     existingProofs={mission.proofs || []}
                     onUploadSuccess={async () => {
@@ -641,11 +645,13 @@ export default function MissionDetailPage() {
             
             {/* Formulaire d'ajout de mise à jour */}
             {mission.internalState === "IN_PROGRESS" && (
-              <UpdateForm missionId={mission.id} onUpdate={() => {
+              <UpdateForm missionId={missionUuid || (mission as any)?.dbId || mission.id} onUpdate={() => {
                 // Recharger la mission
-                fetch(`/api/prestataires/espace/missions/${params.id}`)
-                  .then(res => res.json())
-                  .then(data => setMission(data.mission));
+                if (missionUuid) {
+                  fetch(`/api/prestataires/espace/missions/${missionUuid}`)
+                    .then(res => res.json())
+                    .then(data => setMission(data.mission));
+                }
               }} t={t} />
             )}
 
@@ -694,7 +700,7 @@ export default function MissionDetailPage() {
 }
 
 function UpdateForm({ missionId, onUpdate, t }: { 
-  missionId: number; 
+  missionId: string | number; 
   onUpdate: () => void;
   t: any;
 }) {

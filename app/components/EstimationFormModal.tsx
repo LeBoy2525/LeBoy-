@@ -4,7 +4,7 @@ import { useState } from "react";
 import { X } from "lucide-react";
 
 interface EstimationFormModalProps {
-  missionId: number;
+  missionId: string | number; // UUID string ou number (pour compatibilité)
   lang?: "fr" | "en";
   onClose: () => void;
   onSuccess: () => void;

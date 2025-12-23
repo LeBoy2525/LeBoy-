@@ -5,7 +5,7 @@ import { Upload, X, FileText, Image as ImageIcon, Video, CheckCircle2, AlertCirc
 import type { MissionProof } from "@/lib/types";
 
 interface MissionProofUploadProps {
-  missionId: number;
+  missionId: string | number; // UUID string ou number (pour compatibilité)
   lang?: "fr" | "en";
   onUploadSuccess?: () => void;
   onFinalSubmit?: (commentaire: string) => void;
