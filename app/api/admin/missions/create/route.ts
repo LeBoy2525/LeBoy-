@@ -223,15 +223,20 @@ export async function POST(req: Request) {
 
         // Extraire dbId (UUID Prisma) immédiatement après création
         const dbMissionId = (mission as any).dbId;
+        
+        // IMPORTANT: Si dbId manquant, la création DB a échoué - ne pas continuer
         if (!dbMissionId) {
-          console.error(`[${traceId}] ❌ Mission dbId (UUID) manquant après création`);
+          const errorMsg = `Mission DB non créée (dbId manquant) pour prestataire ${prestataireIdUUID}`;
+          console.error(`[${traceId}] ❌ ${errorMsg}`);
+          errors.push(errorMsg);
+          continue; // Ne pas ajouter à missionsCreees ni faire updateMissionInternalState
         }
 
         // ============================================
         // DIAGNOSTIC 2: RÉSULTAT DB RENVOYÉ
         // ============================================
         console.log(`[${traceId}] ✅ Mission créée dans DB:`);
-        console.log(`[${traceId}]   - dbId (UUID): ${dbMissionId || 'MANQUANT'} (type: ${typeof dbMissionId})`);
+        console.log(`[${traceId}]   - dbId (UUID): ${dbMissionId} (type: ${typeof dbMissionId})`);
         console.log(`[${traceId}]   - ref: ${mission.ref}`);
         console.log(`[${traceId}]   - demandeId: ${mission.demandeId} (type: ${typeof mission.demandeId})`);
         console.log(`[${traceId}]   - prestataireId: ${mission.prestataireId} (type: ${typeof mission.prestataireId})`);
@@ -258,19 +263,15 @@ export async function POST(req: Request) {
 
         // Set initial internal state: ASSIGNED_TO_PROVIDER (mandat assigné, en attente d'estimation)
         console.log(`[${traceId}] 📝 Action DB: UPDATE Mission internalState → ASSIGNED_TO_PROVIDER`);
-        if (!dbMissionId) {
-          console.error(`[${traceId}] ❌ Mission dbId (UUID) manquant après création`);
-        } else {
-          await updateMissionInternalState(dbMissionId, "ASSIGNED_TO_PROVIDER", userEmail || "admin@icd.ca");
+        await updateMissionInternalState(dbMissionId, "ASSIGNED_TO_PROVIDER", userEmail || "admin@icd.ca");
 
-          // (optionnel) recharger via repo Prisma plutôt que getMissionById numérique
-          const { getMissionById: getMissionByIdDB } = await import("@/repositories/missionsRepo");
-          const missionAfterUpdate = await getMissionByIdDB(dbMissionId);
+        // (optionnel) recharger via repo Prisma plutôt que getMissionById numérique
+        const { getMissionById: getMissionByIdDB } = await import("@/repositories/missionsRepo");
+        const missionAfterUpdate = await getMissionByIdDB(dbMissionId);
 
-          console.log(`[${traceId}] ✅ Mission après update:`);
-          console.log(`[${traceId}]   - internalState: ${missionAfterUpdate?.internalState}`);
-          console.log(`[${traceId}]   - status: ${missionAfterUpdate?.status}`);
-        }
+        console.log(`[${traceId}] ✅ Mission après update:`);
+        console.log(`[${traceId}]   - internalState: ${missionAfterUpdate?.internalState}`);
+        console.log(`[${traceId}]   - status: ${missionAfterUpdate?.status}`);
         
         missionsCreees.push({ mission, prestataireId: prestataireIdUUID });
         console.log(`[${traceId}] ✅ Mission créée et assignée: ${mission.ref} pour prestataire UUID ${prestataireIdUUID}`);

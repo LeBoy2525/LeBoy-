@@ -218,10 +218,12 @@ export async function createMission(data: Omit<Mission, "id">) {
     console.error(`[missionsRepo]   Type reçu: ${typeof data.prestataireId}, valeur: ${data.prestataireId}`);
   }
   
-  return withRetry(async () => {
-    const missionCreated = await db.mission.create({
+  // Fonction helper pour créer la mission avec retry automatique en cas de P2002 (duplicate ref)
+  const createMissionWithRetry = async (currentRef: string, attempt: number = 1, maxAttempts: number = 3): Promise<any> => {
+    try {
+      const missionCreated = await db.mission.create({
       data: {
-        ref: refToUse,
+        ref: currentRef,
         demandeId: demandeIdStr,
         clientEmail: data.clientEmail,
         prestataireId: prestataireIdStr,
@@ -318,8 +320,26 @@ export async function createMission(data: Omit<Mission, "id">) {
       console.log(`[missionsRepo] ✅ prestataireId correctement sauvegardé: ${missionCreated.prestataireId}`);
     }
     
-    return missionCreated;
-  });
+      return missionCreated;
+    } catch (error: any) {
+      // Si erreur P2002 (duplicate unique constraint) sur ref et qu'on peut retry
+      if (error?.code === "P2002" && attempt < maxAttempts) {
+        const target = error?.meta?.target;
+        if (Array.isArray(target) && target.includes("ref")) {
+          console.warn(`[missionsRepo] ⚠️ P2002 sur ref "${currentRef}" (tentative ${attempt}/${maxAttempts}), régénération...`);
+          // Régénérer la ref et retry
+          const { generateMissionRef } = await import("@/lib/missionRef");
+          const newRef = await generateMissionRef(db);
+          console.log(`[missionsRepo] ✅ Nouvelle ref générée: ${newRef}`);
+          return createMissionWithRetry(newRef, attempt + 1, maxAttempts);
+        }
+      }
+      // Si ce n'est pas P2002 sur ref ou qu'on a épuisé les tentatives, propager l'erreur
+      throw error;
+    }
+  };
+  
+  return createMissionWithRetry(refToUse);
 }
 
 export async function updateMission(id: string, data: Partial<Mission>) {

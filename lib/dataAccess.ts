@@ -1369,15 +1369,8 @@ export async function createMission(
         console.log(`[createMission] ℹ️ Aucun prestataireId fourni dans les données`);
       }
       
-      // IMPORTANT: Utiliser la génération atomique de ref via compteur DB
-      // Plus besoin de retry loop ni de recherche de max ref - la génération est atomique
-      // (prisma déjà importé ci-dessus)
+      // IMPORTANT: La génération de ref est gérée par missionsRepo.ts (source unique de vérité)
       const createdAt = new Date().toISOString();
-      
-      // IMPORTANT: Générer la ref atomiquement AVANT de créer la mission
-      const { generateMissionRef } = await import("@/lib/missionRef");
-      const ref = await generateMissionRef(prisma);
-      console.log(`[createMission] ✅ Référence générée atomiquement: ${ref}`);
       
       // État interne initial
       const { mapInternalStateToStatus, getProgressFromInternalState } = await import("./types");
@@ -1387,9 +1380,9 @@ export async function createMission(
       // Helper pour convertir undefined en null pour Prisma
       const undefToNull = <T>(val: T | undefined): T | null => (val === undefined ? null : val);
       
-      // Créer la mission avec la ref générée atomiquement
+      // Créer la mission (sans ref, le repo la générera atomiquement)
       const mission = await createMissionDB({
-                ref, // Utiliser la ref générée atomiquement
+                // ref non fourni - missionsRepo.ts générera atomiquement via generateMissionRef
             createdAt,
             demandeId: demandeIdUUID, // UUID directement
             clientEmail: data.clientEmail,
@@ -1466,7 +1459,8 @@ export async function createMission(
       return { ...(json as any), dbId: mission.id };
     } catch (error) {
       logPrismaError("createMission", error, { context: "DB" });
-      return createMissionJSON(data);
+      // IMPORTANT: Ne pas fallback JSON - si Prisma échoue, l'API doit répondre avec une erreur réelle
+      throw error;
     }
   } else {
     return createMissionJSON(data);
