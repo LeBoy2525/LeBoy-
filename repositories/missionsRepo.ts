@@ -322,19 +322,49 @@ export async function createMission(data: Omit<Mission, "id">) {
     
       return missionCreated;
     } catch (error: any) {
-      // Si erreur P2002 (duplicate unique constraint) sur ref et qu'on peut retry
+      // Si erreur P2002 (duplicate unique constraint) et qu'on peut retry
       if (error?.code === "P2002" && attempt < maxAttempts) {
+        // Vérifier si c'est bien une erreur sur le champ "ref"
         const target = error?.meta?.target;
-        if (Array.isArray(target) && target.includes("ref")) {
-          console.warn(`[missionsRepo] ⚠️ P2002 sur ref "${currentRef}" (tentative ${attempt}/${maxAttempts}), régénération...`);
+        const constraintFields = error?.meta?.constraint?.fields || error?.meta?.driverAdapterError?.cause?.constraint?.fields;
+        const errorMessage = String(error?.message || "");
+        
+        // Log pour debug
+        console.warn(`[missionsRepo] ⚠️ P2002 détectée (tentative ${attempt}/${maxAttempts})`);
+        console.warn(`[missionsRepo]   Détails erreur:`, {
+          code: error?.code,
+          target: target,
+          constraintFields: constraintFields,
+          message: errorMessage.substring(0, 200),
+          meta: JSON.stringify(error?.meta || {}).substring(0, 300)
+        });
+        
+        const isRefError = 
+          (Array.isArray(target) && target.includes("ref")) ||
+          (typeof target === "string" && target.includes("ref")) ||
+          (Array.isArray(constraintFields) && constraintFields.includes("ref")) ||
+          (errorMessage.includes("ref") && (errorMessage.includes("unique") || errorMessage.includes("constraint")));
+        
+        if (isRefError) {
+          console.warn(`[missionsRepo] ⚠️ P2002 confirmée sur ref "${currentRef}", régénération...`);
+          // Attendre un peu avant de régénérer pour éviter les collisions
+          await new Promise(resolve => setTimeout(resolve, 100 + Math.random() * 100));
           // Régénérer la ref et retry
           const { generateMissionRef } = await import("@/lib/missionRef");
           const newRef = await generateMissionRef(db);
           console.log(`[missionsRepo] ✅ Nouvelle ref générée: ${newRef}`);
           return createMissionWithRetry(newRef, attempt + 1, maxAttempts);
+        } else {
+          // Si P2002 mais pas sur ref, on retry quand même une fois (peut être un autre champ)
+          console.warn(`[missionsRepo] ⚠️ P2002 mais pas clairement sur ref, retry quand même...`);
+          await new Promise(resolve => setTimeout(resolve, 100 + Math.random() * 100));
+          const { generateMissionRef } = await import("@/lib/missionRef");
+          const newRef = await generateMissionRef(db);
+          console.log(`[missionsRepo] ✅ Nouvelle ref générée pour retry: ${newRef}`);
+          return createMissionWithRetry(newRef, attempt + 1, maxAttempts);
         }
       }
-      // Si ce n'est pas P2002 sur ref ou qu'on a épuisé les tentatives, propager l'erreur
+      // Si ce n'est pas P2002 ou qu'on a épuisé les tentatives, propager l'erreur
       throw error;
     }
   };

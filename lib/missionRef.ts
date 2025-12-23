@@ -40,17 +40,38 @@ export async function generateMissionRef(
 
     if (!isMissingTable) throw e;
 
-    // fallback: prendre la dernière ref en DB et incrémenter
-    const last = await prisma.mission.findFirst({
+    // fallback: prendre la dernière ref en DB et incrémenter avec un random pour éviter collisions parallèles
+    console.warn(`[generateMissionRef] ⚠️ Table mission_ref_counters absente, utilisation du fallback`);
+    
+    // Récupérer toutes les refs de l'année pour trouver le max réellement utilisé
+    const allMissions = await prisma.mission.findMany({
       where: { ref: { startsWith: `M-${year}-` } },
-      orderBy: { createdAt: "desc" },
       select: { ref: true },
+      orderBy: { createdAt: "desc" },
+      take: 100, // Limiter pour performance
     });
 
-    const lastSeq = last?.ref ? parseInt(last.ref.split("-")[2] || "0", 10) : 0;
-    const nextSeq = (Number.isFinite(lastSeq) ? lastSeq : 0) + 1;
-
-    return `M-${year}-${String(nextSeq).padStart(3, "0")}`;
+    let maxSeq = 0;
+    for (const mission of allMissions) {
+      const match = mission.ref.match(/^M-\d{4}-(\d+)$/);
+      if (match) {
+        const seq = parseInt(match[1], 10);
+        if (seq > maxSeq) maxSeq = seq;
+      }
+    }
+    
+    // Utiliser timestamp + random pour garantir l'unicité même en parallèle
+    const timestamp = Date.now() % 100000; // 5 derniers chiffres du timestamp
+    const random = Math.floor(Math.random() * 1000); // Random 0-999
+    const nextSeq = maxSeq + 1 + (timestamp % 100) + (random % 10);
+    
+    // S'assurer que le numéro ne dépasse pas 999 (format XXX)
+    const finalSeq = Math.min(nextSeq, 999);
+    
+    const ref = `M-${year}-${String(finalSeq).padStart(3, "0")}`;
+    console.warn(`[generateMissionRef] ⚠️ Fallback généré: ${ref} (max trouvé: ${maxSeq}, timestamp: ${timestamp}, random: ${random})`);
+    
+    return ref;
   }
 }
 
