@@ -383,10 +383,17 @@ export async function POST(req: Request) {
           );
 
           if (emailSent) {
-            // Marquer la mission comme notifiée
-            const { updateMissionInternalState } = await import("@/lib/dataAccess");
-            // On pourrait ajouter un champ notifiedProviderAt dans la mission, mais pour l'instant on log juste
-            console.log(`[${traceId}] ✅ Email envoyé pour prestataire ${prestataireId}, mission ${mission.ref}`);
+            // Marquer la mission comme notifiée en DB
+            try {
+              const { updateMission } = await import("@/repositories/missionsRepo");
+              await updateMission(dbMissionId, {
+                notifiedProviderAt: new Date(),
+              } as any);
+              console.log(`[${traceId}] ✅ Email envoyé et mission marquée comme notifiée pour prestataire ${prestataireId}, mission ${mission.ref}`);
+            } catch (updateError: any) {
+              console.error(`[${traceId}] ⚠️ Échec mise à jour notifiedProviderAt pour mission ${dbMissionId}:`, updateError);
+              // Ne pas bloquer - l'email est déjà envoyé
+            }
           } else {
             emailErrors.push({ prestataireId, error: "Échec envoi email (voir logs)" });
             console.warn(`[${traceId}] ⚠️ Échec envoi email pour prestataire ${prestataireId}`);
