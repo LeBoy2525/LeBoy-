@@ -402,6 +402,10 @@ function getNotificationSubject(type: string, lang: "fr" | "en"): string {
       fr: "Réinitialisation de votre mot de passe - LeBoy",
       en: "Reset your password - LeBoy",
     },
+    "mission-not-selected": {
+      fr: "Mission non retenue - LeBoy",
+      en: "Mission not selected - LeBoy",
+    },
   };
 
   return subjects[type]?.[lang] || "Notification LeBoy";
@@ -501,6 +505,40 @@ function getNotificationHTML(
         </p>
         <p style="margin-top: 20px; color: #6B7280; font-size: 14px;">
           ⚠️ <strong>Important :</strong> Ce lien est valide pendant 1 heure. Si vous n'avez pas demandé cette réinitialisation, ignorez cet email.
+        </p>
+        <p style="margin-top: 20px; color: #6B7280; font-size: 14px;">
+          Si vous avez des questions, n'hésitez pas à nous contacter à <a href="mailto:contact@leboy.com" style="color: #D4A657;">contact@leboy.com</a>
+        </p>
+      `;
+      break;
+    case "mission-not-selected":
+      const platformUrl = data.platformUrl || (process.env.NEXT_PUBLIC_APP_URL || "https://leboy.com");
+      content = `
+        <div style="background: #FEF3C7; border-left: 4px solid #F59E0B; padding: 20px; margin: 20px 0; border-radius: 6px;">
+          <p style="margin: 0 0 12px 0; font-weight: bold; color: #92400E; font-size: 16px;">
+            ℹ️ Information importante
+          </p>
+          <p style="margin: 0; color: #78350F;">
+            Votre mission <strong>${data.missionRef || "N/A"}</strong> n'a pas été retenue pour cette demande.
+          </p>
+        </div>
+        <p>Bonjour ${name},</p>
+        <p>Nous vous informons que votre mission <strong>${data.missionRef || "N/A"}</strong> pour la demande <strong>${data.demandeRef || "N/A"}</strong> n'a pas été sélectionnée par notre équipe.</p>
+        <p>Un autre prestataire a été choisi pour cette mission selon les critères de qualité, prix et délai.</p>
+        ${data.estimationPrix ? `
+        <div style="background: #F9FAFB; padding: 16px; border-radius: 6px; margin: 20px 0;">
+          <p style="margin: 0 0 8px 0; color: #6B7280; font-size: 14px;"><strong>Votre estimation :</strong></p>
+          <ul style="margin: 0; padding-left: 20px; color: #4B5563;">
+            <li>Prix proposé : <strong>${data.estimationPrix.toLocaleString()} FCFA</strong></li>
+            ${data.estimationDelai ? `<li>Délai estimé : <strong>${data.estimationDelai} heures</strong></li>` : ""}
+          </ul>
+        </div>
+        ` : ""}
+        <p style="margin-top: 30px;">Nous vous remercions pour votre intérêt et votre participation. Nous espérons avoir l'occasion de collaborer avec vous sur de futures missions.</p>
+        <p style="margin-top: 20px;">
+          <a href="${platformUrl}/prestataires/espace" style="background: #D4A657; color: #0B2135; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
+            Accéder à mon espace prestataire
+          </a>
         </p>
         <p style="margin-top: 20px; color: #6B7280; font-size: 14px;">
           Si vous avez des questions, n'hésitez pas à nous contacter à <a href="mailto:contact@leboy.com" style="color: #D4A657;">contact@leboy.com</a>

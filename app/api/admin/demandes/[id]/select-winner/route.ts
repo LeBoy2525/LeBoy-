@@ -190,6 +190,42 @@ export async function POST(req: Request, { params }: RouteParams) {
         );
         
         await Promise.all([...archivePromises, ...updatePromises]);
+        
+        // Envoyer des notifications email aux prestataires non sélectionnés (en parallèle)
+        const protocol = process.env.NEXT_PUBLIC_APP_URL?.startsWith("https") ? "https" : "http";
+        const platformUrl = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://localhost:3000`;
+        
+        const emailPromises = missionsToArchive.map(async (m) => {
+          try {
+            const prestataire = m.prestataireId ? await getPrestataireById(m.prestataireId) : null;
+            if (prestataire && prestataire.email) {
+              const { sendNotificationEmail } = await import("@/lib/emailService");
+              await sendNotificationEmail(
+                "mission-not-selected",
+                { 
+                  email: prestataire.email, 
+                  name: prestataire.nomEntreprise || prestataire.nomContact || prestataire.email 
+                },
+                {
+                  missionRef: m.ref,
+                  demandeRef: demande.ref,
+                  estimationPrix: m.estimationPartenaire?.prixFournisseur,
+                  estimationDelai: m.estimationPartenaire?.delaisEstimes,
+                  platformUrl,
+                },
+                "fr"
+              );
+            }
+          } catch (error) {
+            console.error(`Erreur envoi email notification prestataire ${m.prestataireId}:`, error);
+            // Ne pas bloquer le processus si l'email échoue
+          }
+        });
+        
+        // Envoyer les emails en parallèle (ne pas attendre pour ne pas bloquer)
+        Promise.all(emailPromises).catch((error) => {
+          console.error("Erreur lors de l'envoi des emails de notification:", error);
+        });
       } else {
         // Fallback JSON (ne devrait plus être utilisé)
         const now = new Date().toISOString();

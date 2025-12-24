@@ -83,12 +83,18 @@ export async function GET() {
       console.log(`[${traceId}]   - ${statut}: ${count}`);
     });
     
-    // Filtrer les missions non supprimées et non archivées
+    // Filtrer les missions non supprimées et non archivées (missions actives)
     const missions = allMissions.filter(
       (m) => !m.deleted && !m.archived
     );
     
+    // Récupérer les missions archivées par l'admin (non retenues)
+    const rejectedMissions = allMissions.filter(
+      (m) => m.archived && !m.deleted && m.archivedBy === "admin"
+    );
+    
     console.log(`[${traceId}] ✅ Missions après filtrage (non supprimées, non archivées): ${missions.length}`);
+    console.log(`[${traceId}] 📋 Missions non retenues (archivées par admin): ${rejectedMissions.length}`);
     
     // Vérifier aussi les missions qui ne matchent pas le prestataireId
     const missionsNonMatch = allMissions.filter(
@@ -106,6 +112,7 @@ export async function GET() {
     return NextResponse.json(
       {
         missions,
+        rejectedMissions, // Missions non retenues (archivées par admin)
         prestataire: {
           id: prestataire.id,
           ref: prestataire.ref,

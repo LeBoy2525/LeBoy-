@@ -31,6 +31,10 @@ const TEXT = {
     supprimer: "Supprimer",
     archiverConfirmation: "Êtes-vous sûr de vouloir archiver cette mission ?",
     supprimerConfirmation: "Êtes-vous sûr de vouloir supprimer cette mission ? Cette action est irréversible.",
+    missionsNonRetenues: "Missions non retenues",
+    missionsNonRetenuesDesc: "Ces missions n'ont pas été sélectionnées par l'administrateur. Un autre prestataire a été choisi pour ces demandes.",
+    voirMissionsNonRetenues: "Voir les missions non retenues",
+    masquerMissionsNonRetenues: "Masquer les missions non retenues",
   },
   en: {
     title: "LeBoy Provider Space",
@@ -54,6 +58,10 @@ const TEXT = {
     supprimer: "Delete",
     archiverConfirmation: "Are you sure you want to archive this mission?",
     supprimerConfirmation: "Are you sure you want to delete this mission? This action is irreversible.",
+    missionsNonRetenues: "Missions not selected",
+    missionsNonRetenuesDesc: "These missions were not selected by the administrator. Another provider was chosen for these requests.",
+    voirMissionsNonRetenues: "View non-selected missions",
+    masquerMissionsNonRetenues: "Hide non-selected missions",
   },
 } as const;
 
@@ -62,8 +70,10 @@ export default function EspacePrestatairePage() {
   const t = TEXT[lang];
   const [missions, setMissions] = useState<Mission[]>([]);
   const [archivedMissions, setArchivedMissions] = useState<Mission[]>([]);
+  const [rejectedMissions, setRejectedMissions] = useState<Mission[]>([]);
   const [loading, setLoading] = useState(true);
   const [showTrash, setShowTrash] = useState(false);
+  const [showRejected, setShowRejected] = useState(false);
 
   useEffect(() => {
     async function fetchMissions() {
@@ -93,7 +103,9 @@ export default function EspacePrestatairePage() {
         console.log("🔍 Réponse API missions:", { status: resMissions.status, ok: resMissions.ok, data: dataMissions });
         if (resMissions.ok) {
           setMissions(dataMissions.missions || []);
+          setRejectedMissions(dataMissions.rejectedMissions || []);
           console.log(`✅ ${dataMissions.missions?.length || 0} mission(s) chargée(s)`);
+          console.log(`📋 ${dataMissions.rejectedMissions?.length || 0} mission(s) non retenue(s)`);
         } else {
           console.error("❌ Erreur API:", dataMissions.error);
         }
@@ -270,7 +282,79 @@ export default function EspacePrestatairePage() {
           </section>
         )}
 
-        {!showTrash && !loading && missions.length === 0 && (
+        {/* Section Missions non retenues */}
+        {rejectedMissions.length > 0 && (
+          <section className="mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="font-heading text-xl font-semibold text-[#0A1B2A] mb-1">
+                  {t.missionsNonRetenues}
+                </h2>
+                <p className="text-sm text-[#6B7280]">
+                  {t.missionsNonRetenuesDesc}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowRejected(!showRejected)}
+                className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-md transition ${
+                  showRejected
+                    ? "bg-[#F59E0B] text-white hover:bg-[#D97706]"
+                    : "bg-white border border-[#DDDDDD] text-[#4B4F58] hover:bg-gray-50"
+                }`}
+              >
+                <XCircle className="w-4 h-4" />
+                {showRejected ? t.masquerMissionsNonRetenues : t.voirMissionsNonRetenues} ({rejectedMissions.length})
+              </button>
+            </div>
+
+            {showRejected && (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {rejectedMissions.map((mission) => (
+                  <div
+                    key={mission.id}
+                    className="bg-white border-2 border-orange-200 rounded-xl p-6 hover:shadow-md transition"
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <h3 className="font-semibold text-[#0A1B2A] mb-1">
+                          {mission.ref}
+                        </h3>
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 text-orange-800 text-xs font-semibold rounded-full">
+                          <XCircle className="w-3 h-3" />
+                          {lang === "fr" ? "Non retenue" : "Not selected"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {mission.estimationPartenaire && (
+                      <div className="mt-3 pt-3 border-t border-orange-100">
+                        <p className="text-xs text-[#6B7280] mb-1">
+                          {lang === "fr" ? "Votre estimation" : "Your estimation"}
+                        </p>
+                        <p className="text-sm font-semibold text-[#0A1B2A]">
+                          {mission.estimationPartenaire.prixFournisseur.toLocaleString()} FCFA
+                        </p>
+                        {mission.estimationPartenaire.delaisEstimes && (
+                          <p className="text-xs text-[#6B7280] mt-1">
+                            {mission.estimationPartenaire.delaisEstimes} {lang === "fr" ? "heures" : "hours"}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {mission.archivedAt && (
+                      <p className="text-xs text-[#9CA3AF] mt-3">
+                        {lang === "fr" ? "Archivée le" : "Archived on"}: {formatDateWithTimezones(mission.archivedAt).cameroon}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
+        {!showTrash && !loading && missions.length === 0 && rejectedMissions.length === 0 && (
           <div className="bg-white border border-[#DDDDDD] rounded-xl p-12 text-center text-[#4B4F58]">
             {t.noMissions}
           </div>
