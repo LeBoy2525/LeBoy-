@@ -192,15 +192,28 @@ export async function POST(req: Request, { params }: RouteParams) {
     // Archiver les missions des prestataires non sélectionnés (en parallèle avec Prisma)
     const missionsToArchive = allMissionsForDemande.filter((m) => m.id !== missionId);
     
+    console.log(`[SELECT-WINNER] Missions à archiver: ${missionsToArchive.length}`);
+    missionsToArchive.forEach(m => {
+      console.log(`[SELECT-WINNER]   - Mission ${m.ref} (${m.id}) - Prestataire: ${m.prestataireId}`);
+    });
+    
     if (missionsToArchive.length > 0) {
       const { archiveMission } = await import("@/repositories/missionsRepo");
       const { USE_DB } = await import("@/lib/dbFlag");
       
       if (USE_DB) {
         // Utiliser Prisma directement pour archiver (plus rapide)
-        const archivePromises = missionsToArchive.map((m) =>
-          archiveMission(m.id, userEmail)
-        );
+        const archivePromises = missionsToArchive.map(async (m) => {
+          try {
+            console.log(`[SELECT-WINNER] 🔄 Archivage mission ${m.ref} (${m.id})...`);
+            const result = await archiveMission(m.id, userEmail);
+            console.log(`[SELECT-WINNER] ✅ Mission ${m.ref} archivée avec succès`);
+            return result;
+          } catch (error) {
+            console.error(`[SELECT-WINNER] ❌ Erreur archivage mission ${m.ref} (${m.id}):`, error);
+            throw error;
+          }
+        });
         
         // Ajouter les mises à jour en parallèle aussi
         const updatePromises = missionsToArchive.map((m) =>
@@ -213,6 +226,7 @@ export async function POST(req: Request, { params }: RouteParams) {
         );
         
         await Promise.all([...archivePromises, ...updatePromises]);
+        console.log(`[SELECT-WINNER] ✅ ${missionsToArchive.length} mission(s) archivée(s) avec succès`);
         
         // Envoyer des notifications email aux prestataires non sélectionnés (en parallèle)
         const protocol = process.env.NEXT_PUBLIC_APP_URL?.startsWith("https") ? "https" : "http";
