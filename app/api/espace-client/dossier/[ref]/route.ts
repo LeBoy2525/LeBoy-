@@ -1,8 +1,7 @@
 // app/api/espace-client/dossier/[ref]/route.ts
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { getDemandeByRef } from "@/lib/dataAccess";
-import { getMissionsByDemandeId } from "@/lib/dataAccess";
+import { getDemandeByRef, getMissionsByDemandeId, getPropositionsByDemandeId } from "@/lib/dataAccess";
 
 type RouteParams = {
   params: Promise<{ ref: string }>;
@@ -51,9 +50,36 @@ export async function GET(_req: Request, { params }: RouteParams) {
     }
 
     // Récupérer les missions associées à cette demande
-    const missions = (await getMissionsByDemandeId(dossier.id)).filter(
+    const allMissions = (await getMissionsByDemandeId(dossier.id)).filter(
       (m) => !m.deleted && !m.archived
     );
+
+    // Filtrer pour ne garder que la mission du prestataire gagnant
+    // Le client ne doit voir les missions que lorsque le gagnant est sélectionné
+    let missions: typeof allMissions = [];
+    
+    if (allMissions.length > 0) {
+      // Récupérer les propositions pour cette demande
+      const propositions = await getPropositionsByDemandeId(dossier.id);
+      
+      // Chercher la proposition acceptée (prestataire gagnant)
+      const propositionAcceptee = propositions.find(
+        (p) => p.statut === "acceptee"
+      );
+
+      if (propositionAcceptee) {
+        // Si une proposition est acceptée, ne garder que la mission du prestataire gagnant
+        const winningMission = allMissions.find(
+          (m) => m.prestataireId === propositionAcceptee.prestataireId
+        );
+        if (winningMission) {
+          missions = [winningMission];
+        }
+        // Si la mission gagnante n'existe pas encore, missions reste vide
+      }
+      // Si aucune proposition n'est acceptée, missions reste vide
+      // Le client ne doit voir sa mission qu'une fois que l'admin a sélectionné le prestataire gagnant
+    }
 
     return NextResponse.json({ 
       dossier,

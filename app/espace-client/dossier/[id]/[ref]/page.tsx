@@ -340,10 +340,11 @@ export default function DossierPage() {
                     )}
                   </div>
 
+                  {/* Afficher la mission uniquement si un prestataire gagnant a été sélectionné */}
                   {missions.length > 0 && (
                     <div className="mt-4 space-y-2">
                       <h3 className="font-heading text-base font-semibold text-[#0A1B2A]">
-                        Missions associées
+                        Mission
                       </h3>
                       <div className="space-y-2">
                         {missions.map((mission) => (
@@ -374,6 +375,17 @@ export default function DossierPage() {
                           </Link>
                         ))}
                       </div>
+                    </div>
+                  )}
+                  
+                  {/* Message informatif si aucune mission n'est encore visible (prestataire non sélectionné) */}
+                  {missions.length === 0 && dossier!.statut === "acceptee" && (
+                    <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <p className="text-xs text-blue-700">
+                        <span className="font-semibold">En attente de sélection du prestataire</span>
+                        <br />
+                        Votre demande a été acceptée. Un prestataire sera sélectionné prochainement et vous recevrez une notification.
+                      </p>
                     </div>
                   )}
                 </div>
