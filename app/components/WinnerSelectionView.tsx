@@ -124,6 +124,7 @@ function WinnerSelectionView({
       return;
     }
 
+    // Mettre à jour l'état immédiatement pour le feedback UI
     setSubmitting(true);
     setSelectedMissionId(missionId);
 
@@ -137,17 +138,21 @@ function WinnerSelectionView({
       const data = await res.json();
 
       if (res.ok) {
-        // Forcer un rechargement complet de la page pour mettre à jour l'affichage
+        // Appeler le callback pour mettre à jour l'état parent
+        if (onWinnerSelected) {
+          onWinnerSelected();
+        }
+        // Recharger la page pour mettre à jour l'affichage
         window.location.reload();
       } else {
         alert(data.error || (lang === "fr" ? "Erreur lors de la sélection" : "Error selecting"));
         setSelectedMissionId(null);
+        setSubmitting(false);
       }
     } catch (error) {
       console.error("Erreur:", error);
       alert(lang === "fr" ? "Erreur lors de la sélection" : "Error selecting");
       setSelectedMissionId(null);
-    } finally {
       setSubmitting(false);
     }
   };

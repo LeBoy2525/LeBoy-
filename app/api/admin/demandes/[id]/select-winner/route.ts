@@ -75,9 +75,21 @@ export async function POST(req: Request, { params }: RouteParams) {
       );
     }
     
+    // Récupérer la demande et toutes les missions en parallèle
+    const [demande, allMissionsForDemandeRaw] = await Promise.all([
+      getDemandeById(demandeId),
+      getMissionsByDemandeId(demandeId),
+    ]);
+
+    if (!demande) {
+      return NextResponse.json(
+        { error: "Demande non trouvée." },
+        { status: 404 }
+      );
+    }
+
     // Vérifier si un devis a déjà été généré pour une mission de cette demande
-    const allMissionsForDemandeCheck = await getMissionsByDemandeId(demandeId);
-    const missionsWithDevis = allMissionsForDemandeCheck.filter(
+    const missionsWithDevis = allMissionsForDemandeRaw.filter(
       (m) => m.devisGenere
     );
     
@@ -88,16 +100,7 @@ export async function POST(req: Request, { params }: RouteParams) {
       );
     }
 
-    const demande = await getDemandeById(demandeId);
-    if (!demande) {
-      return NextResponse.json(
-        { error: "Demande non trouvée." },
-        { status: 404 }
-      );
-    }
-
-    // Récupérer toutes les missions de cette demande avec des estimations
-    const allMissionsForDemandeRaw = await getMissionsByDemandeId(demandeId);
+    // Filtrer les missions avec des estimations
     const allMissionsForDemande = allMissionsForDemandeRaw.filter(
       (m) => m.internalState === "PROVIDER_ESTIMATED"
     );
@@ -105,20 +108,22 @@ export async function POST(req: Request, { params }: RouteParams) {
     // Récupérer toutes les propositions pour cette demande
     let propositions = await getPropositionsByDemandeId(demandeId);
 
-    // Si aucune proposition n'existe, créer des propositions pour toutes les missions avec estimations
+    // Si aucune proposition n'existe, créer des propositions pour toutes les missions avec estimations (en parallèle)
     if (propositions.length === 0) {
-      for (const m of allMissionsForDemande) {
-        if (m.estimationPartenaire && m.prestataireId) {
-          await createProposition({
+      const createPromises = allMissionsForDemande
+        .filter((m) => m.estimationPartenaire && m.prestataireId)
+        .map((m) =>
+          createProposition({
             demandeId: demandeId,
-            prestataireId: m.prestataireId,
-            prix_prestataire: m.estimationPartenaire.prixFournisseur,
-            delai_estime: m.estimationPartenaire.delaisEstimes,
-            commentaire: m.estimationPartenaire.noteExplication || "",
+            prestataireId: m.prestataireId!,
+            prix_prestataire: m.estimationPartenaire!.prixFournisseur,
+            delai_estime: m.estimationPartenaire!.delaisEstimes,
+            commentaire: m.estimationPartenaire!.noteExplication || "",
             difficulte_estimee: 3, // Valeur par défaut
-          });
-        }
-      }
+          })
+        );
+      
+      await Promise.all(createPromises);
       // Recharger les propositions après création
       propositions = await getPropositionsByDemandeId(demandeId);
     }
@@ -148,45 +153,71 @@ export async function POST(req: Request, { params }: RouteParams) {
       await updatePropositionStatut(winningProposition.id, "acceptee", userEmail, missionId);
     }
 
-    // Refuser toutes les autres propositions
-    for (const prop of propositions) {
-      if (
-        prop.prestataireId !== mission.prestataireId &&
-        prop.statut !== "refusee"
-      ) {
-        await updatePropositionStatut(prop.id, "refusee", userEmail, undefined, "Non sélectionné par l'administrateur");
-      }
-    }
-
-    // Archiver les missions des prestataires non sélectionnés
-    const now = new Date().toISOString();
-    for (const m of allMissionsForDemande) {
-      if (m.id !== missionId) {
-        // Archiver la mission du prestataire non sélectionné
-        m.archived = true;
-        m.archivedAt = now;
-        m.archivedBy = "admin";
-        
-        // Ajouter une mise à jour pour tracer l'archivage
-        await addMissionUpdate(m.id, {
-          type: "status_change",
-          author: "admin",
-          authorEmail: userEmail,
-          content: `Mission archivée : prestataire non sélectionné comme gagnant.`,
-        });
-      }
-    }
+    // Refuser toutes les autres propositions (en parallèle)
+    const rejectPromises = propositions
+      .filter(
+        (prop) =>
+          prop.prestataireId !== mission.prestataireId &&
+          prop.statut !== "refusee"
+      )
+      .map((prop) =>
+        updatePropositionStatut(prop.id, "refusee", userEmail, undefined, "Non sélectionné par l'administrateur")
+      );
     
-    // Sauvegarder les missions archivées
-    await saveMissions();
+    await Promise.all(rejectPromises);
+
+    // Archiver les missions des prestataires non sélectionnés (en parallèle avec Prisma)
+    const missionsToArchive = allMissionsForDemande.filter((m) => m.id !== missionId);
+    
+    if (missionsToArchive.length > 0) {
+      const { archiveMission } = await import("@/repositories/missionsRepo");
+      const { USE_DB } = await import("@/lib/dbFlag");
+      
+      if (USE_DB) {
+        // Utiliser Prisma directement pour archiver (plus rapide)
+        const archivePromises = missionsToArchive.map((m) =>
+          archiveMission(m.id, userEmail)
+        );
+        
+        // Ajouter les mises à jour en parallèle aussi
+        const updatePromises = missionsToArchive.map((m) =>
+          addMissionUpdate(m.id, {
+            type: "status_change",
+            author: "admin",
+            authorEmail: userEmail,
+            content: `Mission archivée : prestataire non sélectionné comme gagnant.`,
+          })
+        );
+        
+        await Promise.all([...archivePromises, ...updatePromises]);
+      } else {
+        // Fallback JSON (ne devrait plus être utilisé)
+        const now = new Date().toISOString();
+        for (const m of missionsToArchive) {
+          m.archived = true;
+          m.archivedAt = now;
+          m.archivedBy = "admin";
+          await addMissionUpdate(m.id, {
+            type: "status_change",
+            author: "admin",
+            authorEmail: userEmail,
+            content: `Mission archivée : prestataire non sélectionné comme gagnant.`,
+          });
+        }
+        await saveMissions();
+      }
+    }
 
     // Mettre à jour le statut de la demande pour indiquer qu'un prestataire a été assigné
+    // (fait en parallèle avec les autres opérations si possible)
     if (mission.prestataireId) {
-      const prestataire = await getPrestataireById(mission.prestataireId);
-      if (prestataire && demandeId) {
+      try {
         await updateDemandeStatus(demandeId, "acceptee");
+        // Le statut "prestataire assigné : [nom]" sera géré par le composant DemandeAssignmentStatus
+      } catch (error) {
+        console.error("Erreur mise à jour statut demande:", error);
+        // Ne pas bloquer la sélection si la mise à jour du statut échoue
       }
-      // Le statut "prestataire assigné : [nom]" sera géré par le composant DemandeAssignmentStatus
     }
 
     return NextResponse.json({
