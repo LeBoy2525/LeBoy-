@@ -321,14 +321,25 @@ function WinnerSelectionView({
         const missionForChat = missionsWithEstimations.find(m => m.id === chatMissionId);
         if (!missionForChat) return null;
         return (
-          <MissionChat
-            mission={missionForChat}
-            currentUserEmail={currentUserEmail}
-            currentUserRole="admin"
-            lang={lang}
-            initialRecipient="prestataire"
-            autoOpen={true}
-          />
+          <div key={chatMissionId}>
+            <MissionChat
+              mission={missionForChat}
+              currentUserEmail={currentUserEmail}
+              currentUserRole="admin"
+              lang={lang}
+              initialRecipient="prestataire"
+              autoOpen={true}
+            />
+            {/* Bouton pour fermer le chat */}
+            <div className="fixed bottom-6 right-6 z-40">
+              <button
+                onClick={() => setChatMissionId(null)}
+                className="px-4 py-2 bg-gray-600 text-white text-sm font-semibold rounded-md hover:bg-gray-700 transition"
+              >
+                {lang === "fr" ? "Fermer le chat" : "Close chat"}
+              </button>
+            </div>
+          </div>
         );
       })()}
     </div>
