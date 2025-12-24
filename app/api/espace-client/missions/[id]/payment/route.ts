@@ -19,15 +19,18 @@ export async function POST(req: Request, { params }: RouteParams) {
     }
 
     const resolvedParams = await params;
-    const missionId = parseInt(resolvedParams.id);
-    if (isNaN(missionId)) {
+    const missionUuid = resolvedParams.id;
+
+    // Validation UUID
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!missionUuid || typeof missionUuid !== "string" || !UUID_REGEX.test(missionUuid)) {
       return NextResponse.json(
-        { error: "ID invalide." },
+        { error: "UUID invalide." },
         { status: 400 }
       );
     }
 
-    const mission = await getMissionById(missionId);
+    const mission = await getMissionById(missionUuid);
     if (!mission) {
       return NextResponse.json(
         { error: "Mission non trouvée." },
@@ -63,50 +66,47 @@ export async function POST(req: Request, { params }: RouteParams) {
       );
     }
 
-    // Enregistrer le paiement
-    const now = new Date().toISOString();
-    mission.paiementEffectue = true;
-    mission.paiementEffectueAt = now;
+    // Mettre à jour la mission via Prisma avec le paiement
+    const { updateMission } = await import("@/repositories/missionsRepo");
+    const { mapInternalStateToStatus } = await import("@/lib/types");
+    const now = new Date();
+    const newInternalState = "PAID_WAITING_TAKEOVER";
+    
+    const updatedMissionPrisma = await updateMission(missionUuid, {
+      paiementEffectue: true,
+      paiementEffectueAt: now,
+      internalState: newInternalState as any,
+      status: mapInternalStateToStatus(newInternalState as any),
+    });
 
-    // TODO: Enregistrer la transaction dans la table des paiements
-    // const transaction = {
-    //   id: generateId(),
-    //   missionId: mission.id,
-    //   clientEmail: mission.clientEmail,
-    //   amount: mission.tarifTotal,
-    //   paymentIntentId,
-    //   paymentMethod,
-    //   status: "succeeded",
-    //   createdAt: now,
-    // };
-
-    // Mettre à jour l'état interne vers PAID_WAITING_TAKEOVER
-    const updated = await updateMissionInternalState(missionId, "PAID_WAITING_TAKEOVER", userEmail);
-
-    if (!updated) {
+    if (!updatedMissionPrisma) {
       return NextResponse.json(
         { error: "Erreur lors de la mise à jour." },
         { status: 500 }
       );
     }
 
-    saveMissions();
+    // Convertir en JSON pour la réponse
+    const { convertPrismaMissionToJSON } = await import("@/lib/dataAccess");
+    const updated = convertPrismaMissionToJSON(updatedMissionPrisma);
+
+    // Plus besoin de saveMissions() car on utilise Prisma directement
 
     // Ajouter une notification pour l'admin
     try {
       const { addAdminNotification } = await import("@/lib/adminNotificationsStore");
-      const { demandesStore } = await import("@/lib/demandesStore");
-      const demande = demandesStore.find((d) => d.id === mission.demandeId);
+      const { getDemandeById } = await import("@/lib/dataAccess");
+      const demande = await getDemandeById(updatedMissionPrisma.demandeId);
       
       if (demande) {
         addAdminNotification({
           type: "mission_paid",
           title: "Paiement reçu",
-          message: `Le client ${demande.fullName} a effectué le paiement de ${(mission.tarifTotal || 0).toLocaleString()} FCFA pour la mission ${mission.ref}.`,
-          missionId: mission.id,
-          missionRef: mission.ref,
-          demandeId: mission.demandeId,
-          clientEmail: mission.clientEmail,
+          message: `Le client ${demande.fullName} a effectué le paiement de ${(updated.tarifTotal || 0).toLocaleString()} FCFA pour la mission ${updatedMissionPrisma.ref}.`,
+          missionId: missionUuid, // Utiliser l'UUID
+          missionRef: updatedMissionPrisma.ref,
+          demandeId: updatedMissionPrisma.demandeId,
+          clientEmail: updatedMissionPrisma.clientEmail,
         });
       }
     } catch (error) {
@@ -118,16 +118,16 @@ export async function POST(req: Request, { params }: RouteParams) {
     try {
       const { sendNotificationEmail } = await import("@/lib/emailService");
       const { getAdminEmail } = await import("@/lib/auth");
-      const { demandesStore } = await import("@/lib/demandesStore");
-      const demande = demandesStore.find((d) => d.id === mission.demandeId);
+      const { getDemandeById } = await import("@/lib/dataAccess");
+      const demande = await getDemandeById(updatedMissionPrisma.demandeId);
       
       if (demande) {
         await sendNotificationEmail(
           "payment-received",
           { email: getAdminEmail() },
           {
-            missionRef: mission.ref,
-            montant: mission.tarifTotal || 0,
+            missionRef: updatedMissionPrisma.ref,
+            montant: updated.tarifTotal || 0,
             clientName: demande.fullName,
             clientEmail: demande.email,
           },
@@ -145,8 +145,8 @@ export async function POST(req: Request, { params }: RouteParams) {
         mission: updated,
         payment: {
           paymentIntentId,
-          amount: mission.tarifTotal,
-          paidAt: mission.paiementEffectueAt,
+          amount: updated.tarifTotal,
+          paidAt: updated.paiementEffectueAt,
         },
       },
       { status: 200 }

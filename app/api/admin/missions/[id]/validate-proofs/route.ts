@@ -22,8 +22,18 @@ export async function POST(req: Request, { params }: RouteParams) {
     }
 
     const resolvedParams = await params;
-    const missionId = parseInt(resolvedParams.id);
-    const mission = await getMissionById(missionId);
+    const missionUuid = resolvedParams.id;
+
+    // Validation UUID
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!missionUuid || typeof missionUuid !== "string" || !UUID_REGEX.test(missionUuid)) {
+      return NextResponse.json(
+        { error: "UUID invalide." },
+        { status: 400 }
+      );
+    }
+
+    const mission = await getMissionById(missionUuid);
 
     if (!mission) {
       return NextResponse.json(
@@ -51,9 +61,22 @@ export async function POST(req: Request, { params }: RouteParams) {
     // Sauf si validate === false (rejet explicite)
     const shouldAutoValidate = isFullPayment && validate !== false;
 
+    // Récupérer la mission Prisma pour mettre à jour
+    const { getMissionById: getMissionByIdDB, updateMission } = await import("@/repositories/missionsRepo");
+    const { mapInternalStateToStatus } = await import("@/lib/types");
+    const missionPrisma = await getMissionByIdDB(missionUuid);
+    
+    if (!missionPrisma) {
+      return NextResponse.json(
+        { error: "Mission non trouvée." },
+        { status: 404 }
+      );
+    }
+
     if (validate === true || shouldAutoValidate) {
       // Valider toutes les preuves
-      mission.proofs.forEach((proof) => {
+      const proofs = missionPrisma.proofs ? JSON.parse(JSON.stringify(missionPrisma.proofs)) : [];
+      proofs.forEach((proof: any) => {
         proof.validatedByAdmin = true;
         proof.validatedAt = new Date().toISOString();
         // Calculer la date d'archivage (3 mois après validation)
@@ -62,18 +85,23 @@ export async function POST(req: Request, { params }: RouteParams) {
         proof.archivedAt = archiveDate.toISOString();
       });
 
-      mission.proofValidatedByAdmin = true;
-      mission.proofValidatedAt = new Date().toISOString();
+      const updateData: any = {
+        proofs: proofs,
+        proofValidatedByAdmin: true,
+        proofValidatedAt: new Date(),
+      };
 
       // Si validateForClient est true OU si c'est un paiement 100%, donner accès au client et valider la mission
       if (validateForClient === true || shouldAutoValidate) {
-        mission.proofValidatedForClient = true;
-        mission.proofValidatedForClientAt = new Date().toISOString(); // Enregistrer la date pour calculer les 24h
-        // Changer l'état interne vers ADMIN_CONFIRMED
-        await updateMissionInternalState(missionId, "ADMIN_CONFIRMED", userEmail);
+        updateData.proofValidatedForClient = true;
+        updateData.proofValidatedForClientAt = new Date();
+        updateData.internalState = "ADMIN_CONFIRMED" as any;
+        updateData.status = mapInternalStateToStatus("ADMIN_CONFIRMED" as any);
+        
+        const updatedMissionPrisma = await updateMission(missionUuid, updateData);
         
         // Créer une mise à jour pour le client
-        await addMissionUpdate(missionId, {
+        await addMissionUpdate(missionUuid, {
           type: "status_change",
           author: "admin",
           authorEmail: userEmail,
@@ -83,21 +111,21 @@ export async function POST(req: Request, { params }: RouteParams) {
         // Envoyer une notification email au client
         try {
           const { sendNotificationEmail } = await import("@/lib/emailService");
-          const demande = await getDemandeById(mission.demandeId);
+          const demande = await getDemandeById(updatedMissionPrisma.demandeId);
           const protocol = process.env.NEXT_PUBLIC_APP_URL?.startsWith("https") ? "https" : "http";
           const platformUrl = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://localhost:3000`;
           
-          if (demande) {
+          if (demande && updatedMissionPrisma) {
             await sendNotificationEmail(
               "mission-completed",
               { email: demande.email, name: demande.fullName },
               {
-                missionRef: mission.ref,
+                missionRef: updatedMissionPrisma.ref,
                 clientName: demande.fullName,
-                serviceType: mission.serviceType,
-                dateCloture: mission.dateFin || new Date().toISOString(),
+                serviceType: updatedMissionPrisma.serviceType,
+                dateCloture: updatedMissionPrisma.dateFin?.toISOString() || new Date().toISOString(),
                 platformUrl,
-                missionId: mission.id,
+                missionId: missionUuid, // Utiliser l'UUID
               },
               "fr"
             );
@@ -108,25 +136,32 @@ export async function POST(req: Request, { params }: RouteParams) {
         }
       } else {
         // Juste valider les preuves, mais ne pas donner accès au client encore
-        mission.proofValidatedForClient = false;
+        updateData.proofValidatedForClient = false;
+        await updateMission(missionUuid, updateData);
         // Le statut reste "PROVIDER_VALIDATION_SUBMITTED"
       }
     } else {
       // Rejeter les preuves
-      mission.proofs.forEach((proof) => {
+      const proofs = missionPrisma.proofs ? JSON.parse(JSON.stringify(missionPrisma.proofs)) : [];
+      proofs.forEach((proof: any) => {
         proof.validatedByAdmin = false;
         proof.validatedAt = undefined;
       });
 
-      mission.proofValidatedByAdmin = false;
-      mission.proofValidatedAt = undefined;
-      mission.proofValidatedForClient = false;
-
-      // Remettre l'état interne à IN_PROGRESS pour que le prestataire puisse corriger
-      await updateMissionInternalState(missionId, "IN_PROGRESS", userEmail);
+      await updateMission(missionUuid, {
+        proofs: proofs,
+        proofValidatedByAdmin: false,
+        proofValidatedAt: null,
+        proofValidatedForClient: false,
+        internalState: "IN_PROGRESS" as any,
+        status: mapInternalStateToStatus("IN_PROGRESS" as any),
+      });
     }
 
-    await saveMissions();
+    // Recharger la mission mise à jour pour la réponse
+    const updatedMissionPrisma = await getMissionByIdDB(missionUuid);
+    const { convertPrismaMissionToJSON } = await import("@/lib/dataAccess");
+    const updatedMission = updatedMissionPrisma ? convertPrismaMissionToJSON(updatedMissionPrisma) : mission;
 
     return NextResponse.json(
       {
@@ -134,7 +169,7 @@ export async function POST(req: Request, { params }: RouteParams) {
         message: validate
           ? "Preuves validées. Le client peut maintenant les consulter."
           : "Preuves rejetées. Le prestataire peut les corriger.",
-        mission,
+        mission: updatedMission,
       },
       { status: 200 }
     );

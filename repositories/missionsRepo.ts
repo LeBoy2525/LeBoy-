@@ -397,17 +397,48 @@ export async function updateMission(id: string, data: Partial<Mission>) {
   if (data.archived !== undefined) updateData.archived = data.archived;
   if (data.deleted !== undefined) updateData.deleted = data.deleted;
   
+  // Mapper les tarifs et commissions
+  if (data.tarifPrestataire !== undefined) updateData.tarifPrestataire = data.tarifPrestataire;
+  if (data.commissionICD !== undefined) updateData.commissionICD = data.commissionICD;
+  if ((data as any).commissionHybride !== undefined) updateData.commissionHybride = (data as any).commissionHybride;
+  if ((data as any).commissionRisk !== undefined) updateData.commissionRisk = (data as any).commissionRisk;
+  if ((data as any).commissionTotale !== undefined) updateData.commissionTotale = (data as any).commissionTotale;
+  if (data.tarifTotal !== undefined) updateData.tarifTotal = data.tarifTotal;
+  if ((data as any).fraisSupplementaires !== undefined) updateData.fraisSupplementaires = (data as any).fraisSupplementaires;
+  
+  // Mapper les pourcentages et paiements
+  if ((data as any).avancePercentage !== undefined) updateData.avancePercentage = (data as any).avancePercentage;
+  if ((data as any).paiementEchelonne !== undefined) {
+    updateData.paiementEchelonne = (data as any).paiementEchelonne ? JSON.parse(JSON.stringify((data as any).paiementEchelonne)) : null;
+  }
+  
   // Mapper les dates
   if (data.dateAssignation !== undefined) updateData.dateAssignation = data.dateAssignation ? new Date(data.dateAssignation) : null;
+  if (data.dateAcceptation !== undefined) updateData.dateAcceptation = data.dateAcceptation ? new Date(data.dateAcceptation) : null;
   if (data.devisGenereAt !== undefined) updateData.devisGenereAt = data.devisGenereAt ? new Date(data.devisGenereAt) : null;
   if (data.paiementEffectueAt !== undefined) updateData.paiementEffectueAt = data.paiementEffectueAt ? new Date(data.paiementEffectueAt) : null;
+  if ((data as any).avanceVerseeAt !== undefined) updateData.avanceVerseeAt = (data as any).avanceVerseeAt ? new Date((data as any).avanceVerseeAt) : null;
+  if ((data as any).soldeVerseeAt !== undefined) updateData.soldeVerseeAt = (data as any).soldeVerseeAt ? new Date((data as any).soldeVerseeAt) : null;
   if (data.archivedAt !== undefined) updateData.archivedAt = data.archivedAt ? new Date(data.archivedAt) : null;
   if (data.deletedAt !== undefined) updateData.deletedAt = data.deletedAt ? new Date(data.deletedAt) : null;
+  
+  // Mapper les champs de validation des preuves
+  if ((data as any).proofValidatedByAdmin !== undefined) updateData.proofValidatedByAdmin = (data as any).proofValidatedByAdmin;
+  if ((data as any).proofValidatedAt !== undefined) updateData.proofValidatedAt = (data as any).proofValidatedAt ? new Date((data as any).proofValidatedAt) : null;
+  if ((data as any).proofValidatedForClient !== undefined) updateData.proofValidatedForClient = (data as any).proofValidatedForClient;
+  if ((data as any).proofValidatedForClientAt !== undefined) updateData.proofValidatedForClientAt = (data as any).proofValidatedForClientAt ? new Date((data as any).proofValidatedForClientAt) : null;
+  if ((data as any).proofSubmissionDate !== undefined) updateData.proofSubmissionDate = (data as any).proofSubmissionDate ? new Date((data as any).proofSubmissionDate) : null;
+  
+  // Mapper les commentaires
+  if ((data as any).commentairePrestataire !== undefined) updateData.commentairePrestataire = (data as any).commentairePrestataire;
   
   // Mapper les champs JSON
   if (data.updates !== undefined) updateData.updates = JSON.parse(JSON.stringify(data.updates));
   if (data.phases !== undefined) updateData.phases = data.phases ? JSON.parse(JSON.stringify(data.phases)) : null;
   if (data.proofs !== undefined) updateData.proofs = data.proofs ? JSON.parse(JSON.stringify(data.proofs)) : null;
+  if ((data as any).estimationPartenaire !== undefined) {
+    updateData.estimationPartenaire = (data as any).estimationPartenaire ? JSON.parse(JSON.stringify((data as any).estimationPartenaire)) : null;
+  }
   
   // Mapper notifiedProviderAt si présent
   if ((data as any).notifiedProviderAt !== undefined) {

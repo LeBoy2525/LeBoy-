@@ -21,15 +21,18 @@ export async function POST(req: Request, { params }: RouteParams) {
     }
 
     const resolvedParams = await params;
-    const missionId = parseInt(resolvedParams.id);
-    if (isNaN(missionId)) {
+    const missionUuid = resolvedParams.id;
+
+    // Validation UUID
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!missionUuid || typeof missionUuid !== "string" || !UUID_REGEX.test(missionUuid)) {
       return NextResponse.json(
-        { error: "ID invalide." },
+        { error: "UUID invalide." },
         { status: 400 }
       );
     }
 
-    const mission = await getMissionById(missionId);
+    const mission = await getMissionById(missionUuid);
     if (!mission) {
       return NextResponse.json(
         { error: "Mission non trouvée." },
@@ -74,45 +77,44 @@ export async function POST(req: Request, { params }: RouteParams) {
     const avance = (mission.tarifPrestataire * avancePercentage) / 100;
     const now = new Date().toISOString();
 
-    // Enregistrer l'avance et le pourcentage
-    mission.avanceVersee = true;
-    mission.avanceVerseeAt = now;
-    mission.avancePercentage = avancePercentage;
+    // Mettre à jour la mission via Prisma avec l'avance
+    const { updateMission } = await import("@/repositories/missionsRepo");
+    const { mapInternalStateToStatus } = await import("@/lib/types");
+    const newInternalState = "ADVANCE_SENT";
+    
+    const updateData: any = {
+      avanceVersee: true,
+      avanceVerseeAt: new Date(now),
+      avancePercentage: avancePercentage,
+      internalState: newInternalState as any,
+      status: mapInternalStateToStatus(newInternalState as any),
+    };
     
     // Si 100%, marquer aussi le solde comme versé (puisqu'il n'y en a pas)
     if (avancePercentage === 100) {
-      mission.soldeVersee = true;
-      mission.soldeVerseeAt = now;
+      updateData.soldeVersee = true;
+      updateData.soldeVerseeAt = new Date(now);
     }
 
-    // TODO: Enregistrer la transaction dans la base de données (type paiement_fournisseur_1)
-    // const transaction = {
-    //   id: generateId(),
-    //   missionId: mission.id,
-    //   prestataireId: mission.prestataireId,
-    //   type: "paiement_fournisseur_1", // Avance de 50%
-    //   amount: avance,
-    //   status: "sent",
-    //   sentAt: now,
-    //   createdAt: now,
-    // };
-
-    // Mettre à jour l'état interne vers ADVANCE_SENT (même pour 100%)
-    const updated = await updateMissionInternalState(missionId, "ADVANCE_SENT", userEmail);
-
-    if (!updated) {
+    const updatedMissionPrisma = await updateMission(missionUuid, updateData);
+    
+    if (!updatedMissionPrisma) {
       return NextResponse.json(
         { error: "Erreur lors de la mise à jour." },
         { status: 500 }
       );
     }
 
-    await saveMissions();
+    // Convertir en JSON pour la réponse
+    const { convertPrismaMissionToJSON } = await import("@/lib/dataAccess");
+    const updated = convertPrismaMissionToJSON(updatedMissionPrisma);
+
+    // Plus besoin de saveMissions() car on utilise Prisma directement
 
     // Envoyer une notification email au prestataire
     try {
       const { sendNotificationEmail } = await import("@/lib/emailService");
-      const prestataire = mission.prestataireId ? await getPrestataireById(mission.prestataireId) : null;
+      const prestataire = updatedMissionPrisma.prestataireId ? await getPrestataireById(updatedMissionPrisma.prestataireId) : null;
       const protocol = process.env.NEXT_PUBLIC_APP_URL?.startsWith("https") ? "https" : "http";
       const platformUrl = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://localhost:3000`;
       
@@ -121,12 +123,12 @@ export async function POST(req: Request, { params }: RouteParams) {
           "advance-sent",
           { email: prestataire.email, name: prestataire.nomEntreprise || prestataire.nomContact },
           {
-            missionRef: mission.ref,
+            missionRef: updatedMissionPrisma.ref,
             providerName: prestataire.nomEntreprise || prestataire.nomContact,
             montantAvance: avance,
-            serviceType: mission.serviceType,
+            serviceType: updatedMissionPrisma.serviceType,
             platformUrl,
-            missionId: mission.id,
+            missionId: missionUuid, // Utiliser l'UUID
           },
           "fr"
         );
@@ -143,7 +145,7 @@ export async function POST(req: Request, { params }: RouteParams) {
         advance: {
           amount: avance,
           percentage: avancePercentage,
-          paidAt: mission.avanceVerseeAt,
+          paidAt: updated.avanceVerseeAt,
         },
       },
       { status: 200 }

@@ -20,15 +20,19 @@ export async function POST(req: Request, { params }: RouteParams) {
     }
 
     const resolvedParams = await params;
-    const missionId = parseInt(resolvedParams.id);
-    if (isNaN(missionId)) {
+    const missionUuid = resolvedParams.id;
+
+    // Validation UUID
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!missionUuid || typeof missionUuid !== "string" || !UUID_REGEX.test(missionUuid)) {
       return NextResponse.json(
-        { error: "ID invalide." },
+        { error: "UUID invalide." },
         { status: 400 }
       );
     }
 
-    const mission = await getMissionById(missionId);
+    // Récupérer la mission par UUID
+    const mission = await getMissionById(missionUuid);
     if (!mission) {
       return NextResponse.json(
         { error: "Mission non trouvée." },
@@ -36,10 +40,17 @@ export async function POST(req: Request, { params }: RouteParams) {
       );
     }
 
-    // Vérifier que le prestataire est bien assigné à cette mission
+    // Vérifier que le prestataire est bien assigné à cette mission (comparer UUIDs)
     const prestataire = await getPrestataireByEmail(userEmail);
+    const missionPrestataireId = (mission as any).dbId ? 
+      (await import("@/repositories/missionsRepo")).getMissionById(missionUuid).then(m => m?.prestataireId) :
+      mission.prestataireId;
 
-    if (!prestataire || mission.prestataireId !== prestataire.id) {
+    // Récupérer la mission Prisma pour comparer les UUIDs correctement
+    const { getMissionById: getMissionByIdDB } = await import("@/repositories/missionsRepo");
+    const missionPrisma = await getMissionByIdDB(missionUuid);
+    
+    if (!prestataire || !missionPrisma || missionPrisma.prestataireId !== prestataire.id) {
       return NextResponse.json(
         { error: "Vous n'êtes pas autorisé à soumettre une estimation pour cette mission." },
         { status: 403 }
@@ -74,33 +85,44 @@ export async function POST(req: Request, { params }: RouteParams) {
 
     // Enregistrer l'estimation et mettre à jour le tarif prestataire
     const prixFournisseurNum = parseFloat(String(prixFournisseur));
-    const now = new Date().toISOString();
+    const delaisEstimesNum = parseFloat(String(delaisEstimes));
+    const now = new Date();
     
-    mission.estimationPartenaire = {
+    // Préparer l'objet estimation
+    const estimationPartenaire = {
       prixFournisseur: prixFournisseurNum,
-      delaisEstimes: parseFloat(String(delaisEstimes)),
+      delaisEstimes: delaisEstimesNum,
       noteExplication: noteExplication || undefined,
       fraisExternes: fraisExternes ? parseFloat(String(fraisExternes)) : undefined,
-      soumiseAt: now,
+      soumiseAt: now.toISOString(),
     };
-    
-    // Mettre à jour le tarif prestataire dans la mission (sans commission ICD pour l'instant)
-    mission.tarifPrestataire = prixFournisseurNum;
-    
-    // Enregistrer la date d'acceptation côté prestataire
-    mission.dateAcceptation = now;
 
-    // Mettre à jour l'état interne vers PROVIDER_ESTIMATED
-    const updated = await updateMissionInternalState(missionId, "PROVIDER_ESTIMATED", userEmail);
+    // Mettre à jour la mission via Prisma avec l'estimation et le tarif
+    const { updateMission } = await import("@/repositories/missionsRepo");
+    const { mapInternalStateToStatus } = await import("@/lib/types");
+    const newInternalState = "PROVIDER_ESTIMATED";
+    
+    const updatedMissionPrisma = await updateMission(missionUuid, {
+      estimationPartenaire: estimationPartenaire as any,
+      tarifPrestataire: prixFournisseurNum,
+      dateAcceptation: now,
+      internalState: newInternalState as any,
+      status: mapInternalStateToStatus(newInternalState as any),
+    });
 
-    if (!updated) {
+    if (!updatedMissionPrisma) {
       return NextResponse.json(
-        { error: "Erreur lors de la mise à jour." },
+        { error: "Erreur lors de la mise à jour de la mission." },
         { status: 500 }
       );
     }
 
-    await saveMissions();
+    // Convertir en JSON pour la réponse
+    const { convertPrismaMissionToJSON } = await import("@/lib/dataAccess");
+    const updated = convertPrismaMissionToJSON(updatedMissionPrisma);
+
+    // La mission a déjà été mise à jour avec l'estimation ci-dessus
+    // Plus besoin de saveMissions() car on utilise Prisma directement
 
     // Ajouter une notification pour l'admin
     try {
@@ -109,9 +131,9 @@ export async function POST(req: Request, { params }: RouteParams) {
         type: "mission_estimated",
         title: "Estimation reçue",
         message: `Le prestataire ${prestataire.nomEntreprise || prestataire.nomContact || prestataire.nomEntreprise || prestataire.nomContact} a soumis une estimation pour la mission ${mission.ref} (${prixFournisseurNum.toLocaleString()} FCFA, ${parseFloat(String(delaisEstimes))} heures).`,
-        missionId: mission.id,
-        missionRef: mission.ref,
-        demandeId: mission.demandeId,
+        missionId: missionUuid, // Utiliser l'UUID Prisma
+        missionRef: updatedMissionPrisma.ref,
+        demandeId: updatedMissionPrisma.demandeId,
         prestataireName: prestataire.nomEntreprise || prestataire.nomContact || prestataire.nomEntreprise || prestataire.nomContact,
       });
     } catch (error) {
@@ -128,7 +150,7 @@ export async function POST(req: Request, { params }: RouteParams) {
         "estimation-submitted",
         { email: getAdminEmail() },
         {
-          missionRef: mission.ref,
+          missionRef: updatedMissionPrisma.ref,
           providerName: prestataire.nomEntreprise || prestataire.nomContact || prestataire.nomEntreprise || prestataire.nomContact,
           prixFournisseur: prixFournisseurNum,
           delaisEstimes: parseFloat(String(delaisEstimes)),

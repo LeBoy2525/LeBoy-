@@ -21,15 +21,18 @@ export async function POST(req: Request, { params }: RouteParams) {
     }
 
     const resolvedParams = await params;
-    const missionId = parseInt(resolvedParams.id);
-    if (isNaN(missionId)) {
+    const missionUuid = resolvedParams.id;
+
+    // Validation UUID
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!missionUuid || typeof missionUuid !== "string" || !UUID_REGEX.test(missionUuid)) {
       return NextResponse.json(
-        { error: "ID invalide." },
+        { error: "UUID invalide." },
         { status: 400 }
       );
     }
 
-    const mission = await getMissionById(missionId);
+    const mission = await getMissionById(missionUuid);
     if (!mission) {
       return NextResponse.json(
         { error: "Mission non trouvée." },
@@ -111,8 +114,45 @@ export async function POST(req: Request, { params }: RouteParams) {
     mission.devisGenere = true;
     mission.devisGenereAt = new Date().toISOString();
 
-    // Mettre à jour l'état interne vers WAITING_CLIENT_PAYMENT
-    const updated = await updateMissionInternalState(missionId, "WAITING_CLIENT_PAYMENT", userEmail);
+    // Mettre à jour la mission via Prisma avec les tarifs et le devis
+    const { updateMission } = await import("@/repositories/missionsRepo");
+    const { mapInternalStateToStatus } = await import("@/lib/types");
+    const newInternalState = "WAITING_CLIENT_PAYMENT";
+    
+    const updatedMissionPrisma = await updateMission(missionUuid, {
+      tarifPrestataire: prixFournisseur,
+      commissionHybride: commissionResult.commissionHybride,
+      commissionRisk: commissionResult.commissionRisk,
+      commissionTotale: commissionResult.commissionTotale,
+      commissionICD: commissionResult.commissionTotale,
+      fraisSupplementaires: fraisSuppl > 0 ? fraisSuppl : undefined,
+      tarifTotal: commissionResult.prixClient + fraisSuppl,
+      paiementEchelonne: (paiementEchelonne && paiementEchelonne.type === "echelonne") ? {
+        type: "echelonne",
+        plan: paiementEchelonne.plan || "50-50",
+        nombreTranches: paiementEchelonne.nombreTranches,
+        tauxInteret: paiementEchelonne.tauxInteret || 0,
+        montantsParTranche: paiementEchelonne.montantsParTranche,
+        pourcentagesParTranche: paiementEchelonne.pourcentagesParTranche,
+        datesEcheances: paiementEchelonne.datesEcheances,
+        totalAvecInterets: paiementEchelonne.totalAvecInterets,
+      } as any : { type: "total" } as any,
+      devisGenere: true,
+      devisGenereAt: new Date(),
+      internalState: newInternalState as any,
+      status: mapInternalStateToStatus(newInternalState as any),
+    });
+
+    if (!updatedMissionPrisma) {
+      return NextResponse.json(
+        { error: "Erreur lors de la mise à jour." },
+        { status: 500 }
+      );
+    }
+
+    // Convertir en JSON pour la réponse
+    const { convertPrismaMissionToJSON } = await import("@/lib/dataAccess");
+    const updated = convertPrismaMissionToJSON(updatedMissionPrisma);
 
     if (!updated) {
       return NextResponse.json(
@@ -121,12 +161,12 @@ export async function POST(req: Request, { params }: RouteParams) {
       );
     }
 
-    await saveMissions();
+    // Plus besoin de saveMissions() car on utilise Prisma directement
 
     // Envoyer une notification email au client
     try {
       const { sendNotificationEmail } = await import("@/lib/emailService");
-      const demande = await getDemandeById(mission.demandeId);
+      const demande = await getDemandeById(updatedMissionPrisma.demandeId);
       const protocol = process.env.NEXT_PUBLIC_APP_URL?.startsWith("https") ? "https" : "http";
       const platformUrl = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://localhost:3000`;
       
@@ -135,12 +175,12 @@ export async function POST(req: Request, { params }: RouteParams) {
           "devis-ready",
           { email: demande.email, name: demande.fullName },
           {
-            missionRef: mission.ref,
+            missionRef: updatedMissionPrisma.ref,
             clientName: demande.fullName,
-            serviceType: mission.serviceType,
-            tarifTotal: mission.tarifTotal || 0,
+            serviceType: updatedMissionPrisma.serviceType,
+            tarifTotal: updated.tarifTotal || 0,
             platformUrl,
-            missionId: mission.id,
+            missionId: missionUuid, // Utiliser l'UUID
           },
           "fr"
         );
@@ -160,7 +200,7 @@ export async function POST(req: Request, { params }: RouteParams) {
           commissionRisk: commissionResult.commissionRisk,
           commissionTotale: commissionResult.commissionTotale,
           fraisSupplementaires: fraisSuppl,
-          tarifTotal: mission.tarifTotal,
+          tarifTotal: updated.tarifTotal,
         },
       },
       { status: 200 }

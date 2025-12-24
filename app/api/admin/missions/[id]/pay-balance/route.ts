@@ -21,15 +21,18 @@ export async function POST(req: Request, { params }: RouteParams) {
     }
 
     const resolvedParams = await params;
-    const missionId = parseInt(resolvedParams.id);
-    if (isNaN(missionId)) {
+    const missionUuid = resolvedParams.id;
+
+    // Validation UUID
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!missionUuid || typeof missionUuid !== "string" || !UUID_REGEX.test(missionUuid)) {
       return NextResponse.json(
-        { error: "ID invalide." },
+        { error: "UUID invalide." },
         { status: 400 }
       );
     }
 
-    const mission = await getMissionById(missionId);
+    const mission = await getMissionById(missionUuid);
     if (!mission) {
       return NextResponse.json(
         { error: "Mission non trouvée." },
@@ -59,14 +62,28 @@ export async function POST(req: Request, { params }: RouteParams) {
     const soldePercentage = 100 - avancePercentage; // Si avance 25%, solde = 75%. Si avance 50%, solde = 50%
     const solde = (montantPrestataire * soldePercentage) / 100;
 
-    // Enregistrer le paiement du solde
-    mission.soldeVersee = true;
-    mission.soldeVerseeAt = new Date().toISOString();
+    // Mettre à jour la mission via Prisma avec le solde
+    const { updateMission } = await import("@/repositories/missionsRepo");
+    const updatedMissionPrisma = await updateMission(missionUuid, {
+      soldeVersee: true,
+      soldeVerseeAt: new Date(),
+    });
+
+    if (!updatedMissionPrisma) {
+      return NextResponse.json(
+        { error: "Erreur lors de la mise à jour." },
+        { status: 500 }
+      );
+    }
+
+    // Convertir en JSON pour la réponse
+    const { convertPrismaMissionToJSON } = await import("@/lib/dataAccess");
+    const updatedMission = convertPrismaMissionToJSON(updatedMissionPrisma);
 
     // Envoyer une notification email au prestataire
     try {
       const { sendNotificationEmail } = await import("@/lib/emailService");
-      const prestataire = mission.prestataireId ? await getPrestataireById(mission.prestataireId) : null;
+      const prestataire = updatedMissionPrisma.prestataireId ? await getPrestataireById(updatedMissionPrisma.prestataireId) : null;
       const protocol = process.env.NEXT_PUBLIC_APP_URL?.startsWith("https") ? "https" : "http";
       const platformUrl = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://localhost:3000`;
       
@@ -75,12 +92,12 @@ export async function POST(req: Request, { params }: RouteParams) {
           "advance-sent",
           { email: prestataire.email, name: prestataire.nomEntreprise || prestataire.nomContact },
           {
-            missionRef: mission.ref,
+            missionRef: updatedMissionPrisma.ref,
             providerName: prestataire.nomEntreprise || prestataire.nomContact,
             montantAvance: solde, // C'est le solde, pas l'avance, mais on réutilise le template
-            serviceType: mission.serviceType,
+            serviceType: updatedMissionPrisma.serviceType,
             platformUrl,
-            missionId: mission.id,
+            missionId: missionUuid, // Utiliser l'UUID
           },
           "fr"
         );
@@ -90,13 +107,11 @@ export async function POST(req: Request, { params }: RouteParams) {
       // Ne pas bloquer le paiement si l'email échoue
     }
 
-    await saveMissions();
-
     return NextResponse.json(
       {
         success: true,
         message: `Solde de $${solde.toFixed(2)} envoyé avec succès.`,
-        mission,
+        mission: updatedMission,
       },
       { status: 200 }
     );
