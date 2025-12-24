@@ -355,7 +355,18 @@ export async function createMission(data: Omit<Mission, "id">) {
           console.log(`[missionsRepo] ✅ Nouvelle ref générée: ${newRef}`);
           return createMissionWithRetry(newRef, attempt + 1, maxAttempts);
         } else {
-          // Si P2002 mais pas sur ref, on retry quand même une fois (peut être un autre champ)
+          // Si P2002 mais pas sur ref, vérifier si c'est un doublon (demandeId + prestataireId)
+          const isDuplicateError = 
+            (Array.isArray(constraintFields) && constraintFields.includes("demandeId") && constraintFields.includes("prestataireId")) ||
+            (errorMessage.includes("demandeId") && errorMessage.includes("prestataireId")) ||
+            (errorMessage.includes("unique_mission_demande_prestataire"));
+          
+          if (isDuplicateError) {
+            console.error(`[missionsRepo] ❌ DOUBLON DÉTECTÉ: Mission existe déjà pour demandeId=${demandeIdStr} et prestataireId=${prestataireIdStr}`);
+            throw new Error(`Une mission existe déjà pour cette demande et ce prestataire. Doublon évité.`);
+          }
+          
+          // Si P2002 mais pas sur ref ni doublon, on retry quand même une fois (peut être un autre champ)
           console.warn(`[missionsRepo] ⚠️ P2002 mais pas clairement sur ref, retry quand même...`);
           await new Promise(resolve => setTimeout(resolve, 100 + Math.random() * 100));
           const { generateMissionRef } = await import("@/lib/missionRef");

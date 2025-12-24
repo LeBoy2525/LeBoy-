@@ -49,6 +49,15 @@ export async function POST(req: Request) {
       }
     }
 
+    // IMPORTANT: Dédupliquer les prestataires pour éviter les doublons
+    const prestataireIdsUnique = [...new Set(prestataireIdsArray)];
+    if (prestataireIdsUnique.length !== prestataireIdsArray.length) {
+      const duplicates = prestataireIdsArray.length - prestataireIdsUnique.length;
+      console.warn(`[${traceId}] ⚠️ ${duplicates} prestataire(s) dupliqué(s) détecté(s) et supprimé(s)`);
+      console.warn(`[${traceId}]   Avant déduplication: ${prestataireIdsArray.length}, Après: ${prestataireIdsUnique.length}`);
+    }
+    prestataireIdsArray = prestataireIdsUnique;
+
     if (prestataireIdsArray.length === 0) {
       console.error(`[${traceId}] ❌ Aucun prestataireId valide`);
       return NextResponse.json(
@@ -56,6 +65,8 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
+    
+    console.log(`[${traceId}] 📋 Liste prestataires (après déduplication): ${prestataireIdsArray.length} prestataire(s) unique(s)`);
 
     // Validation sharedFiles (safe access)
     const safeSharedFiles: SharedFile[] = Array.isArray(sharedFiles) 
@@ -164,14 +175,18 @@ export async function POST(req: Request) {
         console.log(`[${traceId}] 📧 Email admin: ${userEmail}`);
         
         // Vérifier si une mission existe déjà pour cette demande et ce prestataire
+        // IMPORTANT: Vérifier AVANT de créer pour éviter les doublons
         const missionExists = await missionExistsForDemandeAndPrestataire(demandeIdUUID, prestataireIdUUID);
-        console.log(`[${traceId}] 🔍 Mission existe déjà? ${missionExists ? "OUI ⚠️" : "NON ✅"}`);
+        console.log(`[${traceId}] 🔍 Vérification doublon:`);
+        console.log(`[${traceId}]   - demandeId: ${demandeIdUUID}`);
+        console.log(`[${traceId}]   - prestataireId: ${prestataireIdUUID}`);
+        console.log(`[${traceId}]   - Mission existe déjà? ${missionExists ? "OUI ⚠️" : "NON ✅"}`);
         
         if (missionExists) {
-          const errorMsg = `Une mission existe déjà pour le prestataire UUID ${prestataireIdUUID}.`;
+          const errorMsg = `Une mission existe déjà pour cette demande et ce prestataire (UUID ${prestataireIdUUID}). Doublon évité.`;
           console.warn(`[${traceId}] ⚠️ ${errorMsg}`);
           errors.push(errorMsg);
-          continue;
+          continue; // Ne pas créer de doublon
         }
 
         // Récupérer le prestataire pour obtenir sa référence
@@ -203,23 +218,37 @@ export async function POST(req: Request) {
         console.log(`[${traceId}]   - dateLimiteProposition: ${dateLimiteProposition.toISOString()}`);
 
         // Créer la mission sans tarif (le tarif sera défini par le partenaire lors de son estimation)
-        const mission = await createMission({
-          demandeId: demandeIdUUID,
-          clientEmail: demande.email || 'unknown@example.com',
-          prestataireId: prestataireIdUUID,
-          prestataireRef: prestataire.ref || null,
-          titre: `${demande.serviceType} - ${demande.lieu || "Cameroun"}`,
-          description: demande.description || '',
-          serviceType: demande.serviceType,
-          lieu: demande.lieu || undefined,
-          urgence: demande.urgence || 'normale',
-          budget: demande.budget ? parseFloat(String(demande.budget)) : undefined,
-          tarifPrestataire: 0, // Sera défini lors de l'estimation du partenaire
-          commissionICD: 0, // Sera défini lors de la génération du devis
-          tarifTotal: 0, // Sera calculé lors de la génération du devis
-          dateAssignation: dateAssignation.toISOString(),
-          dateLimiteProposition: dateLimiteProposition.toISOString(),
-        });
+        let mission;
+        try {
+          mission = await createMission({
+            demandeId: demandeIdUUID,
+            clientEmail: demande.email || 'unknown@example.com',
+            prestataireId: prestataireIdUUID,
+            prestataireRef: prestataire.ref || null,
+            titre: `${demande.serviceType} - ${demande.lieu || "Cameroun"}`,
+            description: demande.description || '',
+            serviceType: demande.serviceType,
+            lieu: demande.lieu || undefined,
+            urgence: demande.urgence || 'normale',
+            budget: demande.budget ? parseFloat(String(demande.budget)) : undefined,
+            tarifPrestataire: 0, // Sera défini lors de l'estimation du partenaire
+            commissionICD: 0, // Sera défini lors de la génération du devis
+            tarifTotal: 0, // Sera calculé lors de la génération du devis
+            dateAssignation: dateAssignation.toISOString(),
+            dateLimiteProposition: dateLimiteProposition.toISOString(),
+          });
+        } catch (createError: any) {
+          // Détecter les erreurs de doublon
+          const errorMsg = String(createError?.message || "");
+          if (errorMsg.includes("Une mission existe déjà") || errorMsg.includes("Doublon évité")) {
+            const duplicateMsg = `Doublon détecté pour prestataire UUID ${prestataireIdUUID}: ${errorMsg}`;
+            console.warn(`[${traceId}] ⚠️ ${duplicateMsg}`);
+            errors.push(duplicateMsg);
+            continue; // Ne pas créer de doublon
+          }
+          // Propager les autres erreurs
+          throw createError;
+        }
 
         // Extraire dbId (UUID Prisma) immédiatement après création
         const dbMissionId = (mission as any).dbId;

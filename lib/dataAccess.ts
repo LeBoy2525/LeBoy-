@@ -1457,7 +1457,14 @@ export async function createMission(
       
       // conserver l'UUID Prisma pour toutes les opérations DB (update/findUnique)
       return { ...(json as any), dbId: mission.id };
-    } catch (error) {
+    } catch (error: any) {
+      // Détecter les erreurs de doublon spécifiquement
+      const errorMessage = String(error?.message || "");
+      if (errorMessage.includes("Une mission existe déjà") || errorMessage.includes("Doublon évité")) {
+        console.error(`[createMission] ❌ DOUBLON DÉTECTÉ: ${errorMessage}`);
+        throw error; // Propager l'erreur de doublon telle quelle
+      }
+      
       logPrismaError("createMission", error, { context: "DB" });
       // IMPORTANT: Ne pas fallback JSON - si Prisma échoue, l'API doit répondre avec une erreur réelle
       throw error;
