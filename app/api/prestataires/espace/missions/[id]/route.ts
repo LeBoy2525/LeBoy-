@@ -5,7 +5,7 @@ import { getMissionById } from "@/repositories/missionsRepo";
 import { convertPrismaMissionToJSON } from "@/lib/dataAccess";
 
 type RouteParams = {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 };
 
 const UUID_REGEX =
@@ -20,11 +20,22 @@ export async function GET(_req: Request, { params }: RouteParams) {
       return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
     }
 
-    const missionUuid = params.id;
+    const resolvedParams = await params;
+    const missionUuid = resolvedParams.id;
 
-    if (!missionUuid || typeof missionUuid !== "string" || !UUID_REGEX.test(missionUuid)) {
+    console.log(`[GET /api/prestataires/espace/missions/[id]] Mission UUID reçu: ${missionUuid} (type: ${typeof missionUuid})`);
+    
+    if (!missionUuid || typeof missionUuid !== "string") {
+      console.error(`[GET /api/prestataires/espace/missions/[id]] ❌ UUID manquant ou type invalide: ${missionUuid}`);
       return NextResponse.json({ error: "UUID invalide." }, { status: 400 });
     }
+    
+    if (!UUID_REGEX.test(missionUuid)) {
+      console.error(`[GET /api/prestataires/espace/missions/[id]] ❌ UUID ne correspond pas au format attendu: ${missionUuid}`);
+      return NextResponse.json({ error: "UUID invalide." }, { status: 400 });
+    }
+    
+    console.log(`[GET /api/prestataires/espace/missions/[id]] ✅ UUID valide: ${missionUuid}`);
 
     // 1) Mission UUID direct
     const missionPrisma = await getMissionById(missionUuid);
