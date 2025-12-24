@@ -12,6 +12,7 @@ interface MissionChatProps {
   lang?: "fr" | "en";
   initialRecipient?: "client" | "prestataire"; // Destinataire initial pour l'admin
   autoOpen?: boolean; // Ouvrir automatiquement le chat
+  onClose?: () => void; // Callback appelé quand le chat se ferme
 }
 
 const TEXT = {
@@ -57,7 +58,7 @@ const TEXT = {
   },
 } as const;
 
-export function MissionChat({ mission, currentUserEmail, currentUserRole, lang = "fr", initialRecipient, autoOpen = false }: MissionChatProps) {
+export function MissionChat({ mission, currentUserEmail, currentUserRole, lang = "fr", initialRecipient, autoOpen = false, onClose }: MissionChatProps) {
   const t = TEXT[lang];
   const [messages, setMessages] = useState<Message[]>(mission.messages || []);
   const [newMessage, setNewMessage] = useState("");
@@ -214,7 +215,10 @@ export function MissionChat({ mission, currentUserEmail, currentUserRole, lang =
             </p>
           </div>
           <button
-            onClick={() => setShowChat(false)}
+            onClick={() => {
+              setShowChat(false);
+              if (onClose) onClose();
+            }}
             className="text-[#6B7280] hover:text-[#0A1B2A] text-2xl leading-none"
           >
             <X className="w-5 h-5" />

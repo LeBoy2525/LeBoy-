@@ -613,17 +613,15 @@ export function ProviderEstimationView({
 
       {/* Chat modal */}
       {showChat && currentUserEmail && (
-        <>
-          <MissionChat
-            mission={mission}
-            currentUserEmail={currentUserEmail}
-            currentUserRole="admin"
-            lang={lang}
-            initialRecipient="prestataire"
-            autoOpen={true}
-          />
-          {/* Le chat se ferme via le bouton X dans MissionChat */}
-        </>
+        <MissionChat
+          mission={mission}
+          currentUserEmail={currentUserEmail}
+          currentUserRole="admin"
+          lang={lang}
+          initialRecipient="prestataire"
+          autoOpen={true}
+          onClose={() => setShowChat(false)}
+        />
       )}
     </div>
   );
