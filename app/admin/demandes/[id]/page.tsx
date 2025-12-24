@@ -729,6 +729,21 @@ export default function AdminDemandeDetailPage() {
                   >
                     {demande.email}
                   </a>
+                  {currentUserEmail && (() => {
+                    // Trouver une mission pour cette demande pour le chat
+                    const missionForChat = missions.find(m => m.demandeId === demande?.id);
+                    if (!missionForChat) return null;
+                    return (
+                      <button
+                        onClick={() => setChatMissionId(missionForChat.id)}
+                        className="ml-2 inline-flex items-center gap-1 px-2 py-1 bg-[#C8A55F] text-white text-xs font-semibold rounded-md hover:bg-[#B8944F] transition"
+                        title={lang === "fr" ? "Écrire au client" : "Write to client"}
+                      >
+                        <Send className="w-3 h-3" />
+                        {lang === "fr" ? "Chat" : "Chat"}
+                      </button>
+                    );
+                  })()}
                 </div>
                 <div className="flex items-center gap-2">
                   <Phone className="w-4 h-4 text-[#6B7280]" />
@@ -1080,12 +1095,13 @@ export default function AdminDemandeDetailPage() {
 
                     {/* Chat/Communication */}
                     {currentUserEmail && (
-                      <div className="pt-2 border-t border-[#E2E2E8]">
+                      <div className="pt-2 border-t border-[#E2E2E8]" data-chat-mission={mission.id}>
                         <MissionChat
                           mission={mission}
                           currentUserEmail={currentUserEmail}
                           currentUserRole="admin"
                           lang={lang}
+                          initialRecipient={mission.prestataireId ? "prestataire" : "client"}
                         />
                       </div>
                     )}

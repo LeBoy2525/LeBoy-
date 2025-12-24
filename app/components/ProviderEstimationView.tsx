@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { Calculator, CheckCircle2, X } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Calculator, CheckCircle2, X, MessageSquare } from "lucide-react";
 import type { Mission } from "@/lib/types";
+import { MissionChat } from "./MissionChat";
 
 interface ProviderEstimationViewProps {
   mission: Mission;
@@ -76,6 +77,24 @@ export function ProviderEstimationView({
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [devisSent, setDevisSent] = useState(false); // État pour masquer immédiatement après envoi
+  const [showChat, setShowChat] = useState(false);
+  const [currentUserEmail, setCurrentUserEmail] = useState<string>("");
+
+  // Charger l'email de l'utilisateur (admin)
+  useEffect(() => {
+    async function fetchUserEmail() {
+      try {
+        const res = await fetch("/api/auth/me", { cache: "no-store" });
+        if (res.ok) {
+          const data = await res.json();
+          setCurrentUserEmail(data.user?.email || "");
+        }
+      } catch (err) {
+        console.error("Erreur chargement email utilisateur:", err);
+      }
+    }
+    fetchUserEmail();
+  }, []);
   
   // Paiement échelonné
   const [paymentType, setPaymentType] = useState<"total" | "echelonne">("total");
@@ -245,15 +264,28 @@ export function ProviderEstimationView({
         <h3 className="font-heading text-lg font-semibold text-blue-900">
           {t.title}
         </h3>
-        {!showApplyFees && (
-          <button
-            onClick={() => setShowApplyFees(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-[#D4A657] text-white text-sm font-semibold rounded-md hover:bg-[#B8944F] transition"
-          >
-            <Calculator className="w-4 h-4" />
-            {t.appliquerFraisICD}
-          </button>
-        )}
+        <div className="flex gap-2">
+          {/* Bouton Chat */}
+          {currentUserEmail && !showApplyFees && (
+            <button
+              onClick={() => setShowChat(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-[#C8A55F] text-white text-sm font-semibold rounded-md hover:bg-[#B8944F] transition"
+              title={lang === "fr" ? "Écrire au prestataire" : "Write to provider"}
+            >
+              <MessageSquare className="w-4 h-4" />
+              {lang === "fr" ? "Chat" : "Chat"}
+            </button>
+          )}
+          {!showApplyFees && (
+            <button
+              onClick={() => setShowApplyFees(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-[#D4A657] text-white text-sm font-semibold rounded-md hover:bg-[#B8944F] transition"
+            >
+              <Calculator className="w-4 h-4" />
+              {t.appliquerFraisICD}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Affichage de l'estimation */}
@@ -577,6 +609,18 @@ export function ProviderEstimationView({
             </div>
           )}
         </div>
+      )}
+
+      {/* Chat modal */}
+      {showChat && currentUserEmail && (
+        <MissionChat
+          mission={mission}
+          currentUserEmail={currentUserEmail}
+          currentUserRole="admin"
+          lang={lang}
+          initialRecipient="prestataire"
+          autoOpen={true}
+        />
       )}
     </div>
   );

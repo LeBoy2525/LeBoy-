@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { CheckCircle2, Trophy, X } from "lucide-react";
+import { CheckCircle2, Trophy, X, MessageSquare } from "lucide-react";
 import type { Mission } from "@/lib/types";
+import { MissionChat } from "./MissionChat";
 
 interface Prestataire {
   id: string;
@@ -53,6 +54,8 @@ function WinnerSelectionView({
   const [selectedMissionId, setSelectedMissionId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [prestataires, setPrestataires] = useState<Map<string, Prestataire>>(new Map());
+  const [chatMissionId, setChatMissionId] = useState<string | null>(null);
+  const [currentUserEmail, setCurrentUserEmail] = useState<string>("");
 
   // Filtrer les missions avec des estimations VALIDES (double vérification)
   const missionsWithEstimations = missions.filter(
@@ -64,6 +67,22 @@ function WinnerSelectionView({
       m.estimationPartenaire.prixFournisseur && // L'estimation doit avoir un prix valide
       !m.devisGenere // Le devis ne doit pas encore être généré
   );
+
+  // Charger l'email de l'utilisateur (admin)
+  useEffect(() => {
+    async function fetchUserEmail() {
+      try {
+        const res = await fetch("/api/auth/me", { cache: "no-store" });
+        if (res.ok) {
+          const data = await res.json();
+          setCurrentUserEmail(data.user?.email || "");
+        }
+      } catch (err) {
+        console.error("Erreur chargement email utilisateur:", err);
+      }
+    }
+    fetchUserEmail();
+  }, []);
 
   // Charger les informations des prestataires
   useEffect(() => {
@@ -251,36 +270,67 @@ function WinnerSelectionView({
                   )}
                 </div>
 
-                <button
-                  onClick={() => handleSelectWinner(mission.id)}
-                  disabled={submitting || isSelected || devisGenere}
-                  className={`px-4 py-2 rounded-md text-sm font-semibold transition-all ${
-                    isSelected
-                      ? "bg-[#D4A657] text-white cursor-default"
-                      : submitting || devisGenere
-                      ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                      : "bg-[#0A1B2A] text-white hover:bg-[#07121e]"
-                  }`}
-                >
-                  {submitting && selectedMissionId === mission.id ? (
-                    <span className="flex items-center gap-2">
-                      <span className="animate-spin">⏳</span>
-                      {t.selectionEnCours}
-                    </span>
-                  ) : isSelected ? (
-                    <span className="flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4" />
-                      {lang === "fr" ? "Sélectionné" : "Selected"}
-                    </span>
-                  ) : (
-                    t.selectionner
+                <div className="flex gap-2">
+                  {/* Bouton Chat */}
+                  {currentUserEmail && (
+                    <button
+                      onClick={() => setChatMissionId(mission.id)}
+                      className="px-3 py-2 rounded-md text-sm font-semibold transition-all bg-[#C8A55F] text-white hover:bg-[#B8944F] flex items-center gap-2"
+                      title={lang === "fr" ? "Écrire au prestataire" : "Write to provider"}
+                    >
+                      <MessageSquare className="w-4 h-4" />
+                      {lang === "fr" ? "Chat" : "Chat"}
+                    </button>
                   )}
-                </button>
+                  
+                  {/* Bouton Sélectionner */}
+                  <button
+                    onClick={() => handleSelectWinner(mission.id)}
+                    disabled={submitting || isSelected || devisGenere}
+                    className={`px-4 py-2 rounded-md text-sm font-semibold transition-all ${
+                      isSelected
+                        ? "bg-[#D4A657] text-white cursor-default"
+                        : submitting || devisGenere
+                        ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                        : "bg-[#0A1B2A] text-white hover:bg-[#07121e]"
+                    }`}
+                  >
+                    {submitting && selectedMissionId === mission.id ? (
+                      <span className="flex items-center gap-2">
+                        <span className="animate-spin">⏳</span>
+                        {t.selectionEnCours}
+                      </span>
+                    ) : isSelected ? (
+                      <span className="flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4" />
+                        {lang === "fr" ? "Sélectionné" : "Selected"}
+                      </span>
+                    ) : (
+                      t.selectionner
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
           );
         })}
       </div>
+
+      {/* Chat modal pour le prestataire sélectionné */}
+      {chatMissionId && currentUserEmail && (() => {
+        const missionForChat = missionsWithEstimations.find(m => m.id === chatMissionId);
+        if (!missionForChat) return null;
+        return (
+          <MissionChat
+            mission={missionForChat}
+            currentUserEmail={currentUserEmail}
+            currentUserRole="admin"
+            lang={lang}
+            initialRecipient="prestataire"
+            autoOpen={true}
+          />
+        );
+      })()}
     </div>
   );
 }

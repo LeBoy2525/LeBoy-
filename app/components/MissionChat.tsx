@@ -10,6 +10,8 @@ interface MissionChatProps {
   currentUserEmail: string;
   currentUserRole: "client" | "prestataire" | "admin";
   lang?: "fr" | "en";
+  initialRecipient?: "client" | "prestataire"; // Destinataire initial pour l'admin
+  autoOpen?: boolean; // Ouvrir automatiquement le chat
 }
 
 const TEXT = {
@@ -55,17 +57,20 @@ const TEXT = {
   },
 } as const;
 
-export function MissionChat({ mission, currentUserEmail, currentUserRole, lang = "fr" }: MissionChatProps) {
+export function MissionChat({ mission, currentUserEmail, currentUserRole, lang = "fr", initialRecipient, autoOpen = false }: MissionChatProps) {
   const t = TEXT[lang];
   const [messages, setMessages] = useState<Message[]>(mission.messages || []);
   const [newMessage, setNewMessage] = useState("");
   const [messageType, setMessageType] = useState<"chat" | "email">("chat");
   const [sending, setSending] = useState(false);
-  const [showChat, setShowChat] = useState(false);
+  const [showChat, setShowChat] = useState(autoOpen);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   // Pour l'admin : choisir le destinataire (client ou prestataire)
-  const [adminRecipient, setAdminRecipient] = useState<"client" | "prestataire">("client");
+  // Utiliser initialRecipient si fourni, sinon "client" par défaut
+  const [adminRecipient, setAdminRecipient] = useState<"client" | "prestataire">(
+    initialRecipient || "client"
+  );
 
   // Charger les messages périodiquement
   useEffect(() => {
