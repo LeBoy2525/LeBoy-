@@ -26,20 +26,42 @@ export function VersionChecker() {
       checkVersion();
     }, 1000);
 
-    // Vérifier la version toutes les 60 secondes (1 minute)
+    // Vérifier la version toutes les 30 secondes (plus fréquent pour desktop)
     const interval = setInterval(() => {
       checkVersion();
-    }, 60000);
+    }, 30000);
+
+    // Vérifier immédiatement quand l'utilisateur revient sur l'onglet (important pour desktop)
+    const handleFocus = () => {
+      console.log("[VersionChecker] 👁️ Fenêtre focalisée - vérification version");
+      checkVersion();
+    };
+
+    // Vérifier quand l'onglet redevient visible (important pour desktop avec plusieurs onglets)
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        console.log("[VersionChecker] 👁️ Onglet visible - vérification version");
+        checkVersion();
+      }
+    };
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
       clearTimeout(initialDelay);
       clearInterval(interval);
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, []);
 
   async function checkVersion() {
     // Ne pas vérifier si une notification est déjà affichée
-    if (showReload || isChecking) return;
+    if (showReload || isChecking) {
+      console.log(`[VersionChecker] ⏭️ Vérification ignorée (showReload: ${showReload}, isChecking: ${isChecking})`);
+      return;
+    }
 
     try {
       setIsChecking(true);
@@ -67,7 +89,7 @@ export function VersionChecker() {
       const currentDeploymentId = localStorage.getItem("app_deployment_id");
       const currentBuildTime = localStorage.getItem("app_build_time");
 
-      console.log(`[VersionChecker] 🔍 Vérification version:`, {
+      console.log(`[VersionChecker] 🔍 Vérification version (${new Date().toLocaleTimeString()}):`, {
         versionServeur: data.version,
         versionLocale: currentVersion || "première visite",
         commitShaServeur: data.sources?.commitSha,
@@ -77,6 +99,7 @@ export function VersionChecker() {
         buildTimeServeur: data.sources?.buildTime,
         buildTimeLocale: currentBuildTime,
         timestamp: data.timestamp,
+        lastCheckTime: lastCheckTime ? new Date(parseInt(lastCheckTime)).toLocaleTimeString() : "jamais",
       });
 
       // Si c'est la première visite, sauvegarder toutes les informations de version
