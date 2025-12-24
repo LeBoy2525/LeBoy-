@@ -68,9 +68,18 @@ export async function POST(req: Request, { params }: RouteParams) {
       );
     }
 
+    // Vérifier que la mission a vraiment une estimation soumise
     if (mission.internalState !== "PROVIDER_ESTIMATED") {
       return NextResponse.json(
         { error: "La mission doit avoir une estimation pour être sélectionnée." },
+        { status: 400 }
+      );
+    }
+    
+    // Vérifier que l'estimation existe vraiment (double vérification)
+    if (!mission.estimationPartenaire || !mission.estimationPartenaire.prixFournisseur) {
+      return NextResponse.json(
+        { error: "Cette mission n'a pas d'estimation valide. Seules les missions avec estimation soumise peuvent être sélectionnées." },
         { status: 400 }
       );
     }
@@ -133,8 +142,8 @@ export async function POST(req: Request, { params }: RouteParams) {
       (p) => p.prestataireId === mission.prestataireId
     );
 
-    // Si la proposition n'existe pas, la créer
-    if (!winningProposition && mission.prestataireId && mission.estimationPartenaire) {
+    // Si la proposition n'existe pas, la créer (seulement si l'estimation existe vraiment)
+    if (!winningProposition && mission.prestataireId && mission.estimationPartenaire && mission.estimationPartenaire.prixFournisseur) {
       await createProposition({
         demandeId: demandeId,
         prestataireId: mission.prestataireId,
@@ -146,6 +155,12 @@ export async function POST(req: Request, { params }: RouteParams) {
       propositions = await getPropositionsByDemandeId(demandeId);
       winningProposition = propositions.find(
         (p) => p.prestataireId === mission.prestataireId
+      );
+    } else if (!winningProposition) {
+      // Si on ne peut pas créer la proposition car pas d'estimation, erreur
+      return NextResponse.json(
+        { error: "Impossible de créer la proposition : la mission n'a pas d'estimation valide." },
+        { status: 400 }
       );
     }
 

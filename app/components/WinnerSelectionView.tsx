@@ -54,9 +54,15 @@ function WinnerSelectionView({
   const [submitting, setSubmitting] = useState(false);
   const [prestataires, setPrestataires] = useState<Map<string, Prestataire>>(new Map());
 
-  // Filtrer les missions avec des estimations
+  // Filtrer les missions avec des estimations VALIDES (double vérification)
   const missionsWithEstimations = missions.filter(
-    (m) => m.internalState === "PROVIDER_ESTIMATED" && m.estimationPartenaire && !m.devisGenere
+    (m) => 
+      !m.archived && // Ne pas inclure les missions archivées
+      !m.deleted && // Ne pas inclure les missions supprimées
+      m.internalState === "PROVIDER_ESTIMATED" && // Doit avoir soumis une estimation
+      m.estimationPartenaire && // L'estimation doit exister
+      m.estimationPartenaire.prixFournisseur && // L'estimation doit avoir un prix valide
+      !m.devisGenere // Le devis ne doit pas encore être généré
   );
 
   // Charger les informations des prestataires

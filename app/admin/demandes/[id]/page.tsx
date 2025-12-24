@@ -843,17 +843,20 @@ export default function AdminDemandeDetailPage() {
                   {/* Afficher les missions */}
                   {missions
                     .filter((mission: Mission) => {
-                      // Exclure les missions archivées ou supprimées
+                      // Exclure TOUJOURS les missions archivées ou supprimées (priorité absolue)
                       if (mission.archived || mission.deleted) {
                         return false;
                       }
                       
-                      // Si un gagnant a été sélectionné, masquer toutes les missions avec estimations sauf la gagnante
+                      // Si un gagnant a été sélectionné, masquer toutes les missions non gagnantes
+                      // Les missions non gagnantes sont archivées, donc déjà filtrées ci-dessus
+                      // Mais on double-vérifie pour éviter toute confusion
                       if (winningMission) {
+                        // Si c'est une mission avec estimation, ne montrer que la gagnante
                         if (mission.internalState === "PROVIDER_ESTIMATED") {
                           return mission.id === winningMission.id;
                         }
-                        // Afficher les autres missions qui ne sont pas en PROVIDER_ESTIMATED
+                        // Afficher les autres missions qui ne sont pas en PROVIDER_ESTIMATED (missions en cours, etc.)
                         return true;
                       }
                       // Si on attend la sélection, masquer toutes les missions avec estimations (elles seront dans WinnerSelectionView)
