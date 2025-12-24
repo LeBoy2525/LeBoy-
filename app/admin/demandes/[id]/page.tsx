@@ -1096,13 +1096,23 @@ export default function AdminDemandeDetailPage() {
 
                     {/* Chat/Communication */}
                     {currentUserEmail && (
-                      <div className="pt-2 border-t border-[#E2E2E8]" data-chat-mission={mission.id}>
+                      <div className="pt-2 border-t border-[#E2E2E8]">
                         <MissionChat
                           mission={mission}
                           currentUserEmail={currentUserEmail}
                           currentUserRole="admin"
                           lang={lang}
-                          initialRecipient={mission.prestataireId ? "prestataire" : "client"}
+                          initialRecipient={
+                            chatMissionId === mission.id 
+                              ? "client" // Si ouvert depuis coordonnées, destinataire = client
+                              : (mission.prestataireId ? "prestataire" : "client")
+                          }
+                          autoOpen={chatMissionId === mission.id}
+                          onClose={() => {
+                            if (chatMissionId === mission.id) {
+                              setChatMissionId(null);
+                            }
+                          }}
                         />
                       </div>
                     )}
