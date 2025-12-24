@@ -84,10 +84,18 @@ export async function POST(req: Request, { params }: RouteParams) {
       );
     }
     
-    // Récupérer la demande et toutes les missions en parallèle
+    // Récupérer la demande et toutes les missions en parallèle (INCLURE les archivées pour pouvoir les archiver)
     const [demande, allMissionsForDemandeRaw] = await Promise.all([
       getDemandeById(demandeId),
-      getMissionsByDemandeId(demandeId),
+      (async () => {
+        // Pour la sélection du gagnant, on doit récupérer TOUTES les missions (y compris archivées)
+        // pour pouvoir archiver celles qui ne sont pas gagnantes
+        const { getMissionsByDemandeId: getMissionsByDemandeIdDB } = await import("@/repositories/missionsRepo");
+        return await getMissionsByDemandeIdDB(demandeId, true); // includeArchived = true
+      })().then(missions => missions.map((m: any) => {
+        const { convertPrismaMissionToJSON } = require("@/lib/dataAccess");
+        return convertPrismaMissionToJSON(m);
+      })),
     ]);
 
     if (!demande) {

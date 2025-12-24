@@ -161,14 +161,21 @@ export async function getMissionsByPrestataire(prestataireId: string) {
   return missions;
 }
 
-export async function getMissionsByDemandeId(demandeId: string) {
+export async function getMissionsByDemandeId(demandeId: string, includeArchived: boolean = false) {
   const db = ensurePrisma();
   return withRetry(async () => {
+    const whereClause: any = {
+      demandeId,
+      deleted: false,
+    };
+    
+    // Exclure les missions archivées sauf si explicitement demandé
+    if (!includeArchived) {
+      whereClause.archived = false;
+    }
+    
     return db.mission.findMany({
-      where: {
-        demandeId,
-        deleted: false,
-      },
+      where: whereClause,
       orderBy: {
         createdAt: "desc",
       },
