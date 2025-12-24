@@ -61,25 +61,49 @@ export function VersionChecker() {
       const data = await res.json();
       const currentVersion = localStorage.getItem("app_version");
       const lastCheckTime = localStorage.getItem("app_version_check_time");
+      
+      // Utiliser aussi les sources détaillées pour une comparaison plus robuste
+      const currentCommitSha = localStorage.getItem("app_commit_sha");
+      const currentDeploymentId = localStorage.getItem("app_deployment_id");
+      const currentBuildTime = localStorage.getItem("app_build_time");
 
       console.log(`[VersionChecker] 🔍 Vérification version:`, {
         versionServeur: data.version,
         versionLocale: currentVersion || "première visite",
+        commitShaServeur: data.sources?.commitSha,
+        commitShaLocale: currentCommitSha,
+        deploymentIdServeur: data.sources?.deploymentId,
+        deploymentIdLocale: currentDeploymentId,
+        buildTimeServeur: data.sources?.buildTime,
+        buildTimeLocale: currentBuildTime,
         timestamp: data.timestamp,
-        sources: data.sources,
       });
 
-      // Si c'est la première visite, sauvegarder la version actuelle
+      // Si c'est la première visite, sauvegarder toutes les informations de version
       if (!currentVersion) {
         console.log(`[VersionChecker] ✅ Première visite - sauvegarde version: ${data.version}`);
         localStorage.setItem("app_version", data.version);
         localStorage.setItem("app_version_check_time", Date.now().toString());
+        if (data.sources?.commitSha) localStorage.setItem("app_commit_sha", data.sources.commitSha);
+        if (data.sources?.deploymentId) localStorage.setItem("app_deployment_id", data.sources.deploymentId);
+        if (data.sources?.buildTime) localStorage.setItem("app_build_time", data.sources.buildTime);
         return;
       }
 
-      // Si la version a changé, afficher la notification
-      if (currentVersion !== data.version) {
-        console.log(`[VersionChecker] 🔄 Nouvelle version détectée: ${currentVersion} → ${data.version}`);
+      // Comparer la version principale ET les sources détaillées pour une détection plus fiable
+      const versionChanged = currentVersion !== data.version;
+      const commitShaChanged = data.sources?.commitSha && currentCommitSha !== data.sources.commitSha;
+      const deploymentIdChanged = data.sources?.deploymentId && currentDeploymentId !== data.sources.deploymentId;
+      const buildTimeChanged = data.sources?.buildTime && currentBuildTime !== data.sources.buildTime;
+
+      // Si la version ou une des sources a changé, afficher la notification
+      if (versionChanged || commitShaChanged || deploymentIdChanged || buildTimeChanged) {
+        console.log(`[VersionChecker] 🔄 Nouvelle version détectée:`, {
+          version: `${currentVersion} → ${data.version}`,
+          commitSha: commitShaChanged ? `${currentCommitSha} → ${data.sources?.commitSha}` : "identique",
+          deploymentId: deploymentIdChanged ? `${currentDeploymentId} → ${data.sources?.deploymentId}` : "identique",
+          buildTime: buildTimeChanged ? `${currentBuildTime} → ${data.sources?.buildTime}` : "identique",
+        });
         setShowReload(true);
       } else {
         console.log(`[VersionChecker] ✅ Version à jour: ${data.version}`);
@@ -93,12 +117,15 @@ export function VersionChecker() {
 
   function handleReload() {
     // Sauvegarder la nouvelle version avant de recharger
-    fetch("/api/version")
+    fetch("/api/version?t=" + Date.now(), { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
         localStorage.setItem("app_version", data.version);
         localStorage.setItem("app_version_check_time", Date.now().toString());
-        // Recharger la page
+        if (data.sources?.commitSha) localStorage.setItem("app_commit_sha", data.sources.commitSha);
+        if (data.sources?.deploymentId) localStorage.setItem("app_deployment_id", data.sources.deploymentId);
+        if (data.sources?.buildTime) localStorage.setItem("app_build_time", data.sources.buildTime);
+        // Recharger la page avec un paramètre pour éviter le cache
         window.location.reload();
       })
       .catch(() => {
@@ -109,11 +136,14 @@ export function VersionChecker() {
 
   function handleDismiss() {
     // Mettre à jour la version sans recharger (l'utilisateur rechargera plus tard)
-    fetch("/api/version")
+    fetch("/api/version?t=" + Date.now(), { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
         localStorage.setItem("app_version", data.version);
         localStorage.setItem("app_version_check_time", Date.now().toString());
+        if (data.sources?.commitSha) localStorage.setItem("app_commit_sha", data.sources.commitSha);
+        if (data.sources?.deploymentId) localStorage.setItem("app_deployment_id", data.sources.deploymentId);
+        if (data.sources?.buildTime) localStorage.setItem("app_build_time", data.sources.buildTime);
         setShowReload(false);
       })
       .catch(() => {
