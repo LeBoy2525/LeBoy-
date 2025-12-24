@@ -166,6 +166,7 @@ export default function AdminDemandeDetailPage() {
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const [missions, setMissions] = useState<any[]>([]);
   const [currentUserEmail, setCurrentUserEmail] = useState<string>("");
+  const [chatMissionId, setChatMissionId] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [showModificationModal, setShowModificationModal] = useState(false);
