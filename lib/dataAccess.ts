@@ -1496,7 +1496,13 @@ export function convertPrismaMissionToJSON(mission: any): Mission {
     prestataireId: prestataireId, // UUID directement ou null
     prestataireRef: nullToUndef(mission.prestataireRef),
     internalState: mission.internalState as any,
-    status: mission.status as any,
+    // Toujours calculer le status à partir de internalState (source de vérité)
+    // Le status dans la DB peut être obsolète, donc on le recalcule systématiquement
+    status: (() => {
+      const { mapInternalStateToStatus } = require("./types");
+      const internalState = mission.internalState || "CREATED";
+      return mapInternalStateToStatus(internalState);
+    })(),
     dateAssignation: mission.dateAssignation?.toISOString(),
     dateLimiteProposition: mission.dateLimiteProposition?.toISOString(),
     dateAcceptation: mission.dateAcceptation?.toISOString(),

@@ -190,11 +190,11 @@ export function DemandeAssignmentStatus({
     return null;
   }
   
-  // Récupérer le prestataire correspondant à cette mission
+  // Récupérer le prestataire correspondant à cette mission (comparaison UUID)
   const prestataire = prestataires.find(p => {
-    // Convertir l'ID du prestataire pour comparaison (peut être string ou number)
-    const prestataireId = typeof p.id === 'string' ? parseInt(p.id) : p.id;
-    const missionPrestataireId = typeof mission.prestataireId === 'string' ? parseInt(mission.prestataireId) : mission.prestataireId;
+    // Comparer directement les UUIDs (string)
+    const prestataireId = typeof p.id === 'string' ? p.id : String(p.id);
+    const missionPrestataireId = typeof mission.prestataireId === 'string' ? mission.prestataireId : String(mission.prestataireId);
     return prestataireId === missionPrestataireId;
   }) || prestataires[0];
   
@@ -278,18 +278,35 @@ export function DemandeAssignmentStatus({
 
   // Mission avec devis généré (WAITING_CLIENT_PAYMENT) ou état ultérieur - Prestataire assigné définitivement
   // Note: PROVIDER_VALIDATION_SUBMITTED, PAID_WAITING_TAKEOVER, PROVIDER_ESTIMATED sont déjà gérés ci-dessus
-  const state = mission.internalState;
+  const state = mission.internalState || "CREATED";
+  const missionStatus = mission.status || (() => {
+    // Si le status n'est pas défini, le calculer à partir de internalState
+    const { mapInternalStateToStatus } = require("@/lib/types");
+    return mapInternalStateToStatus(state);
+  })();
+  
   if (state === "WAITING_CLIENT_PAYMENT" || 
       state === "ADVANCE_SENT" ||
       state === "IN_PROGRESS" ||
       state === "ADMIN_CONFIRMED" ||
-      state === "COMPLETED") {
+      state === "COMPLETED" ||
+      missionStatus === "en_attente_paiement_client" ||
+      missionStatus === "avance_versee_partenaire" ||
+      missionStatus === "en_cours_partenaire" ||
+      missionStatus === "en_validation_quebec" ||
+      missionStatus === "termine_icd_canada" ||
+      missionStatus === "cloture") {
     return (
       <div className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-green-700 bg-green-50 border border-green-200 rounded-md">
         <CheckCircle className="w-3.5 h-3.5" />
         <span>
           {t.prestataireAssigne}: {prestataireNom}
         </span>
+        {state === "WAITING_CLIENT_PAYMENT" && (
+          <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-[10px]">
+            {lang === "fr" ? "En attente paiement" : "Waiting payment"}
+          </span>
+        )}
       </div>
     );
   }
@@ -306,11 +323,25 @@ export function DemandeAssignmentStatus({
     );
   }
 
-  // Par défaut, ne devrait pas arriver ici
+  // Debug: Afficher les informations de la mission pour diagnostiquer
+  console.warn("[DemandeAssignmentStatus] Statut inconnu pour mission:", {
+    id: mission.id,
+    ref: mission.ref,
+    internalState: mission.internalState,
+    status: mission.status,
+    devisGenere: mission.devisGenere,
+  });
+
+  // Par défaut, afficher le prestataire assigné même si le statut n'est pas reconnu
   return (
-    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-600 bg-gray-50 border border-gray-200 rounded-md">
-      <User className="w-3.5 h-3.5" />
-      <span>{lang === "fr" ? "Statut inconnu" : "Unknown status"}</span>
+    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-green-700 bg-green-50 border border-green-200 rounded-md">
+      <CheckCircle className="w-3.5 h-3.5" />
+      <span>
+        {t.prestataireAssigne}: {prestataireNom}
+      </span>
+      <span className="ml-2 px-2 py-0.5 bg-gray-100 text-gray-700 rounded-full text-[10px]">
+        {mission.internalState || mission.status || "N/A"}
+      </span>
     </div>
   );
 }
