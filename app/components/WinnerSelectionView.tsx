@@ -1,12 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { CheckCircle2, Trophy, X } from "lucide-react";
 import type { Mission } from "@/lib/types";
 
+interface Prestataire {
+  id: string;
+  nomEntreprise?: string;
+  nomContact?: string;
+  email: string;
+}
+
 interface WinnerSelectionViewProps {
   missions: Mission[];
-  demandeId: number;
+  demandeId: string;
   lang?: "fr" | "en";
   onWinnerSelected: () => void;
 }
@@ -43,13 +50,45 @@ function WinnerSelectionView({
   onWinnerSelected,
 }: WinnerSelectionViewProps) {
   const t = TEXT[lang];
-  const [selectedMissionId, setSelectedMissionId] = useState<number | null>(null);
+  const [selectedMissionId, setSelectedMissionId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [prestataires, setPrestataires] = useState<Map<string, Prestataire>>(new Map());
 
   // Filtrer les missions avec des estimations
   const missionsWithEstimations = missions.filter(
     (m) => m.internalState === "PROVIDER_ESTIMATED" && m.estimationPartenaire && !m.devisGenere
   );
+
+  // Charger les informations des prestataires
+  useEffect(() => {
+    async function fetchPrestataires() {
+      const prestatairesMap = new Map<string, Prestataire>();
+      
+      for (const mission of missionsWithEstimations) {
+        if (mission.prestataireId && !prestatairesMap.has(mission.prestataireId)) {
+          try {
+            const res = await fetch(`/api/prestataires/${mission.prestataireId}`, {
+              cache: "no-store",
+            });
+            if (res.ok) {
+              const data = await res.json();
+              if (data.prestataire) {
+                prestatairesMap.set(mission.prestataireId, data.prestataire);
+              }
+            }
+          } catch (err) {
+            console.error(`Erreur chargement prestataire ${mission.prestataireId}:`, err);
+          }
+        }
+      }
+      
+      setPrestataires(prestatairesMap);
+    }
+
+    if (missionsWithEstimations.length > 0) {
+      fetchPrestataires();
+    }
+  }, [missionsWithEstimations]);
   
   // Vérifier si un devis a déjà été généré pour une des missions
   const devisGenere = missions.some((m) => m.devisGenere);
@@ -75,7 +114,7 @@ function WinnerSelectionView({
     );
   }
 
-  const handleSelectWinner = async (missionId: number) => {
+  const handleSelectWinner = async (missionId: string) => {
     if (submitting || devisGenere) return;
 
     if (!confirm(lang === "fr" 
@@ -139,9 +178,25 @@ function WinnerSelectionView({
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
-                    <p className="font-semibold text-[#0A1B2A]">
-                      {mission.prestataireRef || `Mission ${mission.ref}`}
-                    </p>
+                    {(() => {
+                      const prestataire = mission.prestataireId ? prestataires.get(mission.prestataireId) : null;
+                      const prestataireName = prestataire 
+                        ? (prestataire.nomEntreprise || prestataire.nomContact || prestataire.email)
+                        : (mission.prestataireRef || `Mission ${mission.ref}`);
+                      
+                      return (
+                        <>
+                          <p className="font-semibold text-[#0A1B2A]">
+                            {prestataireName}
+                          </p>
+                          {mission.prestataireRef && (
+                            <span className="text-xs text-[#6B7280] font-mono">
+                              ({mission.prestataireRef})
+                            </span>
+                          )}
+                        </>
+                      );
+                    })()}
                     {isSelected && (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#D4A657] text-white text-xs font-semibold rounded-full">
                         <Trophy className="w-3 h-3" />

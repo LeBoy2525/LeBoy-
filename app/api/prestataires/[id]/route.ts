@@ -8,16 +8,18 @@ type RouteParams = {
 export async function GET(_req: Request, { params }: RouteParams) {
   try {
     const resolvedParams = await params;
-    const id = parseInt(resolvedParams.id);
-    
-    if (isNaN(id)) {
+    const prestataireUuid = resolvedParams.id;
+
+    // Validation UUID
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!prestataireUuid || typeof prestataireUuid !== "string" || !UUID_REGEX.test(prestataireUuid)) {
       return NextResponse.json(
-        { error: "ID invalide." },
+        { error: "UUID invalide." },
         { status: 400 }
       );
     }
 
-    const prestataire = await getPrestataireById(id);
+    const prestataire = await getPrestataireById(prestataireUuid);
     
     if (!prestataire) {
       return NextResponse.json(

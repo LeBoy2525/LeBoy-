@@ -817,7 +817,7 @@ export default function AdminDemandeDetailPage() {
                     <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                       <WinnerSelectionView
                         missions={missionsWithEstimations}
-                        demandeId={demande?.id || 0}
+                        demandeId={demande?.id || ""}
                         lang={lang}
                         onWinnerSelected={async () => {
                           // Recharger les missions et propositions
