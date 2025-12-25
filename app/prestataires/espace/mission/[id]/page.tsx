@@ -524,6 +524,12 @@ export default function MissionDetailPage() {
             <EstimationFormModal
               missionId={missionUuid || (mission as any)?.dbId || mission.id}
               lang={lang}
+              isRevision={mission.internalState === "PROVIDER_ESTIMATED" && !!mission.estimationPartenaire}
+              previousEstimation={mission.estimationPartenaire ? {
+                prixFournisseur: (mission.estimationPartenaire as any).prixFournisseur,
+                delaisEstimes: (mission.estimationPartenaire as any).delaisEstimes,
+                noteExplication: (mission.estimationPartenaire as any).noteExplication,
+              } : undefined}
               onClose={() => setShowEstimationModal(false)}
               onSuccess={async () => {
                 // Recharger la mission après soumission réussie
@@ -538,9 +544,10 @@ export default function MissionDetailPage() {
                     setMission(data.mission);
                   }
                 }
+                const isRevision = mission.internalState === "PROVIDER_ESTIMATED" && !!mission.estimationPartenaire;
                 alert(lang === "fr" 
-                  ? "✅ Estimation soumise avec succès !" 
-                  : "✅ Estimation submitted successfully!");
+                  ? (isRevision ? "✅ Estimation révisée avec succès !" : "✅ Estimation soumise avec succès !")
+                  : (isRevision ? "✅ Estimation revised successfully!" : "✅ Estimation submitted successfully!"));
               }}
             />
           )}

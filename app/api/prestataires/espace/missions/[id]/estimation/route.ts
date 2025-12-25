@@ -57,12 +57,19 @@ export async function POST(req: Request, { params }: RouteParams) {
       );
     }
 
-    // Vérifier que la mission est dans l'état ASSIGNED_TO_PROVIDER
-    if (mission.internalState !== "ASSIGNED_TO_PROVIDER") {
+    // Vérifier que la mission est dans l'état ASSIGNED_TO_PROVIDER ou PROVIDER_ESTIMATED (pour révision)
+    if (mission.internalState !== "ASSIGNED_TO_PROVIDER" && mission.internalState !== "PROVIDER_ESTIMATED") {
       return NextResponse.json(
-        { error: "La mission doit être assignée et en attente d'estimation pour soumettre une estimation." },
+        { error: "La mission doit être assignée et en attente d'estimation, ou avoir déjà une estimation pour permettre une révision." },
         { status: 400 }
       );
+    }
+    
+    // Si l'estimation existe déjà, vérifier qu'une révision est demandée
+    if (mission.internalState === "PROVIDER_ESTIMATED" && mission.estimationPartenaire) {
+      // Vérifier si une révision est demandée (via un message dans le chat ou un flag)
+      // Pour l'instant, on permet toujours la révision si l'état est PROVIDER_ESTIMATED
+      // L'admin peut demander une révision via le chat, et le prestataire peut réviser
     }
 
     const body = await req.json();
@@ -89,12 +96,20 @@ export async function POST(req: Request, { params }: RouteParams) {
     const now = new Date();
     
     // Préparer l'objet estimation
+    const isRevision = mission.internalState === "PROVIDER_ESTIMATED" && mission.estimationPartenaire;
+    
     const estimationPartenaire = {
       prixFournisseur: prixFournisseurNum,
       delaisEstimes: delaisEstimesNum,
       noteExplication: noteExplication || undefined,
       fraisExternes: fraisExternes ? parseFloat(String(fraisExternes)) : undefined,
       soumiseAt: now.toISOString(),
+      // Si c'est une révision, conserver l'historique
+      ...(isRevision ? {
+        previousEstimation: mission.estimationPartenaire,
+        revisionNumber: ((mission.estimationPartenaire as any)?.revisionNumber || 0) + 1,
+        revisedAt: now.toISOString(),
+      } : {}),
     };
 
     // Mettre à jour la mission via Prisma avec l'estimation et le tarif

@@ -406,6 +406,10 @@ function getNotificationSubject(type: string, lang: "fr" | "en"): string {
       fr: "Mission non retenue - LeBoy",
       en: "Mission not selected - LeBoy",
     },
+    "admin-message": {
+      fr: "Nouveau message de l'administrateur - LeBoy",
+      en: "New message from administrator - LeBoy",
+    },
   };
 
   return subjects[type]?.[lang] || "Notification LeBoy";
@@ -537,6 +541,27 @@ function getNotificationHTML(
         <p style="margin-top: 30px;">Nous vous remercions pour votre intérêt et votre participation. Nous espérons avoir l'occasion de collaborer avec vous sur de futures missions.</p>
         <p style="margin-top: 20px;">
           <a href="${platformUrl}/prestataires/connexion" style="background: #D4A657; color: #0B2135; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
+            Se connecter à mon espace prestataire
+          </a>
+        </p>
+        <p style="margin-top: 20px; color: #6B7280; font-size: 14px;">
+          Si vous avez des questions, n'hésitez pas à nous contacter à <a href="mailto:contact@leboy.com" style="color: #D4A657;">contact@leboy.com</a>
+        </p>
+      `;
+      break;
+    case "admin-message":
+      const loginUrl = data.platformUrl || (process.env.NEXT_PUBLIC_APP_URL ? `${process.env.NEXT_PUBLIC_APP_URL}/prestataires/connexion` : "/prestataires/connexion");
+      content = `
+        <p>Bonjour ${name},</p>
+        <p>Vous avez reçu un message de l'administrateur LeBoy concernant votre mission <strong>${data.missionRef || "N/A"}</strong>.</p>
+        ${data.missionTitre ? `<p><strong>Mission:</strong> ${data.missionTitre}</p>` : ""}
+        <div style="background: #F9FAFB; padding: 16px; border-radius: 6px; margin: 20px 0;">
+          <p style="margin: 0 0 8px 0; color: #6B7280; font-size: 14px;"><strong>Message de l'administrateur :</strong></p>
+          <p style="margin: 0; color: #4B5563;">${(data.messageContent || "").split('\n').map((line: string) => line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')).join('<br>')}</p>
+        </div>
+        <p style="margin-top: 30px;">Veuillez vous connecter à votre espace prestataire pour répondre à ce message.</p>
+        <p style="margin-top: 20px;">
+          <a href="${loginUrl}" style="background: #D4A657; color: #0B2135; padding: 14px 28px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 16px;">
             Se connecter à mon espace prestataire
           </a>
         </p>

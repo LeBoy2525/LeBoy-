@@ -8,12 +8,20 @@ interface EstimationFormModalProps {
   lang?: "fr" | "en";
   onClose: () => void;
   onSuccess: () => void;
+  isRevision?: boolean; // Indique si c'est une révision
+  previousEstimation?: {
+    prixFournisseur?: number;
+    delaisEstimes?: number;
+    noteExplication?: string;
+  };
 }
 
 const TEXT = {
   fr: {
     title: "Soumettre votre estimation",
+    titleRevision: "Réviser votre estimation",
     subtitle: "Remplissez les informations ci-dessous pour soumettre votre estimation",
+    subtitleRevision: "Modifiez votre estimation précédente. Vous pouvez ajuster le prix, les délais ou les commentaires.",
     montantEstime: "Montant estimé (FCFA)",
     montantEstimePlaceholder: "Entrez le montant estimé",
     delaisEstimes: "Délais estimés (heures)",
@@ -30,7 +38,9 @@ const TEXT = {
   },
   en: {
     title: "Submit your estimation",
+    titleRevision: "Revise your estimation",
     subtitle: "Fill in the information below to submit your estimation",
+    subtitleRevision: "Modify your previous estimation. You can adjust the price, delays or comments.",
     montantEstime: "Estimated amount (FCFA)",
     montantEstimePlaceholder: "Enter the estimated amount",
     delaisEstimes: "Estimated delays (hours)",
@@ -52,11 +62,19 @@ export function EstimationFormModal({
   lang = "fr",
   onClose,
   onSuccess,
+  isRevision = false,
+  previousEstimation,
 }: EstimationFormModalProps) {
   const t = TEXT[lang];
-  const [prixFournisseur, setPrixFournisseur] = useState("");
-  const [delaisEstimes, setDelaisEstimes] = useState("");
-  const [noteExplication, setNoteExplication] = useState("");
+  const [prixFournisseur, setPrixFournisseur] = useState(
+    previousEstimation?.prixFournisseur?.toString() || ""
+  );
+  const [delaisEstimes, setDelaisEstimes] = useState(
+    previousEstimation?.delaisEstimes?.toString() || ""
+  );
+  const [noteExplication, setNoteExplication] = useState(
+    previousEstimation?.noteExplication || ""
+  );
   const [fraisExternes, setFraisExternes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -138,11 +156,18 @@ export function EstimationFormModal({
           <div className="flex items-center justify-between">
             <div>
               <h2 className="font-heading text-xl font-semibold text-[#0A1B2A]">
-                {t.title}
+                {isRevision ? t.titleRevision : t.title}
               </h2>
               <p className="text-sm text-[#6B7280] mt-1">
-                {t.subtitle}
+                {isRevision ? t.subtitleRevision : t.subtitle}
               </p>
+              {isRevision && previousEstimation && (
+                <div className="mt-2 p-2 bg-gray-50 border border-gray-200 rounded text-xs text-gray-600">
+                  <p className="font-semibold mb-1">{lang === "fr" ? "Estimation précédente:" : "Previous estimation:"}</p>
+                  <p>{lang === "fr" ? "Prix:" : "Price:"} {previousEstimation.prixFournisseur?.toLocaleString()} FCFA</p>
+                  <p>{lang === "fr" ? "Délais:" : "Delays:"} {previousEstimation.delaisEstimes} {lang === "fr" ? "heures" : "hours"}</p>
+                </div>
+              )}
             </div>
             <button
               onClick={onClose}
@@ -271,7 +296,11 @@ export function EstimationFormModal({
               disabled={submitting || !prixFournisseur || !delaisEstimes}
               className="px-6 py-2 bg-[#C8A55F] text-white text-sm font-semibold rounded-md hover:bg-[#B8944F] transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {submitting ? t.envoi : t.envoyerEstimation}
+              {submitting 
+                ? t.envoi 
+                : (isRevision 
+                  ? (lang === "fr" ? "Réviser l'estimation" : "Revise estimation")
+                  : t.envoyerEstimation)}
             </button>
           </div>
         </form>

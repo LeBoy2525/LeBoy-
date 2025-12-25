@@ -27,15 +27,18 @@ export async function GET(_req: Request, { params }: RouteParams) {
     }
 
     const resolvedParams = await params;
-    const missionId = parseInt(resolvedParams.id);
-    if (isNaN(missionId)) {
+    const missionUuid = resolvedParams.id; // UUID string (pas de parseInt)
+    
+    // Validation UUID
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!missionUuid || typeof missionUuid !== "string" || !UUID_REGEX.test(missionUuid)) {
       return NextResponse.json(
-        { error: "ID invalide." },
+        { error: "UUID invalide." },
         { status: 400 }
       );
     }
 
-    const mission = await getMissionById(missionId);
+    const mission = await getMissionById(missionUuid);
     if (!mission) {
       return NextResponse.json(
         { error: "Mission non trouvée." },
@@ -84,15 +87,18 @@ export async function POST(req: Request, { params }: RouteParams) {
     }
 
     const resolvedParams = await params;
-    const missionId = parseInt(resolvedParams.id);
-    if (isNaN(missionId)) {
+    const missionUuid = resolvedParams.id; // UUID string (pas de parseInt)
+    
+    // Validation UUID
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!missionUuid || typeof missionUuid !== "string" || !UUID_REGEX.test(missionUuid)) {
       return NextResponse.json(
-        { error: "ID invalide." },
+        { error: "UUID invalide." },
         { status: 400 }
       );
     }
 
-    const mission = await getMissionById(missionId);
+    const mission = await getMissionById(missionUuid);
     if (!mission) {
       return NextResponse.json(
         { error: "Mission non trouvée." },
@@ -150,7 +156,7 @@ export async function POST(req: Request, { params }: RouteParams) {
     // Créer le message
     const message: Message = {
       id: generateId(),
-      missionId,
+      missionId: missionUuid, // UUID string
       from: userRole as "client" | "prestataire" | "admin",
       fromEmail: userEmail,
       to: to as "client" | "prestataire" | "admin",
@@ -161,14 +167,67 @@ export async function POST(req: Request, { params }: RouteParams) {
       lu: false,
     };
 
-    // Ajouter le message à la mission
-    if (!mission.messages) {
-      mission.messages = [];
+    // Sauvegarder le message dans la base de données via Prisma
+    try {
+      const { prisma } = await import("@/lib/db");
+      const missionPrisma = await prisma.mission.findUnique({
+        where: { id: missionUuid },
+      });
+      
+      if (missionPrisma) {
+        const currentMessages = (missionPrisma.messages as any) || [];
+        const updatedMessages = [...currentMessages, message];
+        
+        await prisma.mission.update({
+          where: { id: missionUuid },
+          data: { messages: updatedMessages },
+        });
+      } else {
+        throw new Error("Mission Prisma non trouvée");
+      }
+    } catch (error) {
+      console.error("Erreur sauvegarde message:", error);
+      // Fallback sur JSON si Prisma échoue
+      if (!mission.messages) {
+        mission.messages = [];
+      }
+      mission.messages.push(message);
+      await saveMissions();
     }
-    mission.messages.push(message);
 
-    // Sauvegarder
-    await saveMissions();
+    // Envoyer un email de notification au destinataire (pour chat ET email)
+    // Si c'est l'admin qui écrit au prestataire, envoyer un email d'invitation à se connecter
+    if (userRole === "admin" && to === "prestataire" && recipientEmail) {
+      try {
+        const { sendNotificationEmail } = await import("@/lib/emailService");
+        const { getPrestataireById } = await import("@/lib/dataAccess");
+        const prestataire = mission.prestataireId ? await getPrestataireById(mission.prestataireId) : null;
+        
+        if (prestataire) {
+          const protocol = process.env.NEXT_PUBLIC_APP_URL?.startsWith("https") ? "https" : "http";
+          const platformUrl = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://localhost:3000`;
+          const loginUrl = `${platformUrl}/prestataires/connexion`;
+          
+          await sendNotificationEmail(
+            "admin-message",
+            { 
+              email: prestataire.email, 
+              name: prestataire.nomEntreprise || prestataire.nomContact || prestataire.email 
+            },
+            {
+              missionRef: mission.ref,
+              missionTitre: mission.titre,
+              messageContent: content.trim(),
+              platformUrl: loginUrl,
+            },
+            "fr"
+          );
+        }
+      } catch (error) {
+        console.error("Erreur envoi email notification prestataire:", error);
+        // Ne pas bloquer l'envoi du message si l'email échoue
+      }
+    }
 
     // Si c'est un email, envoyer l'email réellement
     if (type === "email") {
