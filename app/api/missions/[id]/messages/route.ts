@@ -60,8 +60,47 @@ export async function GET(_req: Request, { params }: RouteParams) {
       );
     }
 
+    // Filtrer les messages selon le rôle de l'utilisateur pour respecter la confidentialité
+    // Chaque relation est privée : client-admin, admin-prestataire
+    const allMessages = mission.messages || [];
+    let filteredMessages: typeof allMessages = [];
+
+    if (userRole === "admin") {
+      // L'admin voit tous les messages
+      filteredMessages = allMessages;
+    } else if (userRole === "client") {
+      // Le client ne voit que les messages où il est impliqué (from="client" ou to="client")
+      // ou où son email est dans fromEmail ou toEmail
+      filteredMessages = allMessages.filter((msg: any) => {
+        const isFromClient = msg.from === "client" || msg.fromEmail?.toLowerCase() === userEmail.toLowerCase();
+        const isToClient = msg.to === "client" || msg.toEmail?.toLowerCase() === userEmail.toLowerCase();
+        // Le client ne doit PAS voir les messages entre admin et prestataire
+        const isAdminPrestataireOnly = (msg.from === "admin" && msg.to === "prestataire") || 
+                                       (msg.from === "prestataire" && msg.to === "admin");
+        return (isFromClient || isToClient) && !isAdminPrestataireOnly;
+      });
+    } else if (userRole === "prestataire") {
+      // Le prestataire ne voit que les messages où il est impliqué (from="prestataire" ou to="prestataire")
+      // ou où son email est dans fromEmail ou toEmail
+      // Récupérer l'email du prestataire pour vérifier
+      const { getPrestataireById } = await import("@/lib/dataAccess");
+      const prestataire = mission.prestataireId ? await getPrestataireById(mission.prestataireId) : null;
+      const prestataireEmail = prestataire?.email?.toLowerCase();
+      
+      filteredMessages = allMessages.filter((msg: any) => {
+        const isFromPrestataire = msg.from === "prestataire" || 
+                                  (prestataireEmail && msg.fromEmail?.toLowerCase() === prestataireEmail);
+        const isToPrestataire = msg.to === "prestataire" || 
+                               (prestataireEmail && msg.toEmail?.toLowerCase() === prestataireEmail);
+        // Le prestataire ne doit PAS voir les messages entre admin et client
+        const isAdminClientOnly = (msg.from === "admin" && msg.to === "client") || 
+                                  (msg.from === "client" && msg.to === "admin");
+        return (isFromPrestataire || isToPrestataire) && !isAdminClientOnly;
+      });
+    }
+
     return NextResponse.json(
-      { messages: mission.messages || [] },
+      { messages: filteredMessages },
       { status: 200 }
     );
   } catch (error) {

@@ -84,7 +84,33 @@ export function MissionChat({ mission, currentUserEmail, currentUserRole, lang =
         });
         if (res.ok) {
           const data = await res.json();
-          setMessages(data.messages || []);
+          const allMessages = data.messages || [];
+          
+          // Filtrage supplémentaire côté client pour sécurité (le filtrage principal est dans l'API)
+          // Le client ne doit voir que les messages où il est impliqué
+          let filteredMessages = allMessages;
+          if (currentUserRole === "client") {
+            filteredMessages = allMessages.filter((msg: Message) => {
+              const isFromClient = msg.from === "client" || msg.fromEmail?.toLowerCase() === currentUserEmail.toLowerCase();
+              const isToClient = msg.to === "client" || msg.toEmail?.toLowerCase() === currentUserEmail.toLowerCase();
+              // Ne pas voir les messages entre admin et prestataire
+              const isAdminPrestataireOnly = (msg.from === "admin" && msg.to === "prestataire") || 
+                                           (msg.from === "prestataire" && msg.to === "admin");
+              return (isFromClient || isToClient) && !isAdminPrestataireOnly;
+            });
+          } else if (currentUserRole === "prestataire") {
+            filteredMessages = allMessages.filter((msg: Message) => {
+              const isFromPrestataire = msg.from === "prestataire" || msg.fromEmail?.toLowerCase() === currentUserEmail.toLowerCase();
+              const isToPrestataire = msg.to === "prestataire" || msg.toEmail?.toLowerCase() === currentUserEmail.toLowerCase();
+              // Ne pas voir les messages entre admin et client
+              const isAdminClientOnly = (msg.from === "admin" && msg.to === "client") || 
+                                       (msg.from === "client" && msg.to === "admin");
+              return (isFromPrestataire || isToPrestataire) && !isAdminClientOnly;
+            });
+          }
+          // L'admin voit tous les messages (pas de filtrage)
+          
+          setMessages(filteredMessages);
         }
       } catch (err) {
         console.error("Erreur chargement messages:", err);
