@@ -476,9 +476,13 @@ export default function DossierPage() {
                   {missions.length === 0 && dossier!.statut === "acceptee" && (
                     <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                       <p className="text-xs text-blue-700">
-                        <span className="font-semibold">En attente de sélection du prestataire</span>
+                        <span className="font-semibold">
+                          {lang === "fr" ? "En attente d'assignation de prestataire" : "Awaiting provider assignment"}
+                        </span>
                         <br />
-                        Votre demande a été acceptée. Un prestataire sera sélectionné prochainement et vous recevrez une notification.
+                        {lang === "fr"
+                          ? "Votre demande a été acceptée. Un prestataire sera assigné prochainement et vous recevrez une notification."
+                          : "Your request has been accepted. A provider will be assigned shortly and you will receive a notification."}
                       </p>
                     </div>
                   )}
