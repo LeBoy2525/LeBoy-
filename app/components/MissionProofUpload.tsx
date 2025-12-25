@@ -27,6 +27,11 @@ const TEXT = {
     commentairePlaceholder: "Résumez le travail effectué, ajoutez des remarques importantes...",
     submit: "Soumettre les preuves",
     terminerEtEnvoyer: "Terminer et envoyer pour validation",
+    envoyerPourValidation: "Envoyer pour validation",
+    confirmationTitle: "Confirmer l'envoi",
+    confirmationMessage: "Êtes-vous sûr de vouler envoyer ces preuves pour validation ? Cette action enverra la mission à l'administrateur pour validation finale.",
+    confirm: "Oui, envoyer",
+    cancel: "Annuler",
     submitting: "Soumission en cours...",
     filesSelected: "fichier(s) sélectionné(s)",
     remove: "Retirer",
@@ -50,6 +55,11 @@ const TEXT = {
     commentairePlaceholder: "Summarize the work completed, add important remarks...",
     submit: "Submit proofs",
     terminerEtEnvoyer: "Finish and send for validation",
+    envoyerPourValidation: "Send for validation",
+    confirmationTitle: "Confirm sending",
+    confirmationMessage: "Are you sure you want to send these proofs for validation? This action will send the mission to the administrator for final validation.",
+    confirm: "Yes, send",
+    cancel: "Cancel",
     submitting: "Submitting...",
     filesSelected: "file(s) selected",
     remove: "Remove",
@@ -121,6 +131,7 @@ export function MissionProofUpload({ missionId, lang = "fr", onUploadSuccess, on
   const [uploading, setUploading] = useState(false);
   const [compressing, setCompressing] = useState(false);
   const [hasUploadedProofs, setHasUploadedProofs] = useState(existingProofs.length > 0);
+  const [showConfirmation, setShowConfirmation] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Mettre à jour hasUploadedProofs si des preuves existent déjà
@@ -139,10 +150,9 @@ export function MissionProofUpload({ missionId, lang = "fr", onUploadSuccess, on
     setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (selectedFiles.length === 0) {
+  const handleUploadAndSubmit = async () => {
+    // Vérifier qu'il y a des fichiers OU des preuves déjà uploadées
+    if (selectedFiles.length === 0 && existingProofs.length === 0) {
       alert(t.atLeastOne);
       return;
     }
@@ -151,55 +161,64 @@ export function MissionProofUpload({ missionId, lang = "fr", onUploadSuccess, on
     setCompressing(true);
 
     try {
-      // Compresser les images
-      const processedFiles: File[] = [];
-      for (const file of selectedFiles) {
-        if (file.type.startsWith("image/")) {
-          const compressed = await compressImage(file);
-          processedFiles.push(compressed);
-        } else {
-          processedFiles.push(file);
+      // Si des fichiers sont sélectionnés, les uploader d'abord
+      if (selectedFiles.length > 0) {
+        // Compresser les images
+        const processedFiles: File[] = [];
+        for (const file of selectedFiles) {
+          if (file.type.startsWith("image/")) {
+            const compressed = await compressImage(file);
+            processedFiles.push(compressed);
+          } else {
+            processedFiles.push(file);
+          }
         }
+
+        setCompressing(false);
+
+        // Créer FormData
+        const formData = new FormData();
+        processedFiles.forEach((file) => {
+          formData.append("files", file);
+        });
+        if (description.trim()) {
+          formData.append("description", description.trim());
+        }
+
+        const res = await fetch(`/api/missions/${missionId}/proofs`, {
+          method: "POST",
+          body: formData,
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || t.error);
+        }
+
+        // Réinitialiser les fichiers sélectionnés
+        setSelectedFiles([]);
+        setDescription("");
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+        onUploadSuccess?.();
       }
 
-      setCompressing(false);
-
-      // Créer FormData
-      const formData = new FormData();
-      processedFiles.forEach((file) => {
-        formData.append("files", file);
-      });
-      if (description.trim()) {
-        formData.append("description", description.trim());
+      // Maintenant, soumettre pour validation finale
+      if (onFinalSubmit) {
+        await onFinalSubmit(commentaire);
       }
-
-      const res = await fetch(`/api/missions/${missionId}/proofs`, {
-        method: "POST",
-        body: formData,
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || t.error);
-      }
-
-      // Ne pas afficher d'alerte ici, on attend la soumission finale
-      setSelectedFiles([]);
-      setDescription("");
-      setHasUploadedProofs(true);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-      onUploadSuccess?.();
     } catch (error: any) {
-      console.error("Erreur upload preuves:", error);
+      console.error("Erreur upload et soumission preuves:", error);
       alert(error.message || t.error);
     } finally {
       setUploading(false);
       setCompressing(false);
+      setShowConfirmation(false);
     }
   };
+
 
   const getFileIcon = (file: File) => {
     if (file.type.startsWith("image/")) return <ImageIcon className="w-5 h-5" />;
@@ -225,7 +244,7 @@ export function MissionProofUpload({ missionId, lang = "fr", onUploadSuccess, on
         <p className="text-sm text-[#6B7280] mt-1">{t.subtitle}</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-4">
         {/* Zone de téléversement */}
         <div className="border-2 border-dashed border-[#DDDDDD] rounded-lg p-6 text-center hover:border-[#C8A55F] transition">
           <input
@@ -318,43 +337,61 @@ export function MissionProofUpload({ missionId, lang = "fr", onUploadSuccess, on
           </div>
         )}
 
-        {/* Bouton de soumission des fichiers - seulement si on n'a pas encore uploadé de preuves */}
-        {!hasUploadedProofs && (
-          <button
-            type="submit"
-            disabled={selectedFiles.length === 0 || uploading || compressing}
-            className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-[#0A1B2A] text-white text-sm font-semibold rounded-md hover:bg-[#07121e] transition disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {uploading ? (
-              <>
-                <span className="animate-spin">⏳</span>
-                {t.uploading}
-              </>
-            ) : (
-              <>
-                <CheckCircle2 className="w-4 h-4" />
-                {t.submit}
-              </>
-            )}
-          </button>
-        )}
-      </form>
+        {/* Bouton unique "Envoyer pour validation" - fait l'upload ET la soumission */}
+        <button
+          type="button"
+          onClick={() => {
+            // Vérifier qu'il y a des fichiers OU des preuves déjà uploadées
+            if (selectedFiles.length === 0 && existingProofs.length === 0) {
+              alert(t.atLeastOne);
+              return;
+            }
+            setShowConfirmation(true);
+          }}
+          disabled={(selectedFiles.length === 0 && existingProofs.length === 0) || uploading || compressing}
+          className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white text-sm font-semibold rounded-md hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {uploading ? (
+            <>
+              <span className="animate-spin">⏳</span>
+              {t.submitting}
+            </>
+          ) : (
+            <>
+              <CheckCircle2 className="w-5 h-5" />
+              {t.envoyerPourValidation}
+            </>
+          )}
+        </button>
+      </div>
 
-      {/* Bouton "Terminer et envoyer pour validation" - affiché après upload de preuves OU si des preuves existent déjà */}
-      {hasUploadedProofs && (
-        <div className="pt-4 border-t border-[#E2E2E8]">
-          <button
-            onClick={() => {
-              if (onFinalSubmit) {
-                onFinalSubmit(commentaire);
-              }
-            }}
-            disabled={uploading}
-            className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white text-sm font-semibold rounded-md hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <CheckCircle2 className="w-5 h-5" />
-            {t.terminerEtEnvoyer}
-          </button>
+      {/* Modal de confirmation */}
+      {showConfirmation && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 space-y-4">
+            <h3 className="font-heading text-lg font-semibold text-[#0A1B2A]">
+              {t.confirmationTitle}
+            </h3>
+            <p className="text-sm text-[#4B4F58]">
+              {t.confirmationMessage}
+            </p>
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => setShowConfirmation(false)}
+                disabled={uploading}
+                className="flex-1 px-4 py-2 text-sm font-semibold text-[#4B4F58] bg-[#F9F9FB] border border-[#DDDDDD] rounded-md hover:bg-[#F2F2F5] transition disabled:opacity-50"
+              >
+                {t.cancel}
+              </button>
+              <button
+                onClick={handleUploadAndSubmit}
+                disabled={uploading}
+                className="flex-1 px-4 py-2 text-sm font-semibold text-white bg-green-600 rounded-md hover:bg-green-700 transition disabled:opacity-50"
+              >
+                {t.confirm}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
