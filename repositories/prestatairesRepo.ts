@@ -66,6 +66,7 @@ export async function createPrestataire(data: Omit<Prestataire, "id">) {
       zonesIntervention: data.zonesIntervention || [],
       statut: data.statut || "en_attente",
       passwordHash: data.passwordHash || null, // Ajouter passwordHash
+      typePrestataire: (data as any).typePrestataire || "freelance", // Type de prestataire
       actifAt: data.dateValidation ? new Date(data.dateValidation) : null,
       deletedAt: data.deletedAt ? new Date(data.deletedAt) : null,
       deletedBy: data.deletedBy || null,

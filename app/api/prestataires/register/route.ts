@@ -33,6 +33,7 @@ export async function POST(req: Request) {
     const commissionICD = 0; // DEPRECATED - Ne plus utiliser
     const description = (formData.get("description") as string)?.trim() || "";
     const countriesRaw = formData.get("countries") as string;
+    const typePrestataire = (formData.get("typePrestataire") as "entreprise" | "freelance") || "freelance";
 
     // Parsing des pays
     const countries = countriesRaw
@@ -127,6 +128,7 @@ export async function POST(req: Request) {
       description,
       capaciteMaxMissions: 5, // Par défaut
       passwordHash, // Ajouter ce champ
+      typePrestataire, // Type de prestataire (entreprise | freelance)
       documents: documents.map((doc: any) => ({
         id: doc.id,
         type: doc.type,

@@ -49,6 +49,9 @@ export type Prestataire = {
   specialites: ServiceType[]; // IDs des catégories de services (ex: ["administratif_government", "immobilier_foncier"])
   zonesIntervention: string[]; // Villes où il intervient
   countries?: string[]; // Codes pays où le prestataire opère (ex: ["CM", "CI"] pour Cameroun et Côte d'Ivoire)
+  
+  // Type de prestataire
+  typePrestataire?: "entreprise" | "freelance"; // Type de prestataire (entreprise avec documents officiels ou freelance indépendant)
 
   // Certifications et qualifications
   certifications: string[]; // ["Notaire", "Géomètre", "Comptable", etc.]
@@ -154,6 +157,7 @@ export function addPrestataire(
     
     // Champs optionnels
     passwordHash?: string;
+    typePrestataire?: "entreprise" | "freelance";
     description?: string;
     numeroOrdre?: string;
     tarifMin?: number;
@@ -193,6 +197,7 @@ export function addPrestataire(
     statut: "en_attente",
     documentsVerifies: false,
     disponibilite: "disponible",
+    typePrestataire: data.typePrestataire || "freelance", // Par défaut freelance
     // Données fournies (peuvent écraser les valeurs par défaut si nécessaire)
     ...data,
   };

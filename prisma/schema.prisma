@@ -80,6 +80,8 @@ model Prestataire {
   specialites          String[] // Array of service types
   zonesIntervention    String[] // Array of cities
   
+  typePrestataire      String   @default("freelance") // "entreprise" | "freelance"
+  
   passwordHash          String?  // Hash bcrypt du mot de passe
   
   statut               String   @default("en_attente") // "en_attente" | "actif" | "suspendu" | "rejete"

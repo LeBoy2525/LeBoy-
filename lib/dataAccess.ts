@@ -153,6 +153,7 @@ function convertPrismaDemandeToJSON(demande: any): DemandeICD {
 }
 
 function convertPrismaPrestataireToJSON(prestataire: any): Prestataire {
+  // typePrestataire est maintenant dans le schéma Prisma
   // Utiliser directement l'UUID string (plus de conversion)
   const prestataireId = typeof prestataire.id === "string" ? prestataire.id : String(prestataire.id);
 
@@ -185,6 +186,7 @@ function convertPrismaPrestataireToJSON(prestataire: any): Prestataire {
     deletedAt: prestataire.deletedAt?.toISOString(),
     deletedBy: prestataire.deletedBy || undefined,
     passwordHash: prestataire.passwordHash || undefined, // ⚠️ IMPORTANT: Inclure passwordHash
+    typePrestataire: prestataire.typePrestataire || "freelance", // Type de prestataire (entreprise | freelance)
   };
   
   // Log pour diagnostic si passwordHash manquant
@@ -627,6 +629,7 @@ export async function createPrestataire(
         zonesIntervention: data.zonesIntervention,
         statut: "en_attente",
         passwordHash: data.passwordHash,
+        typePrestataire: (data as any).typePrestataire || "freelance",
       } as any);
 
       const jsonPrestataire = convertPrismaPrestataireToJSON(prestataire);

@@ -3,7 +3,7 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "../../components/LanguageProvider";
-import { Building2, CheckCircle2, AlertCircle, FileText } from "lucide-react";
+import { Building2, CheckCircle2, AlertCircle, FileText, User } from "lucide-react";
 import Link from "next/link";
 import BackToHomeLink from "../../components/BackToHomeLink";
 import CountrySelect from "../../components/CountrySelect";
@@ -39,6 +39,11 @@ const TEXT = {
     zonesHelp: "Séparez les villes par des virgules (ex: Yaoundé, Douala, Bafoussam)",
     certifications: "Certifications / Qualifications",
     certificationsHelp: "Séparez par des virgules (ex: Notaire, Géomètre, Comptable agréé)",
+    typePrestataire: "Type de prestataire *",
+    typeEntreprise: "Entreprise",
+    typeFreelance: "Freelance / Indépendant",
+    typeEntrepriseDesc: "Structure légale avec documents officiels (RC, CNI, etc.)",
+    typeFreelanceDesc: "Indépendant avec compétences/diplômes",
     anneeExperience: "Années d'expérience *",
     tarifType: "Type de tarification",
     tarifFixe: "Tarif fixe",
@@ -78,6 +83,11 @@ const TEXT = {
     zonesHelp: "Separate cities with commas (e.g.: Yaoundé, Douala, Bafoussam)",
     certifications: "Certifications / Qualifications",
     certificationsHelp: "Separate with commas (e.g.: Notary, Surveyor, Certified Accountant)",
+    typePrestataire: "Provider type *",
+    typeEntreprise: "Company",
+    typeFreelance: "Freelance / Independent",
+    typeEntrepriseDesc: "Legal entity with official documents (RC, ID, etc.)",
+    typeFreelanceDesc: "Independent with skills/diplomas",
     anneeExperience: "Years of experience *",
     tarifType: "Pricing type",
     tarifFixe: "Fixed rate",
@@ -119,6 +129,7 @@ export default function InscriptionPrestatairePage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [prestataireRef, setPrestataireRef] = useState<string | null>(null);
 
+  const [typePrestataire, setTypePrestataire] = useState<"entreprise" | "freelance">("freelance");
   const [selectedSpecialites, setSelectedSpecialites] = useState<string[]>([]);
   const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
   const [selectedCities, setSelectedCities] = useState<string[]>([]);
@@ -236,6 +247,9 @@ export default function InscriptionPrestatairePage() {
     
     // Ajouter les documents
     formData.set("documents", JSON.stringify(uploadedDocuments));
+    
+    // Ajouter le type de prestataire
+    formData.set("typePrestataire", typePrestataire);
 
     // Validation des pays
     if (selectedCountries.length === 0) {
@@ -379,6 +393,59 @@ export default function InscriptionPrestatairePage() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Type de prestataire */}
+            <div className="space-y-4">
+              <h3 className="font-heading text-base font-semibold text-[#0A1B2A] border-b border-[#E2E2E8] pb-2">
+                {t.typePrestataire}
+              </h3>
+              
+              <div className="grid md:grid-cols-2 gap-4">
+                <label className={`relative flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                  typePrestataire === "entreprise" 
+                    ? "border-[#0A1B2A] bg-[#F9F9FB]" 
+                    : "border-[#DDDDDD] hover:border-[#C8A55F]"
+                }`}>
+                  <input
+                    type="radio"
+                    name="typePrestataire"
+                    value="entreprise"
+                    checked={typePrestataire === "entreprise"}
+                    onChange={(e) => setTypePrestataire(e.target.value as "entreprise" | "freelance")}
+                    className="mt-1 w-4 h-4 text-[#0A1B2A] border-[#DDDDDD] focus:ring-[#0A1B2A]"
+                  />
+                  <div className="flex-1">
+                    <div className="font-semibold text-[#0A1B2A] flex items-center gap-2">
+                      <Building2 className="w-5 h-5" />
+                      {t.typeEntreprise}
+                    </div>
+                    <p className="text-sm text-[#6B7280] mt-1">{t.typeEntrepriseDesc}</p>
+                  </div>
+                </label>
+                
+                <label className={`relative flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                  typePrestataire === "freelance" 
+                    ? "border-[#0A1B2A] bg-[#F9F9FB]" 
+                    : "border-[#DDDDDD] hover:border-[#C8A55F]"
+                }`}>
+                  <input
+                    type="radio"
+                    name="typePrestataire"
+                    value="freelance"
+                    checked={typePrestataire === "freelance"}
+                    onChange={(e) => setTypePrestataire(e.target.value as "entreprise" | "freelance")}
+                    className="mt-1 w-4 h-4 text-[#0A1B2A] border-[#DDDDDD] focus:ring-[#0A1B2A]"
+                  />
+                  <div className="flex-1">
+                    <div className="font-semibold text-[#0A1B2A] flex items-center gap-2">
+                      <User className="w-5 h-5" />
+                      {t.typeFreelance}
+                    </div>
+                    <p className="text-sm text-[#6B7280] mt-1">{t.typeFreelanceDesc}</p>
+                  </div>
+                </label>
+              </div>
+            </div>
+
             {/* Informations de base */}
             <div className="space-y-4">
               <h3 className="font-heading text-base font-semibold text-[#0A1B2A] border-b border-[#E2E2E8] pb-2">
