@@ -875,9 +875,17 @@ export default function AdminDemandeDetailPage() {
                         // Afficher les autres missions qui ne sont pas en PROVIDER_ESTIMATED (missions en cours, etc.)
                         return true;
                       }
-                      // Si on attend la sélection, masquer toutes les missions avec estimations (elles seront dans WinnerSelectionView)
+                      // Si on attend la sélection (plusieurs estimations), masquer toutes les missions avec estimations (elles seront dans WinnerSelectionView)
+                      // IMPORTANT: Ne masquer QUE si on attend vraiment la sélection (plusieurs estimations)
+                      // Si une seule estimation existe, on doit quand même afficher toutes les missions assignées
                       if (needsWinnerSelection && mission.internalState === "PROVIDER_ESTIMATED") {
                         return false;
+                      }
+                      // Si une seule estimation existe, afficher toutes les missions (y compris celle avec estimation)
+                      // Cela permet de voir la mission avec estimation ET les missions en attente d'estimation
+                      if (missionsWithEstimations.length === 1 && mission.internalState === "PROVIDER_ESTIMATED") {
+                        // Afficher la mission avec estimation même si une seule existe
+                        return true;
                       }
                       // Sinon, afficher toutes les missions non archivées
                       return true;
