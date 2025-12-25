@@ -5,6 +5,9 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useLanguage } from "../../../../components/LanguageProvider";
 import BackToHomeLink from "../../../../components/BackToHomeLink";
+import { MissionProgressBar } from "../../../../components/MissionProgressBar";
+import { ClientPaymentSection } from "../../../../components/ClientPaymentSection";
+import type { Mission } from "@/lib/types";
 
 // Désactiver le préchargement pour cette page dynamique
 export const dynamic = "force-dynamic";
@@ -27,15 +30,7 @@ type Dossier = {
   raisonRejet?: string | null;
 };
 
-type Mission = {
-  id: number;
-  ref: string;
-  status: string;
-  internalState: string;
-  titre: string;
-  createdAt: string;
-  prestataireRef?: string | null;
-};
+// Utiliser le type Mission complet de lib/types
 
 type ServiceCategory = {
   id: string;
@@ -56,6 +51,23 @@ export default function DossierPage() {
   const [missions, setMissions] = useState<Mission[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [serviceCategories, setServiceCategories] = useState<ServiceCategory[]>([]);
+  
+  // Fonction pour recharger les missions après paiement
+  const handlePaymentSuccess = async () => {
+    if (!dossier?.ref) return;
+    try {
+      const res = await fetch(
+        `/api/espace-client/dossier/${encodeURIComponent(dossier.ref)}`,
+        { cache: "no-store" }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setMissions(data.missions ?? []);
+      }
+    } catch (e) {
+      console.error("Erreur rechargement missions:", e);
+    }
+  };
 
   useEffect(() => {
     // Charger les catégories de services
@@ -295,6 +307,13 @@ export default function DossierPage() {
                     Statut de la demande
                   </h2>
                   
+                  {/* Barre de progression de la mission si elle existe */}
+                  {missions.length > 0 && missions[0] && (
+                    <div className="mb-4">
+                      <MissionProgressBar mission={missions[0]} lang={lang} />
+                    </div>
+                  )}
+                  
                   <div className="space-y-2">
                     {dossier!.statut === "en_attente" && (
                       <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
@@ -340,41 +359,49 @@ export default function DossierPage() {
                     )}
                   </div>
 
-                  {/* Afficher la mission uniquement si un prestataire gagnant a été sélectionné */}
-                  {missions.length > 0 && (
-                    <div className="mt-4 space-y-2">
-                      <h3 className="font-heading text-base font-semibold text-[#0A1B2A]">
-                        Mission
-                      </h3>
-                      <div className="space-y-2">
-                        {missions.map((mission) => (
-                          <Link
-                            key={mission.id}
-                            href={`/espace-client/mission/${mission.id}`}
-                            prefetch={false}
-                            className="block p-3 bg-[#F9F9FB] border border-[#DDDDDD] rounded-lg hover:bg-[#F2F2F5] transition"
-                          >
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <p className="font-semibold text-sm text-[#0A1B2A]">
-                                  {mission.ref}
-                                </p>
+                  {/* Afficher la mission avec détails et actions */}
+                  {missions.length > 0 && missions[0] && (
+                    <div className="mt-4 space-y-4">
+                      <div>
+                        <h3 className="font-heading text-base font-semibold text-[#0A1B2A] mb-2">
+                          Mission
+                        </h3>
+                        <Link
+                          href={`/espace-client/mission/${missions[0].id}`}
+                          prefetch={false}
+                          className="block p-3 bg-[#F9F9FB] border border-[#DDDDDD] rounded-lg hover:bg-[#F2F2F5] transition"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="font-semibold text-sm text-[#0A1B2A]">
+                                {missions[0].ref}
+                              </p>
+                              <p className="text-xs text-[#6B7280] mt-1">
+                                {missions[0].titre}
+                              </p>
+                              {(missions[0] as any).prestataireRef && (
                                 <p className="text-xs text-[#6B7280] mt-1">
-                                  {mission.titre}
+                                  Prestataire : {(missions[0] as any).prestataireRef}
                                 </p>
-                                {mission.prestataireRef && (
-                                  <p className="text-xs text-[#6B7280] mt-1">
-                                    Prestataire : {mission.prestataireRef}
-                                  </p>
-                                )}
-                              </div>
-                              <span className="text-xs text-[#4B4F58]">
-                                →
-                              </span>
+                              )}
                             </div>
-                          </Link>
-                        ))}
+                            <span className="text-xs text-[#4B4F58]">
+                              →
+                            </span>
+                          </div>
+                        </Link>
                       </div>
+                      
+                      {/* Section de paiement si la mission nécessite un paiement */}
+                      {missions[0].internalState === "WAITING_CLIENT_PAYMENT" && missions[0].devisGenere && (
+                        <div className="mt-4">
+                          <ClientPaymentSection
+                            mission={missions[0]}
+                            lang={lang}
+                            onPaymentSuccess={handlePaymentSuccess}
+                          />
+                        </div>
+                      )}
                     </div>
                   )}
                   
