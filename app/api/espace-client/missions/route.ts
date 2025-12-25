@@ -32,21 +32,22 @@ export async function GET() {
       (m) => !m.deleted
     );
 
-    // Grouper les missions par demandeId
-    const missionsByDemande = new Map<number, typeof allMissions>();
+    // Grouper les missions par demandeId (UUID string)
+    const missionsByDemande = new Map<string, typeof allMissions>();
     for (const mission of allMissions) {
-      if (!missionsByDemande.has(mission.demandeId)) {
-        missionsByDemande.set(mission.demandeId, []);
+      const demandeIdStr = String(mission.demandeId || "");
+      if (!missionsByDemande.has(demandeIdStr)) {
+        missionsByDemande.set(demandeIdStr, []);
       }
-      missionsByDemande.get(mission.demandeId)!.push(mission);
+      missionsByDemande.get(demandeIdStr)!.push(mission);
     }
 
     // Pour chaque demande, ne garder que la mission du prestataire gagnant
     const filteredMissions: typeof allMissions = [];
     
-    for (const [demandeId, missions] of missionsByDemande.entries()) {
-      // Récupérer les propositions pour cette demande
-      const propositions = await getPropositionsByDemandeId(demandeId);
+    for (const [demandeIdStr, missions] of missionsByDemande.entries()) {
+      // Récupérer les propositions pour cette demande (demandeIdStr est un UUID string)
+      const propositions = await getPropositionsByDemandeId(demandeIdStr);
       
       // Chercher la proposition acceptée (prestataire gagnant)
       const propositionAcceptee = propositions.find(

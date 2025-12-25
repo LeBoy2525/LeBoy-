@@ -703,11 +703,16 @@ export default function EspaceClientPage() {
                         <div className="flex justify-end gap-2">
                           {/* Vérifier si cette demande a une mission nécessitant une action */}
                           {(() => {
+                            // Convertir demande.id en string pour comparaison avec mission.demandeId (UUID)
+                            const demandeIdStr = String(demande.id);
                             const missionAssociee = missions.find(
-                              (m) => m.demandeId === demande.id && 
-                              m.internalState === "WAITING_CLIENT_PAYMENT" && 
-                              !m.deleted && 
-                              !m.archived
+                              (m) => {
+                                const missionDemandeId = String(m.demandeId || "");
+                                return missionDemandeId === demandeIdStr && 
+                                m.internalState === "WAITING_CLIENT_PAYMENT" && 
+                                !m.deleted && 
+                                !m.archived;
+                              }
                             );
                             if (missionAssociee) {
                               return (
@@ -765,11 +770,16 @@ export default function EspaceClientPage() {
                         <div className="pt-1 flex justify-end gap-2">
                           {/* Vérifier si cette demande a une mission nécessitant une action */}
                           {(() => {
+                            // Convertir demande.id en string pour comparaison avec mission.demandeId (UUID)
+                            const demandeIdStr = String(demande.id);
                             const missionAssociee = missions.find(
-                              (m) => m.demandeId === demande.id && 
-                              m.internalState === "WAITING_CLIENT_PAYMENT" && 
-                              !m.deleted && 
-                              !m.archived
+                              (m) => {
+                                const missionDemandeId = String(m.demandeId || "");
+                                return missionDemandeId === demandeIdStr && 
+                                m.internalState === "WAITING_CLIENT_PAYMENT" && 
+                                !m.deleted && 
+                                !m.archived;
+                              }
                             );
                             if (missionAssociee) {
                               return (
