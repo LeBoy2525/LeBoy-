@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useLanguage } from "../../components/LanguageProvider";
-import { FileText, CheckCircle2, Clock, XCircle, Bell, Trash2, RotateCcw } from "lucide-react";
+import { FileText, CheckCircle2, Clock, XCircle, Bell, Trash2, RotateCcw, Plus, DollarSign, Star, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import BackToHomeLink from "../../components/BackToHomeLink";
 import type { Mission } from "@/lib/types";
@@ -35,6 +35,29 @@ const TEXT = {
     missionsNonRetenuesDesc: "Ces missions n'ont pas été sélectionnées par l'administrateur. Un autre prestataire a été choisi pour ces demandes.",
     voirMissionsNonRetenues: "Voir les missions non retenues",
     masquerMissionsNonRetenues: "Masquer les missions non retenues",
+    demandesDisponibles: "Demandes disponibles",
+    aucuneDemande: "Aucune demande disponible pour le moment",
+    soumettreProposition: "Soumettre une proposition",
+    montantPropose: "Montant proposé (FCFA) *",
+    delaiEstime: "Délai estimé (jours) *",
+    difficulteEstimee: "Niveau de difficulté estimé *",
+    commentaire: "Note explicative *",
+    commentairePlaceholder: "Expliquez votre approche, les étapes prévues, les risques identifiés...",
+    soumettre: "Soumettre la proposition",
+    soumettant: "Envoi en cours...",
+    propositionSoumise: "Proposition soumise avec succès !",
+    erreur: "Erreur lors de la soumission",
+    fermer: "Fermer",
+    service: "Service",
+    lieu: "Lieu",
+    urgence: "Urgence",
+    budget: "Budget",
+    dateReception: "Date de réception",
+    delaiRestant: "Délai restant",
+    delaiExpire: "Délai expiré",
+    normal: "Normal",
+    urgent: "Urgent",
+    tresUrgent: "Très urgent",
   },
   en: {
     title: "LeBoy Provider Space",
@@ -62,8 +85,52 @@ const TEXT = {
     missionsNonRetenuesDesc: "These missions were not selected by the administrator. Another provider was chosen for these requests.",
     voirMissionsNonRetenues: "View non-selected missions",
     masquerMissionsNonRetenues: "Hide non-selected missions",
+    demandesDisponibles: "Available requests",
+    aucuneDemande: "No requests available at this time",
+    soumettreProposition: "Submit a proposal",
+    montantPropose: "Proposed amount (FCFA) *",
+    delaiEstime: "Estimated delay (days) *",
+    difficulteEstimee: "Estimated difficulty level *",
+    commentaire: "Explanatory note *",
+    commentairePlaceholder: "Explain your approach, planned steps, identified risks...",
+    soumettre: "Submit proposal",
+    soumettant: "Submitting...",
+    propositionSoumise: "Proposal submitted successfully!",
+    erreur: "Error submitting",
+    fermer: "Close",
+    service: "Service",
+    lieu: "Location",
+    urgence: "Urgency",
+    budget: "Budget",
+    dateReception: "Reception date",
+    delaiRestant: "Time remaining",
+    delaiExpire: "Deadline expired",
+    normal: "Normal",
+    urgent: "Urgent",
+    tresUrgent: "Very urgent",
   },
 } as const;
+
+type DemandeDisponible = {
+  id: number;
+  ref: string;
+  createdAt: string;
+  serviceType: string;
+  serviceSubcategory?: string;
+  description: string;
+  lieu?: string | null;
+  urgence: string;
+  budget?: string | null;
+  missionId?: number;
+  dateAssignation?: string;
+  dateLimite?: string;
+};
+
+const URGENCE_COLORS = {
+  normal: "bg-blue-100 text-blue-800",
+  urgent: "bg-orange-100 text-orange-800",
+  "tres-urgent": "bg-red-100 text-red-800",
+};
 
 export default function EspacePrestatairePage() {
   const { lang } = useLanguage();
@@ -71,16 +138,24 @@ export default function EspacePrestatairePage() {
   const [missions, setMissions] = useState<Mission[]>([]);
   const [archivedMissions, setArchivedMissions] = useState<Mission[]>([]);
   const [rejectedMissions, setRejectedMissions] = useState<Mission[]>([]);
+  const [demandesDisponibles, setDemandesDisponibles] = useState<DemandeDisponible[]>([]);
   const [loading, setLoading] = useState(true);
   const [showTrash, setShowTrash] = useState(false);
   const [showRejected, setShowRejected] = useState(false);
+  const [selectedDemande, setSelectedDemande] = useState<DemandeDisponible | null>(null);
+  const [showModal, setShowModal] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [prix_prestataire, setPrix_prestataire] = useState("");
+  const [delai_estime, setDelai_estime] = useState("");
+  const [difficulte_estimee, setDifficulte_estimee] = useState<number>(3);
+  const [commentaire, setCommentaire] = useState("");
 
   useEffect(() => {
     async function fetchMissions() {
       try {
         // Ajouter un timestamp pour éviter le cache
         const timestamp = Date.now();
-        const [resMissions, resArchived] = await Promise.all([
+        const [resMissions, resArchived, resDemandes] = await Promise.all([
           fetch(`/api/prestataires/espace/missions?t=${timestamp}`, {
             cache: "no-store",
             headers: {
@@ -95,10 +170,18 @@ export default function EspacePrestatairePage() {
               "Pragma": "no-cache",
             },
           }),
+          fetch(`/api/prestataires/espace/demandes-disponibles?t=${timestamp}`, {
+            cache: "no-store",
+            headers: {
+              "Cache-Control": "no-cache",
+              "Pragma": "no-cache",
+            },
+          }),
         ]);
         
         const dataMissions = await resMissions.json();
         const dataArchived = await resArchived.json();
+        const dataDemandes = await resDemandes.json();
         
         console.log("🔍 Réponse API missions:", { status: resMissions.status, ok: resMissions.ok, data: dataMissions });
         if (resMissions.ok) {
@@ -114,6 +197,11 @@ export default function EspacePrestatairePage() {
           setArchivedMissions(dataArchived.missions || []);
           console.log(`✅ ${dataArchived.missions?.length || 0} mission(s) archivée(s) chargée(s)`);
         }
+
+        if (resDemandes.ok) {
+          setDemandesDisponibles(dataDemandes.demandes || []);
+          console.log(`✅ ${dataDemandes.demandes?.length || 0} demande(s) disponible(s)`);
+        }
       } catch (err) {
         console.error("❌ Erreur chargement missions:", err);
       } finally {
@@ -122,6 +210,10 @@ export default function EspacePrestatairePage() {
     }
 
     fetchMissions();
+    
+    // Rafraîchir toutes les 5 minutes pour retirer les demandes expirées
+    const interval = setInterval(fetchMissions, 5 * 60 * 1000);
+    return () => clearInterval(interval);
   }, []);
 
   const missionsEnAttente = missions.filter(
@@ -155,6 +247,79 @@ export default function EspacePrestatairePage() {
     }
   );
 
+  // Fonction pour calculer le temps restant
+  const getTempsRestant = (dateLimite?: string): { heures: number; minutes: number; expire: boolean } | null => {
+    if (!dateLimite) return null;
+    const maintenant = new Date();
+    const limite = new Date(dateLimite);
+    const diff = limite.getTime() - maintenant.getTime();
+    
+    if (diff <= 0) {
+      return { heures: 0, minutes: 0, expire: true };
+    }
+    
+    const heures = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    
+    return { heures, minutes, expire: false };
+  };
+
+  const handleOpenModal = (demande: DemandeDisponible) => {
+    setSelectedDemande(demande);
+    setPrix_prestataire("");
+    setDelai_estime("");
+    setDifficulte_estimee(3);
+    setCommentaire("");
+    setShowModal(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedDemande) return;
+
+    if (!prix_prestataire || !delai_estime || !commentaire) {
+      alert(lang === "fr" ? "Veuillez remplir tous les champs requis." : "Please fill in all required fields.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/prestataires/espace/propositions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          demandeId: selectedDemande.id,
+          prix_prestataire: parseFloat(prix_prestataire),
+          delai_estime: parseInt(delai_estime),
+          difficulte_estimee,
+          commentaire: commentaire.trim(),
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        alert(t.propositionSoumise);
+        setShowModal(false);
+        // Retirer la demande de la liste et recharger
+        setDemandesDisponibles(demandesDisponibles.filter((d) => d.id !== selectedDemande.id));
+        // Recharger les missions aussi
+        const resMissions = await fetch("/api/prestataires/espace/missions", { cache: "no-store" });
+        if (resMissions.ok) {
+          const dataMissions = await resMissions.json();
+          setMissions(dataMissions.missions || []);
+        }
+      } else {
+        alert(data.error || t.erreur);
+      }
+    } catch (err) {
+      console.error("Erreur:", err);
+      alert(t.erreur);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <main className="bg-[#F2F2F5] min-h-screen">
       <BackToHomeLink />
@@ -181,16 +346,98 @@ export default function EspacePrestatairePage() {
                 <Trash2 className="w-4 h-4" />
                 {t.corbeille} {archivedMissions.length > 0 && `(${archivedMissions.length})`}
               </button>
-              <Link
-                href="/prestataires/espace/propositions"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-[#D4A657] text-[#0A1B2A] text-sm font-semibold rounded-md hover:bg-[#B8944F] transition"
-              >
-                <FileText className="w-4 h-4" />
-                {lang === "fr" ? "Soumettre une proposition" : "Submit a proposal"}
-              </Link>
             </div>
           </div>
         </div>
+
+        {/* Demandes disponibles */}
+        <section className="mb-8">
+          <h2 className="font-heading text-lg font-semibold text-[#0A1B2A] mb-4">
+            {t.demandesDisponibles} ({demandesDisponibles.length})
+          </h2>
+          {demandesDisponibles.length === 0 ? (
+            <div className="bg-white border border-[#DDDDDD] rounded-xl p-12 text-center text-[#4B4F58]">
+              {t.aucuneDemande}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {demandesDisponibles.map((demande) => (
+                <div
+                  key={demande.id}
+                  className="bg-white border border-[#DDDDDD] rounded-xl p-6 hover:shadow-md transition"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="font-mono text-xs text-[#6B7280]">{demande.ref}</span>
+                        <span
+                          className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
+                            URGENCE_COLORS[demande.urgence as keyof typeof URGENCE_COLORS] ||
+                            URGENCE_COLORS.normal
+                          }`}
+                        >
+                          {t[demande.urgence as keyof typeof t] || demande.urgence}
+                        </span>
+                      </div>
+                      <h3 className="font-heading font-semibold text-[#0A1B2A] mb-2">
+                        {demande.serviceType}
+                        {demande.serviceSubcategory && (
+                          <span className="text-xs text-[#6B7280] ml-2">
+                            ({demande.serviceSubcategory})
+                          </span>
+                        )}
+                      </h3>
+                      <p className="text-sm text-[#4B4F58] mb-4 line-clamp-2">{demande.description}</p>
+                      <div className="flex flex-wrap gap-4 text-xs text-[#6B7280]">
+                        {demande.lieu && (
+                          <div>
+                            <span className="font-medium">{t.lieu}:</span> {demande.lieu}
+                          </div>
+                        )}
+                        {demande.budget && (
+                          <div>
+                            <span className="font-medium">{t.budget}:</span> {demande.budget} FCFA
+                          </div>
+                        )}
+                        <div>
+                          <span className="font-medium">{t.dateReception}:</span>{" "}
+                          {formatDateWithTimezones(demande.createdAt).cameroon}
+                        </div>
+                        {(demande.dateLimite || demande.dateLimiteProposition) && (() => {
+                          const tempsRestant = getTempsRestant(demande.dateLimite || demande.dateLimiteProposition);
+                          if (tempsRestant) {
+                            if (tempsRestant.expire) {
+                              return (
+                                <div className="flex items-center gap-1 text-red-600 font-semibold">
+                                  <AlertCircle className="w-3 h-3" />
+                                  {t.delaiExpire}
+                                </div>
+                              );
+                            }
+                            return (
+                              <div className="flex items-center gap-1 text-[#D4A657] font-semibold">
+                                <Clock className="w-3 h-3" />
+                                {t.delaiRestant}: {tempsRestant.heures}h {tempsRestant.minutes}min
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleOpenModal(demande)}
+                      className="ml-4 inline-flex items-center gap-2 px-4 py-2 bg-[#D4A657] text-[#0A1B2A] text-sm font-semibold rounded-md hover:bg-[#B8944F] transition"
+                    >
+                      <Plus className="w-4 h-4" />
+                      {t.soumettreProposition}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
 
         {/* Missions en attente */}
         {missionsEnAttente.length > 0 && (
@@ -354,9 +601,141 @@ export default function EspacePrestatairePage() {
           </section>
         )}
 
-        {!showTrash && !loading && missions.length === 0 && rejectedMissions.length === 0 && (
+        {!showTrash && !loading && missions.length === 0 && rejectedMissions.length === 0 && demandesDisponibles.length === 0 && (
           <div className="bg-white border border-[#DDDDDD] rounded-xl p-12 text-center text-[#4B4F58]">
             {t.noMissions}
+          </div>
+        )}
+
+        {/* Modal de soumission */}
+        {showModal && selectedDemande && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6 border-b border-[#E2E2E8]">
+                <div className="flex items-center justify-between">
+                  <h2 className="font-heading text-xl font-semibold text-[#0A1B2A]">
+                    {t.soumettreProposition}
+                  </h2>
+                  <button
+                    onClick={() => setShowModal(false)}
+                    className="text-[#6B7280] hover:text-[#0A1B2A] text-2xl leading-none"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="mt-2 space-y-1">
+                  <p className="text-xs text-[#6B7280]">{selectedDemande.ref}</p>
+                  {(selectedDemande.dateLimite || selectedDemande.dateLimiteProposition) && (() => {
+                    const tempsRestant = getTempsRestant(selectedDemande.dateLimite || selectedDemande.dateLimiteProposition);
+                    if (tempsRestant) {
+                      if (tempsRestant.expire) {
+                        return (
+                          <div className="flex items-center gap-2 text-red-600 text-xs font-semibold">
+                            <AlertCircle className="w-4 h-4" />
+                            {t.delaiExpire}
+                          </div>
+                        );
+                      }
+                      return (
+                        <div className="flex items-center gap-2 text-[#D4A657] text-xs font-semibold">
+                          <Clock className="w-4 h-4" />
+                          {t.delaiRestant}: {tempsRestant.heures}h {tempsRestant.minutes}min
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
+                </div>
+              </div>
+              <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-[#0A1B2A] mb-1">
+                    {t.montantPropose}
+                  </label>
+                  <input
+                    type="number"
+                    value={prix_prestataire}
+                    onChange={(e) => setPrix_prestataire(e.target.value)}
+                    required
+                    min="0"
+                    step="1000"
+                    className="w-full px-3 py-2 border border-[#DDDDDD] rounded-md text-sm focus:outline-none focus:border-[#0A1B2A]"
+                    placeholder="50000"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#0A1B2A] mb-1">
+                    {t.delaiEstime}
+                  </label>
+                  <input
+                    type="number"
+                    value={delai_estime}
+                    onChange={(e) => setDelai_estime(e.target.value)}
+                    required
+                    min="1"
+                    className="w-full px-3 py-2 border border-[#DDDDDD] rounded-md text-sm focus:outline-none focus:border-[#0A1B2A]"
+                    placeholder="7"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#0A1B2A] mb-1">
+                    {t.difficulteEstimee}
+                  </label>
+                  <div className="flex items-center gap-2">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => setDifficulte_estimee(i + 1)}
+                        className={`w-10 h-10 rounded-lg flex items-center justify-center transition ${
+                          i < difficulte_estimee
+                            ? "bg-[#D4A657] text-[#0A1B2A]"
+                            : "bg-[#F9F9FB] text-[#6B7280] border border-[#DDDDDD]"
+                        }`}
+                      >
+                        <Star
+                          className={`w-5 h-5 ${
+                            i < difficulte_estimee ? "fill-current" : ""
+                          }`}
+                        />
+                      </button>
+                    ))}
+                    <span className="text-sm text-[#6B7280] ml-2">
+                      ({difficulte_estimee}/5)
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#0A1B2A] mb-1">
+                    {t.commentaire}
+                  </label>
+                  <textarea
+                    value={commentaire}
+                    onChange={(e) => setCommentaire(e.target.value)}
+                    required
+                    rows={5}
+                    className="w-full px-3 py-2 border border-[#DDDDDD] rounded-md text-sm focus:outline-none focus:border-[#0A1B2A] resize-y"
+                    placeholder={t.commentairePlaceholder}
+                  />
+                </div>
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowModal(false)}
+                    className="flex-1 px-4 py-2 border border-[#DDDDDD] text-[#4B4F58] text-sm font-semibold rounded-md hover:bg-[#F9F9FB] transition"
+                  >
+                    {t.fermer}
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="flex-1 px-4 py-2 bg-[#D4A657] text-[#0A1B2A] text-sm font-semibold rounded-md hover:bg-[#B8944F] transition disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {submitting ? t.soumettant : t.soumettre}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         )}
       </div>
