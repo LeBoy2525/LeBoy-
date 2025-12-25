@@ -38,20 +38,8 @@ export function MissionProgressBar({ mission, lang = "fr", compact = false }: Mi
   const progress = mission.currentProgress || 0;
   const progressHistory = mission.progress || [];
   
-  // Obtenir le statut client simplifié
-  // Si internalState est ADMIN_CONFIRMED ou COMPLETED, forcer le statut à "termine"
-  let clientStatus: ClientMissionStatus;
-  if (mission.internalState === "ADMIN_CONFIRMED" || mission.internalState === "COMPLETED") {
-    clientStatus = "termine";
-  } else {
-    // Utiliser le statut dérivé de internalState si disponible, sinon utiliser status
-    if (mission.status) {
-      clientStatus = mapStatusToClient(mission.status);
-    } else {
-      // Fallback : mapper depuis internalState
-      clientStatus = mapStatusToClient(mapInternalStateToStatus(mission.internalState || "CREATED"));
-    }
-  }
+  // Obtenir le statut client simplifié en utilisant internalState pour un mapping précis
+  const clientStatus = mapStatusToClient(mission.status || mapInternalStateToStatus(mission.internalState || "CREATED"), mission.internalState);
 
   // Déterminer les étapes simplifiées pour le client
   const etapes = [
