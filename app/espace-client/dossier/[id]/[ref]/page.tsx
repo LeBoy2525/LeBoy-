@@ -8,7 +8,7 @@ import BackToHomeLink from "../../../../components/BackToHomeLink";
 import { MissionProgressBar } from "../../../../components/MissionProgressBar";
 import { ClientPaymentSection } from "../../../../components/ClientPaymentSection";
 import { MissionChat } from "../../../../components/MissionChat";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, CheckCircle2 } from "lucide-react";
 import type { Mission } from "@/lib/types";
 import { mapStatusToClient } from "@/lib/types";
 
