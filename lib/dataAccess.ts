@@ -1945,73 +1945,49 @@ export async function createProposition(
   if (USE_DB) {
     try {
       const { createProposition: createPropositionDB } = await import("@/repositories/propositionsRepo");
-      const { getDemandeById, getPrestataireByEmail } = await import("@/lib/dataAccess");
       
-      // Récupérer la demande et le prestataire pour obtenir leurs UUIDs
-      const demande = await getDemandeById(data.demandeId);
-      const prestataire = await getPrestataireByEmail(""); // On n'a pas l'email ici
-      
-      if (!demande) {
-        throw new Error("Demande non trouvée");
+      // Validation UUID basique
+      if (!data.demandeId || typeof data.demandeId !== "string" || !data.demandeId.includes("-")) {
+        throw new Error("demandeId doit être un UUID valide");
+      }
+      if (!data.prestataireId || typeof data.prestataireId !== "string" || !data.prestataireId.includes("-")) {
+        throw new Error("prestataireId doit être un UUID valide");
       }
 
-      // Trouver les UUIDs dans la DB
-      const { getAllDemandes } = await import("@/repositories/demandesRepo");
-      const allDemandes = await getAllDemandes();
-      const demandeDB = allDemandes.find((d: any) => {
-        // Si data.demandeId est un UUID string, comparer directement
-        if (typeof data.demandeId === "string" && data.demandeId.includes("-")) {
-          return d.id === data.demandeId;
-        }
-        // Sinon, c'est un ID numérique (legacy) - convertir UUID en number pour comparaison
-        if (typeof d.id === "string" && d.id.includes("-")) {
-          const hash = d.id.split("").reduce((acc: number, char: string) => {
-            return ((acc << 5) - acc) + char.charCodeAt(0);
-          }, 0);
-          const idNumber = Math.abs(hash) % 1000000;
-          return idNumber === Number(data.demandeId);
-        }
-        return parseInt(String(d.id)) === Number(data.demandeId);
-      });
-
-      if (!demandeDB) {
-        throw new Error("Demande non trouvée dans la DB");
-      }
-
-      // Trouver le prestataire dans la DB
-      const { getAllPrestataires } = await import("@/repositories/prestatairesRepo");
-      const allPrestataires = await getAllPrestataires();
-      const prestataireDB = allPrestataires.find((p: any) => {
-        // Si data.prestataireId est un UUID string, comparer directement
-        if (typeof data.prestataireId === "string" && data.prestataireId.includes("-")) {
-          return p.id === data.prestataireId;
-        }
-        // Sinon, c'est un ID numérique (legacy) - convertir UUID en number pour comparaison
-        if (typeof p.id === "string" && p.id.includes("-")) {
-          const hash = p.id.split("").reduce((acc: number, char: string) => {
-            return ((acc << 5) - acc) + char.charCodeAt(0);
-          }, 0);
-          const idNumber = Math.abs(hash) % 1000000;
-          return idNumber === Number(data.prestataireId);
-        }
-        return parseInt(String(p.id)) === Number(data.prestataireId);
-      });
-
-      if (!prestataireDB) {
-        throw new Error("Prestataire non trouvé dans la DB");
-      }
-
-      // Générer la ref
+      // Générer la ref de manière atomique (en cherchant la dernière ref de l'année)
       const year = new Date().getFullYear();
-      const { getPropositionsByDemandeId: getPropositionsByDemandeIdDB } = await import("@/repositories/propositionsRepo");
-      const existingPropositions = await getPropositionsByDemandeIdDB(demandeDB.id);
-      const nextId = existingPropositions.length + 1;
+      const { prisma } = await import("@/lib/db");
+      
+      // Trouver la dernière proposition de l'année pour générer le prochain numéro
+      const lastProposition = await (prisma as any).proposition.findFirst({
+        where: {
+          ref: {
+            startsWith: `PROP-${year}-`,
+          },
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+        select: {
+          ref: true,
+        },
+      });
+      
+      let nextId = 1;
+      if (lastProposition?.ref) {
+        const match = lastProposition.ref.match(/PROP-\d{4}-(\d+)/);
+        if (match && match[1]) {
+          nextId = parseInt(match[1], 10) + 1;
+        }
+      }
+      
       const ref = `PROP-${year}-${String(nextId).padStart(3, "0")}`;
 
+      // Utiliser directement les UUIDs fournis (pas besoin de chercher dans la DB)
       const proposition = await createPropositionDB({
         ref,
-        demandeId: demandeDB.id,
-        prestataireId: prestataireDB.id,
+        demandeId: data.demandeId, // UUID directement
+        prestataireId: data.prestataireId, // UUID directement
         prix_prestataire: data.prix_prestataire,
         delai_estime: data.delai_estime,
         commentaire: data.commentaire,
