@@ -54,6 +54,7 @@ export default function MissionDetailPage() {
   const [mission, setMission] = useState<Mission | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentUserEmail, setCurrentUserEmail] = useState<string>("");
+  const [isRejected, setIsRejected] = useState(false);
   
   // Extraire l'UUID de la mission depuis l'URL (params.id)
   const idParam = params?.id;
@@ -98,6 +99,23 @@ export default function MissionDetailPage() {
 
         if (res.ok) {
           setMission(data.mission);
+          
+          // Vérifier si la mission a une proposition refusée
+          if (data.mission) {
+            try {
+              const resPropositions = await fetch("/api/prestataires/espace/propositions", { cache: "no-store" });
+              if (resPropositions.ok) {
+                const propositionsData = await resPropositions.json();
+                const propositions = propositionsData.propositions || [];
+                const rejectedProp = propositions.find(
+                  (p: any) => p.demandeId === data.mission.demandeId && p.statut === "refusee"
+                );
+                setIsRejected(!!rejectedProp);
+              }
+            } catch (err) {
+              console.error("Erreur vérification proposition:", err);
+            }
+          }
         } else {
           console.error("❌ Erreur API:", data.error);
         }
@@ -260,13 +278,34 @@ export default function MissionDetailPage() {
       <div className="max-w-4xl mx-auto px-4 md:px-6 py-8">
 
         <div className="bg-white border border-[#DDDDDD] rounded-xl p-6 md:p-8 space-y-6">
+          {/* Message si mission rejetée */}
+          {isRejected && (
+            <div className="bg-orange-50 border-l-4 border-orange-400 p-4 mb-4 rounded-lg">
+              <div className="flex items-start gap-3">
+                <XCircle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <h3 className="font-semibold text-orange-900 mb-1">
+                    {lang === "fr" ? "Mission non retenue" : "Mission not selected"}
+                  </h3>
+                  <p className="text-sm text-orange-800">
+                    {lang === "fr"
+                      ? "Cette mission a été attribuée à un autre prestataire selon les critères de qualité, prix et délai. Cette page est en lecture seule. Vous pouvez archiver cette mission depuis votre espace pour libérer votre espace de travail."
+                      : "This mission was assigned to another provider based on quality, price and deadline criteria. This page is read-only. You can archive this mission from your space to free up your workspace."}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          
           <div>
             <div className="flex items-center justify-between mb-4">
               <h1 className="font-heading text-2xl font-semibold text-[#0A1B2A]">
                 {mission.titre}
               </h1>
-              <span className="px-3 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                {mission.status}
+              <span className={`px-3 py-1 text-xs font-semibold rounded-full ${
+                isRejected ? "bg-orange-100 text-orange-800" : "bg-blue-100 text-blue-800"
+              }`}>
+                {isRejected ? (lang === "fr" ? "Non retenue" : "Not selected") : mission.status}
               </span>
             </div>
             <p className="text-sm text-[#6B7280] font-mono mb-4">{mission.ref}</p>
@@ -320,11 +359,15 @@ export default function MissionDetailPage() {
 
           {/* Barre de progression cliquable */}
           <div className="pt-4 border-t border-[#E2E2E8]">
-            <ClickableMissionProgressBar 
-              mission={mission} 
-              lang={lang}
-              onStepClick={handleStepClick}
-            />
+            {isRejected ? (
+              <MissionProgressBar mission={mission} lang={lang} />
+            ) : (
+              <ClickableMissionProgressBar 
+                mission={mission} 
+                lang={lang}
+                onStepClick={handleStepClick}
+              />
+            )}
           </div>
 
           {/* Fichiers partagés */}
@@ -390,7 +433,7 @@ export default function MissionDetailPage() {
           )}
 
           {/* Actions selon le statut - Soumission d'estimation */}
-          {mission.internalState === "ASSIGNED_TO_PROVIDER" && (
+          {mission.internalState === "ASSIGNED_TO_PROVIDER" && !isRejected && (
             <div className="pt-4 border-t border-[#E2E2E8]">
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
                 <p className="text-sm font-medium text-blue-800 mb-2">
@@ -413,7 +456,7 @@ export default function MissionDetailPage() {
           )}
 
           {/* Estimation soumise avec possibilité de révision */}
-          {mission.internalState === "PROVIDER_ESTIMATED" && mission.estimationPartenaire && !mission.devisGenere && (
+          {mission.internalState === "PROVIDER_ESTIMATED" && mission.estimationPartenaire && !mission.devisGenere && !isRejected && (
             <div className="pt-4 border-t border-[#E2E2E8]">
               <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
                 <p className="text-sm font-medium text-green-800 mb-2">
@@ -466,7 +509,7 @@ export default function MissionDetailPage() {
           )}
 
           {/* Prise en charge de mission après réception de l'avance */}
-          {mission.internalState === "ADVANCE_SENT" && (
+          {mission.internalState === "ADVANCE_SENT" && !isRejected && (
             <div className="pt-4 border-t border-[#E2E2E8]">
               {(() => {
                 const avancePercentage = mission.avancePercentage || 50;
@@ -511,7 +554,7 @@ export default function MissionDetailPage() {
           )}
 
           {/* Phases d'exécution */}
-          {mission.internalState === "IN_PROGRESS" && (
+          {mission.internalState === "IN_PROGRESS" && !isRejected && (
             <div className="pt-4 border-t border-[#E2E2E8]">
               <MissionPhases 
                 mission={mission} 
@@ -534,7 +577,7 @@ export default function MissionDetailPage() {
           )}
 
           {/* Upload de preuves (inline, seulement si en cours) */}
-          {mission.internalState === "IN_PROGRESS" && !showProofModal && (
+          {mission.internalState === "IN_PROGRESS" && !showProofModal && !isRejected && (
             <div className="pt-4 border-t border-[#E2E2E8]">
               <MissionProofUpload
                 missionId={missionUuid || (mission as any)?.dbId || mission.id}
@@ -708,7 +751,7 @@ export default function MissionDetailPage() {
           )}
 
           {/* Chat/Messagerie */}
-          {currentUserEmail && (
+          {currentUserEmail && !isRejected && (
             <div className="pt-4 border-t border-[#E2E2E8]">
               <MissionChat
                 mission={mission}
@@ -726,7 +769,7 @@ export default function MissionDetailPage() {
             </h2>
             
             {/* Formulaire d'ajout de mise à jour */}
-            {mission.internalState === "IN_PROGRESS" && (
+            {mission.internalState === "IN_PROGRESS" && !isRejected && (
               <UpdateForm missionId={missionUuid || (mission as any)?.dbId || mission.id} onUpdate={() => {
                 // Recharger la mission
                 if (missionUuid) {

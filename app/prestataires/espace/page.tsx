@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useLanguage } from "../../components/LanguageProvider";
-import { FileText, CheckCircle2, Clock, XCircle, Bell, Trash2, RotateCcw, Plus, DollarSign, Star, AlertCircle } from "lucide-react";
+import { FileText, CheckCircle2, Clock, XCircle, Bell, Trash2, RotateCcw, Plus, DollarSign, Star, AlertCircle, Archive } from "lucide-react";
 import Link from "next/link";
 import BackToHomeLink from "../../components/BackToHomeLink";
 import type { Mission } from "@/lib/types";
@@ -555,46 +555,15 @@ export default function EspacePrestatairePage() {
             </div>
 
             {showRejected && (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div className="space-y-3">
                 {rejectedMissions.map((mission) => (
-                  <div
-                    key={mission.id}
-                    className="bg-white border-2 border-orange-200 rounded-xl p-6 hover:shadow-md transition"
-                  >
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <h3 className="font-semibold text-[#0A1B2A] mb-1">
-                          {mission.ref}
-                        </h3>
-                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 text-orange-800 text-xs font-semibold rounded-full">
-                          <XCircle className="w-3 h-3" />
-                          {lang === "fr" ? "Non retenue" : "Not selected"}
-                        </span>
-                      </div>
-                    </div>
-
-                    {mission.estimationPartenaire && (
-                      <div className="mt-3 pt-3 border-t border-orange-100">
-                        <p className="text-xs text-[#6B7280] mb-1">
-                          {lang === "fr" ? "Votre estimation" : "Your estimation"}
-                        </p>
-                        <p className="text-sm font-semibold text-[#0A1B2A]">
-                          {mission.estimationPartenaire.prixFournisseur.toLocaleString()} FCFA
-                        </p>
-                        {mission.estimationPartenaire.delaisEstimes && (
-                          <p className="text-xs text-[#6B7280] mt-1">
-                            {mission.estimationPartenaire.delaisEstimes} {lang === "fr" ? "heures" : "hours"}
-                          </p>
-                        )}
-                      </div>
-                    )}
-
-                    {mission.archivedAt && (
-                      <p className="text-xs text-[#9CA3AF] mt-3">
-                        {lang === "fr" ? "Archivée le" : "Archived on"}: {formatDateWithTimezones(mission.archivedAt).cameroon}
-                      </p>
-                    )}
-                  </div>
+                  <MissionCard 
+                    key={mission.id} 
+                    mission={mission} 
+                    t={t} 
+                    lang={lang} 
+                    isRejected={true}
+                  />
                 ))}
               </div>
             )}
@@ -743,7 +712,82 @@ export default function EspacePrestatairePage() {
   );
 }
 
-function MissionCard({ mission, t, lang }: { mission: Mission; t: any; lang: "fr" | "en" }) {
+function MissionCard({ mission, t, lang, isRejected = false }: { mission: Mission; t: any; lang: "fr" | "en"; isRejected?: boolean }) {
+  // Si la mission est rejetée, afficher une carte spéciale non cliquable
+  if (isRejected) {
+    const missionId = (mission as any).dbId || mission.id;
+    
+    return (
+      <div className="bg-white border-2 border-orange-200 rounded-xl p-5 opacity-90 cursor-not-allowed">
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="font-mono text-xs text-[#6B7280]">{mission.ref}</span>
+              <span className="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 text-orange-800 text-xs font-semibold rounded-full">
+                <XCircle className="w-3 h-3" />
+                {lang === "fr" ? "Non retenue" : "Not selected"}
+              </span>
+            </div>
+            <h3 className="font-heading font-semibold text-[#0A1B2A] mb-2">
+              {mission.titre}
+            </h3>
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-3">
+              <p className="text-xs text-orange-800 font-medium mb-1">
+                {lang === "fr" ? "ℹ️ Mission assignée à un autre prestataire" : "ℹ️ Mission assigned to another provider"}
+              </p>
+              <p className="text-xs text-orange-700">
+                {lang === "fr" 
+                  ? "Cette mission a été attribuée à un autre prestataire selon les critères de qualité, prix et délai. Vous pouvez archiver cette mission pour libérer votre espace."
+                  : "This mission was assigned to another provider based on quality, price and deadline criteria. You can archive this mission to free up your space."}
+              </p>
+            </div>
+            {mission.estimationPartenaire && (
+              <div className="mt-3 pt-3 border-t border-orange-100">
+                <p className="text-xs text-[#6B7280] mb-1">
+                  {lang === "fr" ? "Votre estimation" : "Your estimation"}
+                </p>
+                <p className="text-sm font-semibold text-[#0A1B2A]">
+                  {mission.estimationPartenaire.prixFournisseur.toLocaleString()} FCFA
+                </p>
+                {mission.estimationPartenaire.delaisEstimes && (
+                  <p className="text-xs text-[#6B7280] mt-1">
+                    {mission.estimationPartenaire.delaisEstimes} {lang === "fr" ? "jours" : "days"}
+                  </p>
+                )}
+              </div>
+            )}
+            <button
+              onClick={async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (confirm(lang === "fr" ? "Archiver cette mission ?" : "Archive this mission?")) {
+                  try {
+                    const res = await fetch(`/api/prestataires/espace/missions/${missionId}/archive`, {
+                      method: "POST",
+                    });
+                    if (res.ok) {
+                      alert(lang === "fr" ? "✅ Mission archivée avec succès" : "✅ Mission archived successfully");
+                      window.location.reload();
+                    } else {
+                      alert(lang === "fr" ? "❌ Erreur lors de l'archivage" : "❌ Error archiving");
+                    }
+                  } catch (error) {
+                    console.error("Erreur archivage:", error);
+                    alert(lang === "fr" ? "❌ Erreur lors de l'archivage" : "❌ Error archiving");
+                  }
+                }
+              }}
+              className="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-orange-100 text-orange-800 text-xs font-semibold rounded-md hover:bg-orange-200 transition"
+            >
+              <Archive className="w-3 h-3" />
+              {lang === "fr" ? "Archiver" : "Archive"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
   // Déterminer le code couleur selon l'état interne
   const getStatusColor = () => {
     const state = mission.internalState || "CREATED";

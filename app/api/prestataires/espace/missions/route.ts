@@ -83,18 +83,48 @@ export async function GET() {
       console.log(`[${traceId}]   - ${statut}: ${count}`);
     });
     
-    // Filtrer les missions non supprimées et non archivées (missions actives)
-    const missions = allMissions.filter(
-      (m) => !m.deleted && !m.archived
+    // Récupérer les propositions du prestataire pour vérifier les refusées
+    const { getPropositionsByPrestataireId } = await import("@/lib/dataAccess");
+    const propositions = await getPropositionsByPrestataireId(prestataire.id);
+    
+    // Créer un Set des demandeIds avec propositions refusées
+    const demandeIdsAvecPropositionRefusee = new Set(
+      propositions
+        .filter((p) => p.statut === "refusee")
+        .map((p) => p.demandeId)
     );
     
-    // Récupérer les missions archivées par l'admin (non retenues)
-    const rejectedMissions = allMissions.filter(
-      (m) => m.archived && !m.deleted && m.archivedBy === "admin"
-    );
+    console.log(`[${traceId}] 📋 Propositions refusées: ${demandeIdsAvecPropositionRefusee.size}`);
     
-    console.log(`[${traceId}] ✅ Missions après filtrage (non supprimées, non archivées): ${missions.length}`);
-    console.log(`[${traceId}] 📋 Missions non retenues (archivées par admin): ${rejectedMissions.length}`);
+    // Filtrer les missions : exclure celles avec proposition refusée ET celles archivées par admin
+    const missions = allMissions.filter((m) => {
+      // Exclure les missions supprimées
+      if (m.deleted) return false;
+      
+      // Exclure les missions archivées par admin (non retenues)
+      if (m.archived && m.archivedBy === "admin") return false;
+      
+      // Exclure les missions dont la proposition a été refusée
+      if (demandeIdsAvecPropositionRefusee.has(m.demandeId)) return false;
+      
+      return true;
+    });
+    
+    // Missions avec proposition refusée OU archivées par admin (pour affichage séparé)
+    const rejectedMissions = allMissions.filter((m) => {
+      if (m.deleted) return false;
+      
+      // Missions archivées par admin
+      if (m.archived && m.archivedBy === "admin") return true;
+      
+      // Missions avec proposition refusée (même si pas encore archivées)
+      if (demandeIdsAvecPropositionRefusee.has(m.demandeId)) return true;
+      
+      return false;
+    });
+    
+    console.log(`[${traceId}] ✅ Missions après filtrage (non supprimées, non archivées, non refusées): ${missions.length}`);
+    console.log(`[${traceId}] 📋 Missions non retenues (archivées par admin ou proposition refusée): ${rejectedMissions.length}`);
     
     // Vérifier aussi les missions qui ne matchent pas le prestataireId
     const missionsNonMatch = allMissions.filter(
