@@ -8,7 +8,7 @@ import BackToHomeLink from "../../../../components/BackToHomeLink";
 import { MissionProgressBar } from "../../../../components/MissionProgressBar";
 import { ClientPaymentSection } from "../../../../components/ClientPaymentSection";
 import { MissionChat } from "../../../../components/MissionChat";
-import { MessageSquare, CheckCircle2 } from "lucide-react";
+import { MessageSquare, CheckCircle2, ArrowRight, FileText, Eye } from "lucide-react";
 import type { Mission } from "@/lib/types";
 import { mapStatusToClient } from "@/lib/types";
 
@@ -395,7 +395,7 @@ export default function DossierPage() {
                   {missions.length > 0 && missions[0] && (
                     <div className="mt-4 space-y-4">
                       <div>
-                        <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center justify-between mb-3">
                           <h3 className="font-heading text-base font-semibold text-[#0A1B2A]">
                             {lang === "fr" ? "Mission assignée" : "Assigned mission"}
                           </h3>
@@ -419,20 +419,46 @@ export default function DossierPage() {
                             </button>
                           )}
                         </div>
-                        {/* Affichage informatif de la mission (sans lien vers détail) */}
-                        <div className="p-3 bg-[#F9F9FB] border border-[#DDDDDD] rounded-lg">
-                          <div>
-                            <p className="font-semibold text-sm text-[#0A1B2A]">
-                              {missions[0].ref}
-                            </p>
-                            <p className="text-xs text-[#6B7280] mt-1">
-                              {missions[0].titre}
-                            </p>
-                            {(missions[0] as any).prestataireRef && (
-                              <p className="text-xs text-[#6B7280] mt-1">
-                                {lang === "fr" ? "Prestataire :" : "Provider :"} {(missions[0] as any).prestataireRef}
+                        {/* Affichage amélioré de la mission avec bouton "Voir plus" */}
+                        <div className="bg-gradient-to-br from-white to-[#F9F9FB] border-2 border-[#DDDDDD] rounded-xl p-4 hover:border-[#C8A55F] transition-all shadow-sm">
+                          <div className="space-y-3">
+                            <div>
+                              <p className="font-semibold text-sm text-[#0A1B2A] mb-1">
+                                {missions[0].ref}
                               </p>
+                              <p className="text-xs text-[#6B7280]">
+                                {missions[0].titre}
+                              </p>
+                              {(missions[0] as any).prestataireRef && (
+                                <p className="text-xs text-[#6B7280] mt-1">
+                                  {lang === "fr" ? "Prestataire :" : "Provider :"} <span className="font-medium text-[#0A1B2A]">{(missions[0] as any).prestataireRef}</span>
+                                </p>
+                              )}
+                            </div>
+                            
+                            {/* Indicateur si preuves disponibles */}
+                            {(missions[0].proofValidatedForClient === true || 
+                              missions[0].internalState === "ADMIN_CONFIRMED" || 
+                              missions[0].internalState === "COMPLETED") && (
+                              <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded-lg">
+                                <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+                                <p className="text-xs text-green-700 font-medium">
+                                  {lang === "fr" 
+                                    ? "✅ Preuves d'accomplissement disponibles" 
+                                    : "✅ Proof of completion available"}
+                                </p>
+                              </div>
                             )}
+
+                            {/* Bouton "Voir plus" pour accéder aux détails */}
+                            <Link
+                              href={`/espace-client/mission/${missions[0].id}`}
+                              className="inline-flex items-center gap-2 px-4 py-2 bg-[#0A1B2A] text-white text-xs font-semibold rounded-md hover:bg-[#07121e] transition-all shadow-sm hover:shadow-md group"
+                            >
+                              <Eye className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                              {lang === "fr" ? "Voir les détails" : "View details"}
+                              <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+                            </Link>
                           </div>
                         </div>
                       </div>
