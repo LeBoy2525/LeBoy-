@@ -137,6 +137,17 @@ export default function DossierPage() {
           setDossier(null);
         } else {
           const data = await res.json();
+          console.log("[DossierPage] Données reçues:", { 
+            dossier: data.dossier?.ref, 
+            missionsCount: data.missions?.length,
+            missions: data.missions?.map((m: any) => ({ 
+              id: m.id, 
+              ref: m.ref, 
+              internalState: m.internalState,
+              hasMessages: !!m.messages,
+              messagesCount: m.messages?.length || 0
+            }))
+          });
           setDossier(data.dossier ?? null);
           setMissions(data.missions ?? []);
           setError(null);
@@ -387,15 +398,25 @@ export default function DossierPage() {
                           <h3 className="font-heading text-base font-semibold text-[#0A1B2A]">
                             Mission
                           </h3>
-                          {/* Bouton chat */}
-                          <button
-                            onClick={() => setShowChat(!showChat)}
-                            className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-[#0A1B2A] border border-[#0A1B2A] rounded-md hover:bg-[#0A1B2A] hover:text-white transition"
-                            title={lang === "fr" ? "Ouvrir le chat avec l'administrateur" : "Open chat with administrator"}
-                          >
-                            <MessageSquare className="w-4 h-4" />
-                            {lang === "fr" ? "Chat" : "Chat"}
-                          </button>
+                          {/* Bouton chat - toujours visible si mission existe */}
+                          {currentUserEmail && (
+                            <button
+                              onClick={() => {
+                                console.log("[DossierPage] Toggle chat:", { 
+                                  showChat, 
+                                  missionId: missions[0].id,
+                                  hasMessages: !!missions[0].messages,
+                                  currentUserEmail 
+                                });
+                                setShowChat(!showChat);
+                              }}
+                              className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-[#0A1B2A] border border-[#0A1B2A] rounded-md hover:bg-[#0A1B2A] hover:text-white transition"
+                              title={lang === "fr" ? "Ouvrir le chat avec l'administrateur" : "Open chat with administrator"}
+                            >
+                              <MessageSquare className="w-4 h-4" />
+                              {lang === "fr" ? "Chat" : "Chat"}
+                            </button>
+                          )}
                         </div>
                         <Link
                           href={`/espace-client/mission/${missions[0].id}`}
