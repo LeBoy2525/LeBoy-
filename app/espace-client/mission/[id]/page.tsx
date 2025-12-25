@@ -370,12 +370,16 @@ export default function MissionDetailClientPage() {
           )}
 
           {/* Preuves de validation (si validées par l'admin) */}
-          {(mission.proofValidatedForClient || 
+          {/* Afficher les preuves si l'admin a validé OU si la mission est confirmée/complétée */}
+          {(mission.proofValidatedForClient === true || 
             mission.internalState === "ADMIN_CONFIRMED" || 
             mission.internalState === "COMPLETED" || 
             mission.status === "termine_icd_canada" || 
             mission.status === "cloture") && (
             <div className="pt-4 border-t border-[#E2E2E8]">
+              <h3 className="font-heading font-semibold text-[#0A1B2A] mb-3">
+                {lang === "fr" ? "Preuves d'accomplissement" : "Proof of completion"}
+              </h3>
               <MissionProofView
                 missionId={(mission as any).dbId || mission.id}
                 userRole="client"
@@ -540,6 +544,20 @@ export default function MissionDetailClientPage() {
               </div>
             </div>
           )}
+
+          {/* Section Besoin d'une correction ou d'un complément */}
+          <div className="pt-4 border-t border-[#E2E2E8]">
+            <div className="bg-[#FFF9EC] border border-[#C8A55F] rounded-xl p-5 md:p-6 text-xs md:text-sm text-[#4B4F58] space-y-2">
+              <p className="font-heading text-sm md:text-base font-semibold text-[#0A1B2A]">
+                {lang === "fr" ? "Besoin d'une correction ou d'un complément ?" : "Need a correction or addition?"}
+              </p>
+              <p style={{ textAlign: "justify" }}>
+                {lang === "fr" 
+                  ? `Si vous devez corriger une information importante ou ajouter des éléments, vous pourrez le faire en mentionnant la référence ${mission.ref} dans vos échanges avec LeBoy.`
+                  : `If you need to correct important information or add elements, you can do so by mentioning reference ${mission.ref} in your exchanges with LeBoy.`}
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </main>
