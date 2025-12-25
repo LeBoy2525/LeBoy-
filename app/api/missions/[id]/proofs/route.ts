@@ -142,11 +142,15 @@ export async function POST(req: Request, { params }: RouteParams) {
         fileName: file.name,
         fileType: file.type,
         fileSize: file.size,
+        fileUrl: stored.storageUrl, // URL publique du fichier
         uploadedAt: new Date().toISOString(),
         uploadedBy: "prestataire",
         description: description || undefined,
         validated: false,
       };
+      
+      // Ajouter storageKey dans la preuve pour récupération ultérieure (propriété non typée)
+      (proof as any).storageKey = stored.storageKey;
 
       existingProofs.push(proof);
       uploadedProofs.push(proof);

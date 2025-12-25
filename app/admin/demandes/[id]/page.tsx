@@ -1099,7 +1099,7 @@ export default function AdminDemandeDetailPage() {
                       mission.status === "cloture") && (
                       <div className="pt-2 border-t border-[#E2E2E8]">
                         <MissionProofView
-                          missionId={mission.id}
+                          missionId={(mission as any).dbId || mission.id}
                           userRole="admin"
                           lang={lang}
                           onValidationChange={async () => {

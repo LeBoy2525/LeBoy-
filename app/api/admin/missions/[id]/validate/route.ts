@@ -50,10 +50,23 @@ export async function POST(req: Request, { params }: RouteParams) {
     const body = await req.json();
     const { validateForClient } = body;
 
+    // Récupérer la mission Prisma pour mettre à jour
+    const { getMissionById: getMissionByIdDB, updateMission } = await import("@/repositories/missionsRepo");
+    const { mapInternalStateToStatus } = await import("@/lib/types");
+    const missionPrisma = await getMissionByIdDB(missionUuid);
+    
+    if (!missionPrisma) {
+      return NextResponse.json(
+        { error: "Mission non trouvée dans la base de données." },
+        { status: 404 }
+      );
+    }
+
     // Valider toutes les preuves
-    if (mission.proofs && mission.proofs.length > 0) {
+    const proofs = missionPrisma.proofs ? JSON.parse(JSON.stringify(missionPrisma.proofs)) : [];
+    if (proofs.length > 0) {
       const now = new Date().toISOString();
-      mission.proofs.forEach((proof) => {
+      proofs.forEach((proof: any) => {
         proof.validatedByAdmin = true;
         proof.validatedAt = now;
         // Calculer la date d'archivage (3 mois après validation)
@@ -63,24 +76,33 @@ export async function POST(req: Request, { params }: RouteParams) {
       });
     }
 
-    mission.proofValidatedByAdmin = true;
-    mission.proofValidatedAt = new Date().toISOString();
+    const updateData: any = {
+      proofs: proofs,
+      proofValidatedByAdmin: true,
+      proofValidatedAt: new Date(),
+      internalState: "ADMIN_CONFIRMED" as any,
+      status: mapInternalStateToStatus("ADMIN_CONFIRMED" as any),
+    };
 
     // Si le client doit voir les preuves
     if (validateForClient) {
-      mission.proofValidatedForClient = true;
-      mission.proofValidatedForClientAt = new Date().toISOString(); // Enregistrer la date pour calculer les 24h
+      updateData.proofValidatedForClient = true;
+      updateData.proofValidatedForClientAt = new Date();
     }
 
-    // Mettre à jour l'état interne vers ADMIN_CONFIRMED
-    const updated = await updateMissionInternalState(missionUuid, "ADMIN_CONFIRMED", userEmail);
+    // Mettre à jour via Prisma
+    const updatedMissionPrisma = await updateMission(missionUuid, updateData);
 
-    if (!updated) {
+    if (!updatedMissionPrisma) {
       return NextResponse.json(
         { error: "Erreur lors de la mise à jour." },
         { status: 500 }
       );
     }
+
+    // Convertir en JSON pour la réponse
+    const { convertPrismaMissionToJSON } = await import("@/lib/dataAccess");
+    const updated = convertPrismaMissionToJSON(updatedMissionPrisma);
 
     // Créer une mise à jour pour le client si validateForClient est true
     if (validateForClient) {
@@ -94,28 +116,26 @@ export async function POST(req: Request, { params }: RouteParams) {
       });
     }
 
-    await saveMissions();
-
     // Envoyer une notification email au client si validateForClient est true
     if (validateForClient) {
       try {
         const { sendNotificationEmail } = await import("@/lib/emailService");
         const { getDemandeById } = await import("@/lib/dataAccess");
-        const demande = await getDemandeById(mission.demandeId);
+        const demande = await getDemandeById(updatedMissionPrisma.demandeId);
         const protocol = process.env.NEXT_PUBLIC_APP_URL?.startsWith("https") ? "https" : "http";
         const platformUrl = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://localhost:3000`;
         
-        if (demande) {
+        if (demande && updatedMissionPrisma) {
           await sendNotificationEmail(
             "mission-completed",
             { email: demande.email, name: demande.fullName },
             {
-              missionRef: mission.ref,
+              missionRef: updatedMissionPrisma.ref,
               clientName: demande.fullName,
-              serviceType: mission.serviceType,
-              dateCloture: mission.dateFin || new Date().toISOString(),
+              serviceType: updatedMissionPrisma.serviceType,
+              dateCloture: updatedMissionPrisma.dateFin?.toISOString() || new Date().toISOString(),
               platformUrl,
-              missionId: mission.id,
+              missionId: missionUuid, // Utiliser l'UUID
             },
             "fr"
           );

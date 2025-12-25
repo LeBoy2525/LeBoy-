@@ -5,7 +5,7 @@ import { Download, FileText, Image, Video, CheckCircle2, XCircle, Eye, Calendar 
 import type { MissionProof } from "@/lib/types";
 
 interface MissionProofViewProps {
-  missionId: number;
+  missionId: string | number; // UUID string ou number (pour compatibilité)
   userRole: "admin" | "client" | "prestataire";
   lang?: "fr" | "en";
   onValidationChange?: () => void;
