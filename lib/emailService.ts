@@ -536,8 +536,8 @@ function getNotificationHTML(
         ` : ""}
         <p style="margin-top: 30px;">Nous vous remercions pour votre intérêt et votre participation. Nous espérons avoir l'occasion de collaborer avec vous sur de futures missions.</p>
         <p style="margin-top: 20px;">
-          <a href="${platformUrl}/prestataires/espace" style="background: #D4A657; color: #0B2135; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
-            Accéder à mon espace prestataire
+          <a href="${platformUrl}/prestataires/connexion" style="background: #D4A657; color: #0B2135; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
+            Se connecter à mon espace prestataire
           </a>
         </p>
         <p style="margin-top: 20px; color: #6B7280; font-size: 14px;">

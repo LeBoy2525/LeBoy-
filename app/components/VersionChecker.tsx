@@ -9,8 +9,26 @@ import { useEffect, useState } from "react";
 export function VersionChecker() {
   const [showReload, setShowReload] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
+  
+  // Clés localStorage
+  const STORAGE_VERSION_KEY = "app_version";
+  const STORAGE_COMMIT_SHA_KEY = "app_commit_sha";
+  const STORAGE_DEPLOYMENT_ID_KEY = "app_deployment_id";
+  const STORAGE_BUILD_TIME_KEY = "app_build_time";
+  const STORAGE_CHECK_TIME_KEY = "app_version_check_time";
+  const STORAGE_PENDING_UPDATE_KEY = "app_pending_update";
+  const STORAGE_UPDATE_DISMISSED_KEY = "app_update_dismissed";
 
   useEffect(() => {
+    // Vérifier s'il y a une mise à jour en attente depuis une session précédente
+    const pendingUpdate = localStorage.getItem(STORAGE_PENDING_UPDATE_KEY);
+    if (pendingUpdate) {
+      console.log("[VersionChecker] 🔄 Mise à jour en attente détectée - application automatique");
+      // Forcer la mise à jour immédiatement
+      handleReload();
+      return;
+    }
+
     // Mode test : vérifier si on doit forcer l'affichage (pour tester)
     const urlParams = new URLSearchParams(window.location.search);
     const testMode = urlParams.get("test-update") === "true";
@@ -45,16 +63,29 @@ export function VersionChecker() {
       }
     };
 
+    // Gérer la fermeture de la page : si une mise à jour a été reportée, la marquer comme en attente
+    const handleBeforeUnload = () => {
+      const dismissedUpdate = localStorage.getItem(STORAGE_UPDATE_DISMISSED_KEY);
+      if (dismissedUpdate && !showReload) {
+        // Il y a une mise à jour reportée et l'utilisateur ferme la page
+        // Marquer comme en attente pour forcer la mise à jour au prochain chargement
+        localStorage.setItem(STORAGE_PENDING_UPDATE_KEY, "true");
+        console.log("[VersionChecker] 📝 Mise à jour reportée marquée comme en attente");
+      }
+    };
+
     window.addEventListener("focus", handleFocus);
     document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("beforeunload", handleBeforeUnload);
 
     return () => {
       clearTimeout(initialDelay);
       clearInterval(interval);
       window.removeEventListener("focus", handleFocus);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
     };
-  }, []);
+  }, [showReload]);
 
   async function checkVersion() {
     // Ne pas vérifier si une notification est déjà affichée
@@ -81,13 +112,13 @@ export function VersionChecker() {
       }
 
       const data = await res.json();
-      const currentVersion = localStorage.getItem("app_version");
-      const lastCheckTime = localStorage.getItem("app_version_check_time");
+      const currentVersion = localStorage.getItem(STORAGE_VERSION_KEY);
+      const lastCheckTime = localStorage.getItem(STORAGE_CHECK_TIME_KEY);
       
       // Utiliser aussi les sources détaillées pour une comparaison plus robuste
-      const currentCommitSha = localStorage.getItem("app_commit_sha");
-      const currentDeploymentId = localStorage.getItem("app_deployment_id");
-      const currentBuildTime = localStorage.getItem("app_build_time");
+      const currentCommitSha = localStorage.getItem(STORAGE_COMMIT_SHA_KEY);
+      const currentDeploymentId = localStorage.getItem(STORAGE_DEPLOYMENT_ID_KEY);
+      const currentBuildTime = localStorage.getItem(STORAGE_BUILD_TIME_KEY);
 
       console.log(`[VersionChecker] 🔍 Vérification version (${new Date().toLocaleTimeString()}):`, {
         versionServeur: data.version,
@@ -105,11 +136,14 @@ export function VersionChecker() {
       // Si c'est la première visite, sauvegarder toutes les informations de version
       if (!currentVersion) {
         console.log(`[VersionChecker] ✅ Première visite - sauvegarde version: ${data.version}`);
-        localStorage.setItem("app_version", data.version);
-        localStorage.setItem("app_version_check_time", Date.now().toString());
-        if (data.sources?.commitSha) localStorage.setItem("app_commit_sha", data.sources.commitSha);
-        if (data.sources?.deploymentId) localStorage.setItem("app_deployment_id", data.sources.deploymentId);
-        if (data.sources?.buildTime) localStorage.setItem("app_build_time", data.sources.buildTime);
+        localStorage.setItem(STORAGE_VERSION_KEY, data.version);
+        localStorage.setItem(STORAGE_CHECK_TIME_KEY, Date.now().toString());
+        if (data.sources?.commitSha) localStorage.setItem(STORAGE_COMMIT_SHA_KEY, data.sources.commitSha);
+        if (data.sources?.deploymentId) localStorage.setItem(STORAGE_DEPLOYMENT_ID_KEY, data.sources.deploymentId);
+        if (data.sources?.buildTime) localStorage.setItem(STORAGE_BUILD_TIME_KEY, data.sources.buildTime);
+        // Nettoyer les flags de mise à jour en attente
+        localStorage.removeItem(STORAGE_PENDING_UPDATE_KEY);
+        localStorage.removeItem(STORAGE_UPDATE_DISMISSED_KEY);
         return;
       }
 
@@ -127,9 +161,22 @@ export function VersionChecker() {
           deploymentId: deploymentIdChanged ? `${currentDeploymentId} → ${data.sources?.deploymentId}` : "identique",
           buildTime: buildTimeChanged ? `${currentBuildTime} → ${data.sources?.buildTime}` : "identique",
         });
-        setShowReload(true);
+        
+        // Vérifier si l'utilisateur a déjà reporté cette mise à jour
+        const dismissedUpdate = localStorage.getItem(STORAGE_UPDATE_DISMISSED_KEY);
+        const dismissedVersion = dismissedUpdate ? JSON.parse(dismissedUpdate).version : null;
+        
+        // Si c'est une nouvelle version ou si l'utilisateur n'a pas encore reporté cette version, afficher
+        if (!dismissedVersion || dismissedVersion !== data.version) {
+          setShowReload(true);
+        } else {
+          console.log(`[VersionChecker] ⏭️ Mise à jour déjà reportée pour cette version`);
+        }
       } else {
         console.log(`[VersionChecker] ✅ Version à jour: ${data.version}`);
+        // Nettoyer les flags si la version est à jour
+        localStorage.removeItem(STORAGE_PENDING_UPDATE_KEY);
+        localStorage.removeItem(STORAGE_UPDATE_DISMISSED_KEY);
       }
     } catch (err) {
       console.error("[VersionChecker] ❌ Erreur vérification version:", err);
@@ -143,11 +190,14 @@ export function VersionChecker() {
     fetch("/api/version?t=" + Date.now(), { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
-        localStorage.setItem("app_version", data.version);
-        localStorage.setItem("app_version_check_time", Date.now().toString());
-        if (data.sources?.commitSha) localStorage.setItem("app_commit_sha", data.sources.commitSha);
-        if (data.sources?.deploymentId) localStorage.setItem("app_deployment_id", data.sources.deploymentId);
-        if (data.sources?.buildTime) localStorage.setItem("app_build_time", data.sources.buildTime);
+        localStorage.setItem(STORAGE_VERSION_KEY, data.version);
+        localStorage.setItem(STORAGE_CHECK_TIME_KEY, Date.now().toString());
+        if (data.sources?.commitSha) localStorage.setItem(STORAGE_COMMIT_SHA_KEY, data.sources.commitSha);
+        if (data.sources?.deploymentId) localStorage.setItem(STORAGE_DEPLOYMENT_ID_KEY, data.sources.deploymentId);
+        if (data.sources?.buildTime) localStorage.setItem(STORAGE_BUILD_TIME_KEY, data.sources.buildTime);
+        // Nettoyer les flags de mise à jour
+        localStorage.removeItem(STORAGE_PENDING_UPDATE_KEY);
+        localStorage.removeItem(STORAGE_UPDATE_DISMISSED_KEY);
         // Recharger la page avec un paramètre pour éviter le cache
         window.location.reload();
       })
@@ -158,15 +208,16 @@ export function VersionChecker() {
   }
 
   function handleDismiss() {
-    // Mettre à jour la version sans recharger (l'utilisateur rechargera plus tard)
+    // Récupérer la version actuelle du serveur pour la sauvegarder comme "reportée"
     fetch("/api/version?t=" + Date.now(), { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
-        localStorage.setItem("app_version", data.version);
-        localStorage.setItem("app_version_check_time", Date.now().toString());
-        if (data.sources?.commitSha) localStorage.setItem("app_commit_sha", data.sources.commitSha);
-        if (data.sources?.deploymentId) localStorage.setItem("app_deployment_id", data.sources.deploymentId);
-        if (data.sources?.buildTime) localStorage.setItem("app_build_time", data.sources.buildTime);
+        // Marquer cette version comme reportée (avec timestamp)
+        localStorage.setItem(STORAGE_UPDATE_DISMISSED_KEY, JSON.stringify({
+          version: data.version,
+          timestamp: Date.now(),
+        }));
+        console.log(`[VersionChecker] ⏸️ Mise à jour reportée pour version ${data.version}`);
         setShowReload(false);
       })
       .catch(() => {
@@ -210,10 +261,14 @@ export function VersionChecker() {
               <button
                 onClick={handleDismiss}
                 className="px-4 py-2 text-[#0A1B2A]/70 hover:text-[#0A1B2A] transition-colors text-sm"
+                title="La mise à jour sera appliquée automatiquement à la prochaine ouverture de la page"
               >
-                Plus tard
+                Rappeler plus tard
               </button>
             </div>
+            <p className="text-xs text-[#0A1B2A]/60 mt-2">
+              ⚠️ Si vous fermez la page, la mise à jour sera appliquée automatiquement à la prochaine ouverture.
+            </p>
           </div>
         </div>
       </div>
