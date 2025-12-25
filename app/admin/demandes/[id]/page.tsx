@@ -1002,11 +1002,16 @@ export default function AdminDemandeDetailPage() {
                     )}
 
                     {/* Affichage de l'estimation du prestataire et application des frais LeBoy */}
-                    {/* Afficher uniquement si c'est la mission gagnante OU s'il n'y a qu'une seule estimation */}
+                    {/* Afficher uniquement si :
+                        1. C'est la mission gagnante (gagnant déjà sélectionné), OU
+                        2. Il n'y a qu'une seule estimation ET aucun gagnant n'a été sélectionné (pas encore de sélection nécessaire)
+                    */}
                     {/* ET seulement si le devis n'a pas encore été généré */}
+                    {/* IMPORTANT: Ne pas afficher si on attend la sélection (plusieurs estimations) - elles seront dans WinnerSelectionView */}
                     {mission.internalState === "PROVIDER_ESTIMATED" && 
                      !mission.devisGenere &&
-                     (isWinningMission || missionsWithEstimations.length === 1) && (
+                     !needsWinnerSelection &&
+                     (isWinningMission || (missionsWithEstimations.length === 1 && !winningMission)) && (
                       <div className="pt-2 border-t border-[#E2E2E8]">
                         <ProviderEstimationView
                           mission={mission}
