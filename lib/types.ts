@@ -30,9 +30,10 @@ export type MissionStatus =
 // Statut simplifié pour le client (mapping automatique)
 export type ClientMissionStatus = 
   | "en_analyse" // En analyse
-  | "en_evaluation" // En évaluation
+  | "en_attente_assignation_prestataire" // En attente d'assignation de prestataire (avant sélection)
+  | "prestataire_assigné" // Prestataire assigné (après sélection du gagnant)
   | "en_attente_paiement" // En attente de paiement
-  | "en_cours" // En cours
+  | "en_cours" // En cours (prestataire a pris en charge)
   | "termine" // Terminé
   | "annulee"; // Annulée
 
@@ -315,17 +316,52 @@ export function getProgressStepFromInternalState(internalState: MissionInternalS
 }
 
 // Fonction utilitaire pour mapper les statuts admin vers statuts client
-export function mapStatusToClient(status: MissionStatus): ClientMissionStatus {
+// Prend aussi en compte l'état interne pour déterminer si le prestataire a été sélectionné
+export function mapStatusToClient(status: MissionStatus, internalState?: MissionInternalState): ClientMissionStatus {
+  // Utiliser internalState si fourni pour un mapping plus précis
+  if (internalState) {
+    switch (internalState) {
+      case "CREATED":
+        return "en_analyse";
+      case "ASSIGNED_TO_PROVIDER":
+        // Avant sélection du gagnant : en attente d'assignation
+        return "en_attente_assignation_prestataire";
+      case "PROVIDER_ESTIMATED":
+      case "WAITING_CLIENT_PAYMENT":
+        // Après sélection du gagnant : prestataire assigné
+        return "prestataire_assigné";
+      case "PAID_WAITING_TAKEOVER":
+      case "ADVANCE_SENT":
+        // En attente de prise en charge
+        return "prestataire_assigné";
+      case "IN_PROGRESS":
+        // En cours d'exécution
+        return "en_cours";
+      case "PROVIDER_VALIDATION_SUBMITTED":
+      case "ADMIN_CONFIRMED":
+      case "COMPLETED":
+        return "termine";
+      default:
+        return "en_analyse";
+    }
+  }
+  
+  // Fallback sur le mapping par status si internalState n'est pas fourni
   switch (status) {
     case "en_analyse_quebec":
       return "en_analyse";
     case "en_evaluation_partenaire":
+      // Avant sélection : en attente d'assignation
+      return "en_attente_assignation_prestataire";
     case "evaluation_recue_quebec":
-      return "en_evaluation";
+      // Après sélection : prestataire assigné
+      return "prestataire_assigné";
     case "en_attente_paiement_client":
       return "en_attente_paiement";
     case "paye_en_attente_demarrage":
     case "avance_versee_partenaire":
+      // Prestataire assigné mais pas encore pris en charge
+      return "prestataire_assigné";
     case "en_cours_partenaire":
     case "en_validation_quebec":
       return "en_cours";

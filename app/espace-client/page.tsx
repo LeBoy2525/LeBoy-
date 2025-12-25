@@ -428,14 +428,12 @@ export default function EspaceClientPage() {
                                 <div className="flex items-center gap-2">
                                   {(() => {
                                     const state = mission.internalState || "CREATED";
-                                    let clientStatus = mapStatusToClient(mission.status);
-                                    if (state === "ADMIN_CONFIRMED" || state === "COMPLETED") {
-                                      clientStatus = "termine";
-                                    }
+                                    let clientStatus = mapStatusToClient(mission.status, state);
                                     const labels: Record<string, Record<string, string>> = {
                                       fr: {
                                         en_analyse: "En analyse",
-                                        en_evaluation: "En évaluation",
+                                        en_attente_assignation_prestataire: "En attente d'assignation",
+                                        prestataire_assigné: "Prestataire assigné",
                                         en_attente_paiement: "En attente de paiement",
                                         en_cours: "En cours",
                                         termine: "Terminé",
@@ -443,7 +441,8 @@ export default function EspaceClientPage() {
                                       },
                                       en: {
                                         en_analyse: "Under review",
-                                        en_evaluation: "Under evaluation",
+                                        en_attente_assignation_prestataire: "Awaiting assignment",
+                                        prestataire_assigné: "Provider assigned",
                                         en_attente_paiement: "Awaiting payment",
                                         en_cours: "In progress",
                                         termine: "Completed",

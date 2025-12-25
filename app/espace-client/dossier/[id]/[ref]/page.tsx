@@ -10,6 +10,7 @@ import { ClientPaymentSection } from "../../../../components/ClientPaymentSectio
 import { MissionChat } from "../../../../components/MissionChat";
 import { MessageSquare } from "lucide-react";
 import type { Mission } from "@/lib/types";
+import { mapStatusToClient } from "@/lib/types";
 
 // Désactiver le préchargement pour cette page dynamique
 export const dynamic = "force-dynamic";

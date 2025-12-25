@@ -54,19 +54,17 @@ export async function GET(_req: Request, { params }: RouteParams) {
       (m) => !m.deleted && !m.archived
     );
 
-    // Filtrer pour ne garder que la mission du prestataire gagnant
-    // Le client ne doit voir les missions que lorsque le gagnant est sélectionné
+    // Récupérer les propositions pour cette demande
+    const propositions = await getPropositionsByDemandeId(dossier.id);
+    
+    // Chercher la proposition acceptée (prestataire gagnant)
+    const propositionAcceptee = propositions.find(
+      (p) => p.statut === "acceptee"
+    );
+
     let missions: typeof allMissions = [];
     
     if (allMissions.length > 0) {
-      // Récupérer les propositions pour cette demande
-      const propositions = await getPropositionsByDemandeId(dossier.id);
-      
-      // Chercher la proposition acceptée (prestataire gagnant)
-      const propositionAcceptee = propositions.find(
-        (p) => p.statut === "acceptee"
-      );
-
       if (propositionAcceptee) {
         // Si une proposition est acceptée, ne garder que la mission du prestataire gagnant
         const winningMission = allMissions.find(
@@ -75,10 +73,13 @@ export async function GET(_req: Request, { params }: RouteParams) {
         if (winningMission) {
           missions = [winningMission];
         }
-        // Si la mission gagnante n'existe pas encore, missions reste vide
+      } else {
+        // Si aucune proposition n'est acceptée, le client peut quand même voir la mission
+        // mais elle sera affichée avec le statut "en_attente_assignation_prestataire"
+        // On prend la première mission (normalement il n'y en a qu'une avant sélection)
+        // ou toutes les missions si plusieurs prestataires sont assignés
+        missions = allMissions;
       }
-      // Si aucune proposition n'est acceptée, missions reste vide
-      // Le client ne doit voir sa mission qu'une fois que l'admin a sélectionné le prestataire gagnant
     }
 
     return NextResponse.json({ 
