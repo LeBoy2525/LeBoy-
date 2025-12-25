@@ -15,7 +15,7 @@ import type { Mission } from "@/lib/types";
 export const dynamic = "force-dynamic";
 
 type Dossier = {
-  id: number;
+  id: string; // UUID (comme dans lib/types.ts)
   ref: string;
   createdAt: string;
   serviceType: string;
