@@ -20,15 +20,18 @@ export async function POST(req: Request, { params }: RouteParams) {
     }
 
     const resolvedParams = await params;
-    const missionId = parseInt(resolvedParams.id);
-    if (isNaN(missionId)) {
+    const missionUuid = resolvedParams.id;
+    
+    // Validation UUID
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!missionUuid || typeof missionUuid !== "string" || !UUID_REGEX.test(missionUuid)) {
       return NextResponse.json(
-        { error: "ID invalide." },
+        { error: "UUID invalide." },
         { status: 400 }
       );
     }
 
-    const mission = await getMissionById(missionId);
+    const mission = await getMissionById(missionUuid);
     if (!mission) {
       return NextResponse.json(
         { error: "Mission non trouvée." },
@@ -70,7 +73,7 @@ export async function POST(req: Request, { params }: RouteParams) {
     }
 
     // Mettre à jour l'état interne vers ADMIN_CONFIRMED
-    const updated = await updateMissionInternalState(missionId, "ADMIN_CONFIRMED", userEmail);
+    const updated = await updateMissionInternalState(missionUuid, "ADMIN_CONFIRMED", userEmail);
 
     if (!updated) {
       return NextResponse.json(
@@ -83,7 +86,7 @@ export async function POST(req: Request, { params }: RouteParams) {
     if (validateForClient) {
       const { addMissionUpdate } = await import("@/lib/dataAccess");
       
-      await addMissionUpdate(missionId, {
+      await addMissionUpdate(missionUuid, {
         type: "status_change",
         author: "admin",
         authorEmail: userEmail,
@@ -97,8 +100,8 @@ export async function POST(req: Request, { params }: RouteParams) {
     if (validateForClient) {
       try {
         const { sendNotificationEmail } = await import("@/lib/emailService");
-        const { demandesStore } = await import("@/lib/demandesStore");
-        const demande = demandesStore.find((d) => d.id === mission.demandeId);
+        const { getDemandeById } = await import("@/lib/dataAccess");
+        const demande = await getDemandeById(mission.demandeId);
         const protocol = process.env.NEXT_PUBLIC_APP_URL?.startsWith("https") ? "https" : "http";
         const platformUrl = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://localhost:3000`;
         
@@ -153,15 +156,18 @@ export async function PATCH(req: Request, { params }: RouteParams) {
     }
 
     const resolvedParams = await params;
-    const missionId = parseInt(resolvedParams.id);
-    if (isNaN(missionId)) {
+    const missionUuid = resolvedParams.id;
+    
+    // Validation UUID
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!missionUuid || typeof missionUuid !== "string" || !UUID_REGEX.test(missionUuid)) {
       return NextResponse.json(
-        { error: "ID invalide." },
+        { error: "UUID invalide." },
         { status: 400 }
       );
     }
 
-    const mission = await getMissionById(missionId);
+    const mission = await getMissionById(missionUuid);
     if (!mission) {
       return NextResponse.json(
         { error: "Mission non trouvée." },
@@ -178,7 +184,7 @@ export async function PATCH(req: Request, { params }: RouteParams) {
     }
 
     // Mettre à jour le statut vers "cloture"
-    const updated = await updateMissionStatus(missionId, "cloture", userEmail);
+    const updated = await updateMissionStatus(missionUuid, "cloture", userEmail);
 
     if (!updated) {
       return NextResponse.json(
