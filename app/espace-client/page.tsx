@@ -9,7 +9,7 @@ import { mapStatusToClient } from "@/lib/types";
 import { formatDateWithTimezones } from "@/lib/dateUtils";
 
 type DemandeICD = {
-  id: number;
+  id: string; // UUID (comme dans lib/types.ts)
   ref: string;
   createdAt: string;
   serviceType: string;
