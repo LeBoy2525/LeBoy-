@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getDemandeById, getMissionsByDemandeId } from "@/lib/dataAccess";
 import { getUserRoleAsync } from "@/lib/auth";
+import { getPrestataireById } from "@/repositories/prestatairesRepo";
 
 type RouteParams = {
   params: Promise<{ id: string }>;
@@ -52,8 +53,29 @@ export async function GET(_req: Request, { params }: RouteParams) {
       console.log(`[API MISSIONS] Prestataires: ${missionsLinked.map(m => m.prestataireId).join(", ")}`);
     }
 
+    // Enrichir les missions avec les informations du prestataire (nom de l'entreprise)
+    const missionsEnriched = await Promise.all(
+      missionsLinked.map(async (mission) => {
+        if (mission.prestataireId) {
+          try {
+            const prestataire = await getPrestataireById(mission.prestataireId);
+            if (prestataire) {
+              return {
+                ...mission,
+                prestataireNomEntreprise: prestataire.nomEntreprise || prestataire.nomContact || null,
+                prestataireNomContact: prestataire.nomContact || null,
+              };
+            }
+          } catch (error) {
+            console.error(`[API MISSIONS] Erreur récupération prestataire ${mission.prestataireId}:`, error);
+          }
+        }
+        return mission;
+      })
+    );
+
     return NextResponse.json(
-      { missions: missionsLinked }, 
+      { missions: missionsEnriched }, 
       { 
         status: 200,
         headers: {

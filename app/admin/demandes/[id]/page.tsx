@@ -891,7 +891,16 @@ export default function AdminDemandeDetailPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <p className="font-semibold text-[#0A1B2A]">{mission.ref}</p>
-                        <p className="text-xs text-[#6B7280]">{mission.prestataireRef || "Prestataire non assigné"}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <p className="text-xs text-[#6B7280]">
+                            {mission.prestataireRef || "Prestataire non assigné"}
+                          </p>
+                          {(mission.prestataireNomEntreprise || mission.prestataireNomContact) && (
+                            <span className="text-xs text-[#4B5563] font-medium">
+                              • {(mission as any).prestataireNomEntreprise || (mission as any).prestataireNomContact}
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <div className="flex items-center gap-2">
                         {(() => {
