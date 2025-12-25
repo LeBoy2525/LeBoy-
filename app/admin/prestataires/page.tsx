@@ -21,6 +21,7 @@ import Link from "next/link";
 import { AdminPageHeader } from "../_components/AdminPageHeader";
 import type { Prestataire, StatutPrestataire } from "@/lib/prestatairesStore";
 import { formatDateWithTimezones } from "@/lib/dateUtils";
+import { PrestataireTypeBadge } from "../../components/PrestataireTypeBadge";
 
 const TEXT = {
   fr: {
@@ -32,6 +33,9 @@ const TEXT = {
     filterActifs: "Actifs",
     filterSuspendus: "Suspendus",
     filterRejetes: "Rejetés",
+    filterTypeAll: "Tous les types",
+    filterTypeEntreprise: "Entreprises",
+    filterTypeFreelance: "Freelances",
     noResults: "Aucun prestataire trouvé",
     loading: "Chargement...",
     actions: "Actions",
@@ -72,6 +76,9 @@ const TEXT = {
     filterActifs: "Active",
     filterSuspendus: "Suspended",
     filterRejetes: "Rejected",
+    filterTypeAll: "All types",
+    filterTypeEntreprise: "Companies",
+    filterTypeFreelance: "Freelances",
     noResults: "No providers found",
     loading: "Loading...",
     actions: "Actions",
@@ -135,6 +142,7 @@ export default function AdminPrestatairesPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatut, setFilterStatut] = useState<StatutPrestataire | "all">("all");
+  const [filterType, setFilterType] = useState<"all" | "entreprise" | "freelance">("all");
 
   useEffect(() => {
     async function fetchPrestataires() {
@@ -232,7 +240,10 @@ export default function AdminPrestatairesPage() {
     const matchesFilter =
       filterStatut === "all" || p.statut === filterStatut;
 
-    return matchesSearch && matchesFilter;
+    const matchesType =
+      filterType === "all" || (p.typePrestataire || "freelance") === filterType;
+
+    return matchesSearch && matchesFilter && matchesType;
   });
 
   return (
@@ -257,26 +268,69 @@ export default function AdminPrestatairesPage() {
               />
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              {([
-                { value: "all", label: "all" },
-                { value: "en_attente", label: "en_attente" },
-                { value: "actif", label: "actifs" },
-                { value: "suspendu", label: "suspendus" },
-                { value: "rejete", label: "rejetes" },
-              ] as const).map(({ value, label }) => (
-                <button
-                  key={value}
-                  onClick={() => setFilterStatut(value === "all" ? "all" : value as StatutPrestataire)}
-                  className={`px-4 py-1.5 text-xs font-semibold rounded-md transition ${
-                    filterStatut === value
-                      ? "bg-[#0A1B2A] text-white"
-                      : "bg-[#F9F9FB] text-[#4B4F58] hover:bg-[#E2E2E8]"
-                  }`}
-                >
-                  {t[`filter${label.charAt(0).toUpperCase() + label.slice(1)}` as keyof typeof t]}
-                </button>
-              ))}
+            <div className="space-y-3">
+              {/* Filtres par statut */}
+              <div className="flex flex-wrap gap-2">
+                <span className="text-xs font-semibold text-[#6B7280] self-center mr-2">
+                  {lang === "fr" ? "Statut:" : "Status:"}
+                </span>
+                {([
+                  { value: "all", label: "all" },
+                  { value: "en_attente", label: "en_attente" },
+                  { value: "actif", label: "actifs" },
+                  { value: "suspendu", label: "suspendus" },
+                  { value: "rejete", label: "rejetes" },
+                ] as const).map(({ value, label }) => (
+                  <button
+                    key={value}
+                    onClick={() => setFilterStatut(value === "all" ? "all" : value as StatutPrestataire)}
+                    className={`px-4 py-1.5 text-xs font-semibold rounded-md transition ${
+                      filterStatut === value
+                        ? "bg-[#0A1B2A] text-white"
+                        : "bg-[#F9F9FB] text-[#4B4F58] hover:bg-[#E2E2E8]"
+                    }`}
+                  >
+                    {t[`filter${label.charAt(0).toUpperCase() + label.slice(1)}` as keyof typeof t]}
+                  </button>
+                ))}
+              </div>
+
+              {/* Filtres par type */}
+              <div className="flex flex-wrap gap-2">
+                <span className="text-xs font-semibold text-[#6B7280] self-center mr-2">
+                  {lang === "fr" ? "Type:" : "Type:"}
+                </span>
+                {([
+                  { value: "all", label: "TypeAll" },
+                  { value: "entreprise", label: "TypeEntreprise" },
+                  { value: "freelance", label: "TypeFreelance" },
+                ] as const).map(({ value, label }) => (
+                  <button
+                    key={value}
+                    onClick={() => setFilterType(value as "all" | "entreprise" | "freelance")}
+                    className={`px-4 py-1.5 text-xs font-semibold rounded-md transition ${
+                      filterType === value
+                        ? "bg-[#0A1B2A] text-white"
+                        : "bg-[#F9F9FB] text-[#4B4F58] hover:bg-[#E2E2E8]"
+                    }`}
+                  >
+                    {t[label as keyof typeof t]}
+                  </button>
+                ))}
+              </div>
+
+              {/* Statistiques rapides */}
+              <div className="flex gap-4 text-xs text-[#6B7280] pt-2 border-t border-[#E2E2E8]">
+                <span>
+                  {lang === "fr" ? "Total:" : "Total:"} <strong className="text-[#0A1B2A]">{filteredPrestataires.length}</strong>
+                </span>
+                <span>
+                  {lang === "fr" ? "Entreprises:" : "Companies:"} <strong className="text-blue-600">{prestataires.filter(p => (p.typePrestataire || "freelance") === "entreprise" && !p.deletedAt).length}</strong>
+                </span>
+                <span>
+                  {lang === "fr" ? "Freelances:" : "Freelances:"} <strong className="text-green-600">{prestataires.filter(p => (p.typePrestataire || "freelance") === "freelance" && !p.deletedAt).length}</strong>
+                </span>
+              </div>
             </div>
           </div>
 
@@ -298,6 +352,9 @@ export default function AdminPrestatairesPage() {
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-[#0A1B2A]">
                       {t.entreprise}
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-[#0A1B2A]">
+                      {lang === "fr" ? "Type" : "Type"}
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-[#0A1B2A]">
                       {t.contact}
@@ -333,6 +390,13 @@ export default function AdminPrestatairesPage() {
                         </td>
                         <td className="px-4 py-3 text-sm text-[#0A1B2A] font-medium">
                           {prestataire.nomEntreprise}
+                        </td>
+                        <td className="px-4 py-3">
+                          <PrestataireTypeBadge 
+                            type={(prestataire.typePrestataire || "freelance") as "entreprise" | "freelance"} 
+                            lang={lang}
+                            size="sm"
+                          />
                         </td>
                         <td className="px-4 py-3 text-xs text-[#4B4F58]">
                           <div className="font-medium">{prestataire.nomContact}</div>

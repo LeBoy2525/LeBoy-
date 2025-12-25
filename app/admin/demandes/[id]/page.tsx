@@ -34,6 +34,7 @@ import { DemandeAssignmentStatus } from "../DemandeAssignmentStatus";
 import { PropositionsList } from "../../../components/PropositionsList";
 import WinnerSelectionView from "../../../components/WinnerSelectionView";
 import { ProviderActivityTracker } from "../../../components/ProviderActivityTracker";
+import { PrestataireTypeBadge } from "../../../components/PrestataireTypeBadge";
 import type { Mission } from "@/lib/types";
 
 const TEXT = {
@@ -1224,18 +1225,34 @@ export default function AdminDemandeDetailPage() {
               className="p-6 space-y-6"
             >
               <div>
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
                   <h3 className="font-heading font-semibold text-[#0A1B2A]">
                     {lang === "fr" ? "Prestataires suggérés" : "Suggested providers"}{" "}
                     {matches.length > 0 && `(${matches.length})`}
                   </h3>
-                  {selectedPrestataires.length > 0 && (
-                    <span className="text-sm text-[#D4A657] font-semibold">
-                      {lang === "fr" 
-                        ? `${selectedPrestataires.length} sélectionné(s)` 
-                        : `${selectedPrestataires.length} selected`}
-                    </span>
-                  )}
+                  <div className="flex items-center gap-3 text-xs text-[#6B7280]">
+                    {matches.filter((m: any) => (m.prestataire.typePrestataire || "freelance") === "entreprise").length > 0 && (
+                      <span>
+                        {lang === "fr" ? "Entreprises:" : "Companies:"} <strong className="text-blue-600">
+                          {matches.filter((m: any) => (m.prestataire.typePrestataire || "freelance") === "entreprise").length}
+                        </strong>
+                      </span>
+                    )}
+                    {matches.filter((m: any) => (m.prestataire.typePrestataire || "freelance") === "freelance").length > 0 && (
+                      <span>
+                        {lang === "fr" ? "Freelances:" : "Freelances:"} <strong className="text-green-600">
+                          {matches.filter((m: any) => (m.prestataire.typePrestataire || "freelance") === "freelance").length}
+                        </strong>
+                      </span>
+                    )}
+                    {selectedPrestataires.length > 0 && (
+                      <span className="text-sm text-[#D4A657] font-semibold">
+                        {lang === "fr" 
+                          ? `${selectedPrestataires.length} sélectionné(s)` 
+                          : `${selectedPrestataires.length} selected`}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <p className="text-xs text-[#6B7280] mb-4">
                   {lang === "fr" 
@@ -1327,10 +1344,15 @@ export default function AdminDemandeDetailPage() {
                             className="mt-1 w-5 h-5 text-[#C8A657] border-2 border-[#DDDDDD] focus:ring-[#C8A657] focus:ring-2 cursor-pointer flex-shrink-0 rounded accent-[#C8A657]"
                           />
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
                               <p className="font-semibold text-[#0A1B2A]">
                                 {match.prestataire.nomEntreprise || "Nom non disponible"}
                               </p>
+                              <PrestataireTypeBadge 
+                                type={(match.prestataire.typePrestataire || "freelance") as "entreprise" | "freelance"} 
+                                lang={lang}
+                                size="sm"
+                              />
                               {match.prestataire.noteMoyenne && match.prestataire.noteMoyenne >= 4.5 && (
                                 <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 text-green-800 border border-green-300">
                                   ⭐⭐⭐ {match.prestataire.noteMoyenne.toFixed(1)}/5
@@ -1390,10 +1412,25 @@ export default function AdminDemandeDetailPage() {
 
               {/* Section Autres prestataires - Toujours affichée si des prestataires actifs existent */}
               <div className="pt-6 border-t border-[#E2E2E8]">
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
                   <h3 className="font-heading font-semibold text-[#0A1B2A]">
                     {lang === "fr" ? "Autres prestataires" : "Other providers"} {otherPrestataires.length > 0 && `(${otherPrestataires.length})`}
                   </h3>
+                  <div className="flex items-center gap-3 text-xs text-[#6B7280]">
+                    {otherPrestataires.filter((m: any) => (m.prestataire.typePrestataire || "freelance") === "entreprise").length > 0 && (
+                      <span>
+                        {lang === "fr" ? "Entreprises:" : "Companies:"} <strong className="text-blue-600">
+                          {otherPrestataires.filter((m: any) => (m.prestataire.typePrestataire || "freelance") === "entreprise").length}
+                        </strong>
+                      </span>
+                    )}
+                    {otherPrestataires.filter((m: any) => (m.prestataire.typePrestataire || "freelance") === "freelance").length > 0 && (
+                      <span>
+                        {lang === "fr" ? "Freelances:" : "Freelances:"} <strong className="text-green-600">
+                          {otherPrestataires.filter((m: any) => (m.prestataire.typePrestataire || "freelance") === "freelance").length}
+                        </strong>
+                      </span>
+                    )}
                     {selectedPrestataires.length > 0 && (
                       <span className="text-sm text-[#D4A657] font-semibold">
                         {lang === "fr" 
@@ -1402,6 +1439,7 @@ export default function AdminDemandeDetailPage() {
                       </span>
                     )}
                   </div>
+                </div>
                   <p className="text-xs text-[#6B7280] mb-4">
                     {lang === "fr" 
                       ? "Tous les prestataires actifs disponibles. Vous pouvez assigner même si la catégorie ne correspond pas exactement."
@@ -1475,10 +1513,15 @@ export default function AdminDemandeDetailPage() {
                             className="mt-1 w-5 h-5 text-[#C8A657] border-2 border-[#DDDDDD] focus:ring-[#C8A657] focus:ring-2 cursor-pointer flex-shrink-0 rounded accent-[#C8A657]"
                           />
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
                               <p className="font-semibold text-[#0A1B2A]">
                                 {match.prestataire.nomEntreprise || "Nom non disponible"}
                               </p>
+                              <PrestataireTypeBadge 
+                                type={(match.prestataire.typePrestataire || "freelance") as "entreprise" | "freelance"} 
+                                lang={lang}
+                                size="sm"
+                              />
                               {match.prestataire.statut === "actif" && (
                                 <span className="px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800 rounded">
                                   {lang === "fr" ? "Actif" : "Active"}

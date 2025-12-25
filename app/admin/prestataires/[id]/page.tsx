@@ -21,6 +21,7 @@ import {
 import Link from "next/link";
 import type { Prestataire } from "@/lib/prestatairesStore";
 import { formatDateWithTimezones } from "@/lib/dateUtils";
+import { PrestataireTypeBadge } from "../../../components/PrestataireTypeBadge";
 // Import du type seulement (pas de logique serveur)
 type Country = {
   code: string;
@@ -425,6 +426,14 @@ export default function AdminPrestataireDetailPage() {
                   >
                     {STATUT_LABELS[lang][prestataire.statut]}
                   </span>
+                </div>
+                <div>
+                  <p className="text-xs text-[#6B7280] mb-1">{lang === "fr" ? "Type de prestataire" : "Provider type"}</p>
+                  <PrestataireTypeBadge 
+                    type={(prestataire.typePrestataire || "freelance") as "entreprise" | "freelance"} 
+                    lang={lang}
+                    size="md"
+                  />
                 </div>
                 <div>
                   <p className="text-xs text-[#6B7280] mb-1">{t.dateInscription}</p>

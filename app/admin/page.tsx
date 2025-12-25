@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useLanguage } from "../components/LanguageProvider";
-import { Building2, FileText, Users, TrendingUp, DollarSign, AlertCircle, Bell, X } from "lucide-react";
+import { Building2, FileText, Users, TrendingUp, DollarSign, AlertCircle, Bell, X, User } from "lucide-react";
 import Link from "next/link";
 import { AdminPageHeader } from "./_components/AdminPageHeader";
 
@@ -13,6 +13,9 @@ const TEXT = {
     statsDemandes: "Demandes totales",
     statsPrestataires: "Prestataires actifs",
     statsEnAttente: "En attente de validation",
+    statsEntreprises: "Entreprises",
+    statsFreelances: "Freelances",
+    repartitionType: "Répartition par type",
     viewDemandes: "Voir les demandes",
     viewPrestataires: "Gérer les prestataires",
     financeTitle: "Finance & Comptabilité",
@@ -27,6 +30,9 @@ const TEXT = {
     statsDemandes: "Total requests",
     statsPrestataires: "Active providers",
     statsEnAttente: "Pending validation",
+    statsEntreprises: "Companies",
+    statsFreelances: "Freelances",
+    repartitionType: "Distribution by type",
     viewDemandes: "View requests",
     viewPrestataires: "Manage providers",
     financeTitle: "Finance & Accounting",
@@ -44,6 +50,8 @@ export default function AdminPage() {
     demandes: 0,
     prestataires: 0,
     enAttente: 0,
+    entreprises: 0,
+    freelances: 0,
   });
   const [pendingActions, setPendingActions] = useState({
     demandes: 0,
@@ -70,7 +78,20 @@ export default function AdminPage() {
 
         const dataPrestataires = resPrestataires.ok
           ? await resPrestataires.json()
-          : { stats: { actifs: 0, enAttente: 0 } };
+          : { prestataires: [], stats: { actifs: 0, enAttente: 0 } };
+        
+        // Calculer les statistiques par type
+        const prestatairesList = dataPrestataires.prestataires || [];
+        const entreprises = prestatairesList.filter((p: any) => 
+          (p.typePrestataire || "freelance") === "entreprise" && 
+          p.statut === "actif" && 
+          !p.deletedAt
+        ).length;
+        const freelances = prestatairesList.filter((p: any) => 
+          (p.typePrestataire || "freelance") === "freelance" && 
+          p.statut === "actif" && 
+          !p.deletedAt
+        ).length;
 
         const dataPendingActions = resPendingActions.ok
           ? await resPendingActions.json()
@@ -84,6 +105,8 @@ export default function AdminPage() {
           demandes: dataDemandes.demandes?.length || 0,
           prestataires: dataPrestataires.stats?.actifs || 0,
           enAttente: dataPrestataires.stats?.enAttente || 0,
+          entreprises,
+          freelances,
         });
 
         setPendingActions({
@@ -286,6 +309,49 @@ export default function AdminPage() {
             </p>
           </div>
         </div>
+
+        {/* Répartition par type */}
+        {stats.prestataires > 0 && (
+          <div className="bg-white border border-[#DDDDDD] rounded-xl p-6 mb-8">
+            <h3 className="font-heading text-lg font-semibold text-[#0A1B2A] mb-4">
+              {t.repartitionType}
+            </h3>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="flex items-center gap-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center">
+                  <Building2 className="w-6 h-6 text-blue-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm text-[#6B7280]">{t.statsEntreprises}</p>
+                  <p className="text-2xl font-semibold text-blue-600">
+                    {loading ? "..." : stats.entreprises}
+                  </p>
+                  {stats.prestataires > 0 && (
+                    <p className="text-xs text-[#6B7280] mt-1">
+                      {Math.round((stats.entreprises / stats.prestataires) * 100)}% du total
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                <div className="w-12 h-12 rounded-lg bg-green-100 flex items-center justify-center">
+                  <User className="w-6 h-6 text-green-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm text-[#6B7280]">{t.statsFreelances}</p>
+                  <p className="text-2xl font-semibold text-green-600">
+                    {loading ? "..." : stats.freelances}
+                  </p>
+                  {stats.prestataires > 0 && (
+                    <p className="text-xs text-[#6B7280] mt-1">
+                      {Math.round((stats.freelances / stats.prestataires) * 100)}% du total
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Actions rapides */}
         <div className="grid md:grid-cols-2 gap-6">
