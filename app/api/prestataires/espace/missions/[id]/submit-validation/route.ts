@@ -22,17 +22,36 @@ export async function POST(req: Request, { params }: RouteParams) {
     const resolvedParams = await params;
     const missionUuid = resolvedParams.id;
 
+    console.log(`[submit-validation] 🔍 UUID reçu: ${missionUuid}`);
+    console.log(`[submit-validation] 🔍 Type: ${typeof missionUuid}`);
+
     // Validation UUID
     const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     if (!missionUuid || typeof missionUuid !== "string" || !UUID_REGEX.test(missionUuid)) {
+      console.error(`[submit-validation] ❌ UUID invalide: ${missionUuid}`);
       return NextResponse.json(
         { error: "UUID invalide." },
         { status: 400 }
       );
     }
 
+    console.log(`[submit-validation] 🔍 Recherche mission avec UUID: ${missionUuid}`);
     const mission = await getMissionById(missionUuid);
+    console.log(`[submit-validation] ${mission ? "✅ Mission trouvée" : "❌ Mission non trouvée"}: ${mission ? mission.ref : "N/A"}`);
+    
     if (!mission) {
+      // Essayer de trouver la mission directement via Prisma pour diagnostic
+      try {
+        const { getMissionById: getMissionByIdDB } = await import("@/repositories/missionsRepo");
+        const missionPrisma = await getMissionByIdDB(missionUuid);
+        console.log(`[submit-validation] 🔍 Recherche Prisma directe: ${missionPrisma ? "✅ Trouvée" : "❌ Non trouvée"}`);
+        if (missionPrisma) {
+          console.log(`[submit-validation] 🔍 Mission Prisma trouvée: ref=${missionPrisma.ref}, id=${missionPrisma.id}, prestataireId=${missionPrisma.prestataireId}`);
+        }
+      } catch (err) {
+        console.error(`[submit-validation] ❌ Erreur recherche Prisma directe:`, err);
+      }
+      
       return NextResponse.json(
         { error: "Mission non trouvée." },
         { status: 404 }
@@ -41,8 +60,12 @@ export async function POST(req: Request, { params }: RouteParams) {
 
     // Vérifier que le prestataire est bien assigné à cette mission
     const prestataire = await getPrestataireByEmail(userEmail);
+    console.log(`[submit-validation] 🔍 Prestataire trouvé: ${prestataire ? prestataire.id : "N/A"}`);
+    console.log(`[submit-validation] 🔍 Mission prestataireId: ${mission.prestataireId}`);
+    console.log(`[submit-validation] 🔍 Comparaison: ${mission.prestataireId} === ${prestataire?.id} ? ${mission.prestataireId === prestataire?.id}`);
 
     if (!prestataire || mission.prestataireId !== prestataire.id) {
+      console.error(`[submit-validation] ❌ Accès refusé: prestataire=${prestataire?.id}, mission.prestataireId=${mission.prestataireId}`);
       return NextResponse.json(
         { error: "Vous n'êtes pas autorisé à soumettre cette mission pour validation." },
         { status: 403 }

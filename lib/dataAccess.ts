@@ -1225,19 +1225,31 @@ export async function getAllMissions(): Promise<Mission[]> {
  * Bascule automatiquement entre JSON et DB selon USE_DB
  */
 export async function getMissionById(id: string): Promise<Mission | null> {
+  console.log(`[dataAccess.getMissionById] 🔍 Recherche mission avec UUID: ${id} (type: ${typeof id})`);
+  
   if (USE_DB) {
     try {
       // Utiliser directement l'UUID pour trouver la mission
       const { getMissionById: getMissionByIdDB } = await import("@/repositories/missionsRepo");
       const mission = await getMissionByIdDB(id);
       
-      return mission ? convertPrismaMissionToJSON(mission) : null;
+      console.log(`[dataAccess.getMissionById] ${mission ? "✅ Mission trouvée" : "❌ Mission non trouvée"} dans Prisma`);
+      if (mission) {
+        console.log(`[dataAccess.getMissionById] 🔍 Mission Prisma: ref=${mission.ref}, id=${mission.id}, prestataireId=${mission.prestataireId}`);
+      }
+      
+      const converted = mission ? convertPrismaMissionToJSON(mission) : null;
+      console.log(`[dataAccess.getMissionById] ${converted ? "✅ Conversion réussie" : "❌ Conversion échouée"}`);
+      
+      return converted;
     } catch (error) {
+      console.error(`[dataAccess.getMissionById] ❌ Erreur lors de la recherche:`, error);
       logPrismaError("getMissionById", error, { context: "DB" });
       return null;
     }
   } else {
     // JSON utilise des IDs numériques, donc pas de fallback direct avec UUID
+    console.log(`[dataAccess.getMissionById] ⚠️ USE_DB=false, retour null`);
     return null;
   }
 }
