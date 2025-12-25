@@ -469,8 +469,8 @@ function getNotificationHTML(
           <li><strong>Délai estimé:</strong> ${data.delai} jour(s)</li>
         </ul>
         <p style="margin-top: 20px;">
-          <a href="${data.platformUrl}/admin/demandes/${data.demandeId}" style="background: #D4A657; color: #0B2135; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
-            Voir la proposition
+          <a href="${data.platformUrl || (process.env.NEXT_PUBLIC_APP_URL || "https://leboy.com")}/connexion" style="background: #D4A657; color: #0B2135; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
+            Se connecter à mon espace admin
           </a>
         </p>
       `;
@@ -583,7 +583,7 @@ function getNotificationHTML(
       `;
       break;
     case "advance-sent":
-      const missionUrl = data.platformUrl ? `${data.platformUrl}/prestataires/espace/mission/${data.missionId}` : `/prestataires/espace/mission/${data.missionId}`;
+      const loginUrlAdvance = data.platformUrl ? `${data.platformUrl}/prestataires/connexion` : (process.env.NEXT_PUBLIC_APP_URL ? `${process.env.NEXT_PUBLIC_APP_URL}/prestataires/connexion` : "/prestataires/connexion");
       const avancePercentage = data.avancePercentage || 50;
       content = `
         <div style="background: #FEF3C7; border-left: 4px solid #F59E0B; padding: 20px; margin: 20px 0; border-radius: 6px;">
@@ -609,8 +609,8 @@ function getNotificationHTML(
         </p>
         <p style="margin-top: 30px;">Vous pouvez maintenant prendre en charge la mission et commencer le travail.</p>
         <p style="margin-top: 20px;">
-          <a href="${missionUrl}" style="background: #D4A657; color: #0B2135; padding: 14px 28px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 16px;">
-            Voir la mission
+          <a href="${loginUrlAdvance}" style="background: #D4A657; color: #0B2135; padding: 14px 28px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 16px;">
+            Se connecter à mon espace prestataire
           </a>
         </p>
         <p style="margin-top: 20px; color: #6B7280; font-size: 14px;">
@@ -619,7 +619,7 @@ function getNotificationHTML(
       `;
       break;
     case "payment-complete":
-      const missionUrlComplete = data.platformUrl ? `${data.platformUrl}/prestataires/espace/mission/${data.missionId}` : `/prestataires/espace/mission/${data.missionId}`;
+      const loginUrlComplete = data.platformUrl ? `${data.platformUrl}/prestataires/connexion` : (process.env.NEXT_PUBLIC_APP_URL ? `${process.env.NEXT_PUBLIC_APP_URL}/prestataires/connexion` : "/prestataires/connexion");
       content = `
         <div style="background: #D1FAE5; border-left: 4px solid #10B981; padding: 20px; margin: 20px 0; border-radius: 6px;">
           <p style="margin: 0 0 12px 0; font-weight: bold; color: #065F46; font-size: 18px;">
@@ -647,8 +647,8 @@ function getNotificationHTML(
         </p>
         <p style="margin-top: 30px;">Vous pouvez maintenant prendre en charge la mission et commencer le travail.</p>
         <p style="margin-top: 20px;">
-          <a href="${missionUrlComplete}" style="background: #10B981; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 16px;">
-            Voir la mission
+          <a href="${loginUrlComplete}" style="background: #10B981; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 16px;">
+            Se connecter à mon espace prestataire
           </a>
         </p>
         <p style="margin-top: 20px; color: #6B7280; font-size: 14px;">
@@ -657,7 +657,7 @@ function getNotificationHTML(
       `;
       break;
     case "mission-completed":
-      const missionUrlCompleted = data.platformUrl ? `${data.platformUrl}/espace-client/mission/${data.missionId}` : `/espace-client/mission/${data.missionId}`;
+      const loginUrlClient = data.platformUrl ? `${data.platformUrl}/connexion` : (process.env.NEXT_PUBLIC_APP_URL ? `${process.env.NEXT_PUBLIC_APP_URL}/connexion` : "/connexion");
       content = `
         <p style="font-size: 18px; color: #10B981; font-weight: bold; margin-bottom: 20px;">
           🎉 Félicitations ! Votre mission est terminée.
@@ -674,8 +674,8 @@ function getNotificationHTML(
         </div>
         <p style="margin-top: 30px;">Vous pouvez maintenant consulter les preuves d'accomplissement et télécharger le rapport de mission.</p>
         <p style="margin-top: 20px;">
-          <a href="${missionUrlCompleted}" style="background: #D4A657; color: #0B2135; padding: 14px 28px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 16px;">
-            Voir la mission
+          <a href="${loginUrlClient}" style="background: #D4A657; color: #0B2135; padding: 14px 28px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 16px;">
+            Se connecter à mon espace client
           </a>
         </p>
         <p style="margin-top: 20px; color: #6B7280; font-size: 14px;">

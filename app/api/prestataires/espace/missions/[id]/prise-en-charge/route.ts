@@ -21,15 +21,18 @@ export async function POST(_req: Request, { params }: RouteParams) {
     }
 
     const resolvedParams = await params;
-    const missionId = parseInt(resolvedParams.id);
-    if (isNaN(missionId)) {
+    const missionUuid = resolvedParams.id;
+    
+    // Validation UUID
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!missionUuid || typeof missionUuid !== "string" || !UUID_REGEX.test(missionUuid)) {
       return NextResponse.json(
-        { error: "ID invalide." },
+        { error: "UUID invalide." },
         { status: 400 }
       );
     }
 
-    const mission = await getMissionById(missionId);
+    const mission = await getMissionById(missionUuid);
     if (!mission) {
       return NextResponse.json(
         { error: "Mission non trouvée." },
@@ -56,7 +59,7 @@ export async function POST(_req: Request, { params }: RouteParams) {
     }
 
     // Mettre à jour le statut vers "en_cours_partenaire"
-    const updated = await updateMissionStatus(missionId, "en_cours_partenaire", userEmail);
+    const updated = await updateMissionStatus(missionUuid, "en_cours_partenaire", userEmail);
 
     if (!updated) {
       return NextResponse.json(

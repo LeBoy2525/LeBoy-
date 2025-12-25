@@ -640,7 +640,7 @@ export default function MissionDetailPage() {
           {/* Modal d'estimation */}
           {showEstimationModal && (
             <EstimationFormModal
-              missionId={missionUuid || (mission as any)?.dbId || mission.id}
+              missionId={missionUuid || mission.id}
               lang={lang}
               isRevision={mission.internalState === "PROVIDER_ESTIMATED" && !!mission.estimationPartenaire}
               previousEstimation={mission.estimationPartenaire ? {

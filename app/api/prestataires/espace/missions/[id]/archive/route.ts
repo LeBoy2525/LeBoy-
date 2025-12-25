@@ -21,15 +21,18 @@ export async function POST(req: Request, { params }: RouteParams) {
     }
 
     const resolvedParams = await params;
-    const missionId = parseInt(resolvedParams.id);
-    if (isNaN(missionId)) {
+    const missionUuid = resolvedParams.id;
+    
+    // Validation UUID
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!missionUuid || typeof missionUuid !== "string" || !UUID_REGEX.test(missionUuid)) {
       return NextResponse.json(
-        { error: "ID invalide." },
+        { error: "UUID invalide." },
         { status: 400 }
       );
     }
 
-    const mission = await getMissionById(missionId);
+    const mission = await getMissionById(missionUuid);
     if (!mission) {
       return NextResponse.json(
         { error: "Mission non trouvée." },
@@ -47,18 +50,25 @@ export async function POST(req: Request, { params }: RouteParams) {
       );
     }
 
-    // Archiver la mission
-    mission.archived = true;
-    mission.archivedAt = new Date().toISOString();
-    mission.archivedBy = "prestataire";
-
-    await saveMissions();
+    // Archiver la mission via Prisma
+    const { archiveMission } = await import("@/repositories/missionsRepo");
+    const archivedMission = await archiveMission(missionUuid, userEmail);
+    
+    if (!archivedMission) {
+      return NextResponse.json(
+        { error: "Erreur lors de l'archivage." },
+        { status: 500 }
+      );
+    }
+    
+    const { convertPrismaMissionToJSON } = await import("@/lib/dataAccess");
+    const missionArchived = convertPrismaMissionToJSON(archivedMission);
 
     return NextResponse.json(
       {
         success: true,
         message: "Mission archivée avec succès.",
-        mission,
+        mission: missionArchived,
       },
       { status: 200 }
     );
@@ -84,15 +94,18 @@ export async function DELETE(req: Request, { params }: RouteParams) {
     }
 
     const resolvedParams = await params;
-    const missionId = parseInt(resolvedParams.id);
-    if (isNaN(missionId)) {
+    const missionUuid = resolvedParams.id;
+    
+    // Validation UUID
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!missionUuid || typeof missionUuid !== "string" || !UUID_REGEX.test(missionUuid)) {
       return NextResponse.json(
-        { error: "ID invalide." },
+        { error: "UUID invalide." },
         { status: 400 }
       );
     }
 
-    const mission = await getMissionById(missionId);
+    const mission = await getMissionById(missionUuid);
     if (!mission) {
       return NextResponse.json(
         { error: "Mission non trouvée." },
@@ -110,12 +123,21 @@ export async function DELETE(req: Request, { params }: RouteParams) {
       );
     }
 
-    // Soft delete de la mission
-    mission.deleted = true;
-    mission.deletedAt = new Date().toISOString();
-    mission.deletedBy = "prestataire";
-
-    await saveMissions();
+    // Soft delete de la mission via Prisma
+    const { updateMission } = await import("@/repositories/missionsRepo");
+    const now = new Date();
+    const deletedMission = await updateMission(missionUuid, {
+      deleted: true,
+      deletedAt: now,
+      deletedBy: "prestataire",
+    } as any);
+    
+    if (!deletedMission) {
+      return NextResponse.json(
+        { error: "Erreur lors de la suppression." },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json(
       {
