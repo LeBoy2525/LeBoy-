@@ -270,9 +270,40 @@ export default function MissionDetailClientPage() {
                   if (res.ok) {
                     const data = await res.json();
                     setMission(data.mission);
+                    // Forcer un rechargement complet de la page pour mettre à jour la progression
+                    window.location.reload();
                   }
                 }}
               />
+            </div>
+          )}
+
+          {/* Section de confirmation de paiement - affichée après paiement */}
+          {(mission.internalState === "PAID_WAITING_TAKEOVER" || mission.paiementEffectue) && (
+            <div className="pt-4 border-t-4 border-t-green-400 border-[#E2E2E8] bg-green-50/30 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <CheckCircle2 className="w-5 h-5 text-green-600" />
+                <p className="text-sm font-semibold text-green-800">
+                  {lang === "fr" ? "✅ Paiement effectué avec succès" : "✅ Payment successful"}
+                </p>
+              </div>
+              <div className="space-y-2 text-sm text-green-700">
+                {mission.paiementEffectueAt && (
+                  <p>
+                    {lang === "fr" ? "Date de paiement :" : "Payment date:"} {formatDateWithTimezones(mission.paiementEffectueAt).cameroon}
+                  </p>
+                )}
+                {mission.tarifTotal && (
+                  <p>
+                    {lang === "fr" ? "Montant payé :" : "Amount paid:"} <span className="font-semibold">{mission.tarifTotal.toLocaleString()} FCFA</span>
+                  </p>
+                )}
+                <p className="text-xs text-green-600 mt-2">
+                  {lang === "fr" 
+                    ? "Votre paiement a été enregistré. La mission va débuter prochainement une fois que l'administrateur aura envoyé l'avance au prestataire."
+                    : "Your payment has been recorded. The mission will start soon once the administrator sends the advance to the provider."}
+                </p>
+              </div>
             </div>
           )}
 

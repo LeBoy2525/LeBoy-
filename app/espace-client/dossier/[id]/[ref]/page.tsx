@@ -465,8 +465,41 @@ export default function DossierPage() {
                           <ClientPaymentSection
                             mission={missions[0]}
                             lang={lang}
-                            onPaymentSuccess={handlePaymentSuccess}
+                            onPaymentSuccess={async () => {
+                              await handlePaymentSuccess();
+                              // Forcer un rechargement pour mettre à jour l'affichage
+                              window.location.reload();
+                            }}
                           />
+                        </div>
+                      )}
+
+                      {/* Section de confirmation de paiement - affichée après paiement */}
+                      {(missions[0].internalState === "PAID_WAITING_TAKEOVER" || missions[0].paiementEffectue) && (
+                        <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                          <div className="flex items-center gap-2 mb-2">
+                            <CheckCircle2 className="w-5 h-5 text-green-600" />
+                            <p className="text-sm font-semibold text-green-800">
+                              {lang === "fr" ? "✅ Paiement effectué avec succès" : "✅ Payment successful"}
+                            </p>
+                          </div>
+                          <div className="space-y-1 text-sm text-green-700">
+                            {missions[0].paiementEffectueAt && (
+                              <p>
+                                {lang === "fr" ? "Date de paiement :" : "Payment date:"} {new Date(missions[0].paiementEffectueAt).toLocaleDateString("fr-FR")}
+                              </p>
+                            )}
+                            {missions[0].tarifTotal && (
+                              <p>
+                                {lang === "fr" ? "Montant payé :" : "Amount paid:"} <span className="font-semibold">{missions[0].tarifTotal.toLocaleString()} FCFA</span>
+                              </p>
+                            )}
+                            <p className="text-xs text-green-600 mt-2">
+                              {lang === "fr" 
+                                ? "Votre paiement a été enregistré. La mission va débuter prochainement."
+                                : "Your payment has been recorded. The mission will start soon."}
+                            </p>
+                          </div>
                         </div>
                       )}
                     </div>
