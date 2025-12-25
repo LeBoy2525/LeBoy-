@@ -20,15 +20,18 @@ export async function POST(req: Request, { params }: RouteParams) {
     }
 
     const resolvedParams = await params;
-    const missionId = parseInt(resolvedParams.id);
-    if (isNaN(missionId)) {
+    const missionUuid = resolvedParams.id;
+    
+    // Validation UUID
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!missionUuid || typeof missionUuid !== "string" || !UUID_REGEX.test(missionUuid)) {
       return NextResponse.json(
-        { error: "ID invalide." },
+        { error: "UUID invalide." },
         { status: 400 }
       );
     }
 
-    const mission = await getMissionById(missionId);
+    const mission = await getMissionById(missionUuid);
     if (!mission) {
       return NextResponse.json(
         { error: "Mission non trouvée." },
@@ -68,9 +71,19 @@ export async function POST(req: Request, { params }: RouteParams) {
       );
     }
 
-    // Enregistrer la note
-    mission.noteAdminPourPrestataire = noteAdminPourPrestataire;
-    mission.commentaireAdminPourPrestataire = commentaireAdminPourPrestataire || undefined;
+    // Enregistrer la note via Prisma
+    const { updateMission } = await import("@/repositories/missionsRepo");
+    const updatedMissionPrisma = await updateMission(missionUuid, {
+      noteAdminPourPrestataire: noteAdminPourPrestataire,
+      commentaireAdminPourPrestataire: commentaireAdminPourPrestataire || null,
+    } as any);
+
+    if (!updatedMissionPrisma) {
+      return NextResponse.json(
+        { error: "Erreur lors de l'enregistrement de la note." },
+        { status: 500 }
+      );
+    }
 
     // Mettre à jour la note moyenne du prestataire
     try {
@@ -83,13 +96,15 @@ export async function POST(req: Request, { params }: RouteParams) {
       // Ne pas bloquer l'enregistrement de la note si cette mise à jour échoue
     }
 
-    await saveMissions();
+    // Convertir en JSON pour la réponse
+    const { convertPrismaMissionToJSON } = await import("@/lib/dataAccess");
+    const missionUpdated = convertPrismaMissionToJSON(updatedMissionPrisma);
 
     return NextResponse.json(
       {
         success: true,
         message: "Note enregistrée avec succès.",
-        mission,
+        mission: missionUpdated,
       },
       { status: 200 }
     );

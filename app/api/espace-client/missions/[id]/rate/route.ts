@@ -29,15 +29,18 @@ export async function POST(req: Request, { params }: RouteParams) {
     }
 
     const resolvedParams = await params;
-    const missionId = parseInt(resolvedParams.id);
-    if (isNaN(missionId)) {
+    const missionUuid = resolvedParams.id;
+    
+    // Validation UUID
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!missionUuid || typeof missionUuid !== "string" || !UUID_REGEX.test(missionUuid)) {
       return NextResponse.json(
-        { error: "ID invalide." },
+        { error: "UUID invalide." },
         { status: 400 }
       );
     }
 
-    const mission = await getMissionById(missionId);
+    const mission = await getMissionById(missionUuid);
     if (!mission) {
       return NextResponse.json(
         { error: "Mission non trouvée." },
@@ -71,20 +74,30 @@ export async function POST(req: Request, { params }: RouteParams) {
       );
     }
 
-    // Enregistrer la note
-    mission.noteICD = noteICD;
-    mission.commentaireICD = commentaireICD || undefined;
-    
-    // Pour compatibilité, on met aussi à jour noteClient (déprécié)
-    mission.noteClient = noteICD;
+    // Enregistrer la note via Prisma
+    const { updateMission } = await import("@/repositories/missionsRepo");
+    const updatedMissionPrisma = await updateMission(missionUuid, {
+      noteICD: noteICD,
+      commentaireICD: commentaireICD || null,
+      noteClient: noteICD, // Pour compatibilité
+    } as any);
 
-    await saveMissions();
+    if (!updatedMissionPrisma) {
+      return NextResponse.json(
+        { error: "Erreur lors de l'enregistrement de la note." },
+        { status: 500 }
+      );
+    }
+
+    // Convertir en JSON pour la réponse
+    const { convertPrismaMissionToJSON } = await import("@/lib/dataAccess");
+    const missionUpdated = convertPrismaMissionToJSON(updatedMissionPrisma);
 
     return NextResponse.json(
       {
         success: true,
         message: "Note enregistrée avec succès.",
-        mission,
+        mission: missionUpdated,
       },
       { status: 200 }
     );

@@ -53,7 +53,8 @@ export function ClientRatingSection({
     setSubmitting(true);
 
     try {
-      const res = await fetch(`/api/espace-client/missions/${mission.id}/rate`, {
+      const missionId = (mission as any).dbId || mission.id;
+      const res = await fetch(`/api/espace-client/missions/${missionId}/rate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

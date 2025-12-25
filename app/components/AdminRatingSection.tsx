@@ -55,7 +55,8 @@ export function AdminRatingSection({
     setSubmitting(true);
 
     try {
-      const res = await fetch(`/api/admin/missions/${mission.id}/rate-provider`, {
+      const missionId = (mission as any).dbId || mission.id;
+      const res = await fetch(`/api/admin/missions/${missionId}/rate-provider`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
