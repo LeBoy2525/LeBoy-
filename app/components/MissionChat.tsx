@@ -58,9 +58,37 @@ const TEXT = {
   },
 } as const;
 
+// Fonction helper pour filtrer les messages selon le rôle
+function filterMessagesByRole(messages: Message[], currentUserRole: string, currentUserEmail: string): Message[] {
+  if (currentUserRole === "admin") {
+    return messages; // Admin voit tout
+  } else if (currentUserRole === "client") {
+    return messages.filter((msg: Message) => {
+      const isFromClient = msg.from === "client" || msg.fromEmail?.toLowerCase() === currentUserEmail.toLowerCase();
+      const isToClient = msg.to === "client" || msg.toEmail?.toLowerCase() === currentUserEmail.toLowerCase();
+      // Ne pas voir les messages entre admin et prestataire
+      const isAdminPrestataireOnly = (msg.from === "admin" && msg.to === "prestataire") || 
+                                   (msg.from === "prestataire" && msg.to === "admin");
+      return (isFromClient || isToClient) && !isAdminPrestataireOnly;
+    });
+  } else if (currentUserRole === "prestataire") {
+    return messages.filter((msg: Message) => {
+      const isFromPrestataire = msg.from === "prestataire" || msg.fromEmail?.toLowerCase() === currentUserEmail.toLowerCase();
+      const isToPrestataire = msg.to === "prestataire" || msg.toEmail?.toLowerCase() === currentUserEmail.toLowerCase();
+      // Ne pas voir les messages entre admin et client
+      const isAdminClientOnly = (msg.from === "admin" && msg.to === "client") || 
+                               (msg.from === "client" && msg.to === "admin");
+      return (isFromPrestataire || isToPrestataire) && !isAdminClientOnly;
+    });
+  }
+  return [];
+}
+
 export function MissionChat({ mission, currentUserEmail, currentUserRole, lang = "fr", initialRecipient, autoOpen = false, onClose }: MissionChatProps) {
   const t = TEXT[lang];
-  const [messages, setMessages] = useState<Message[]>(mission.messages || []);
+  // Filtrer les messages dès l'initialisation pour éviter le flash
+  const initialMessages = filterMessagesByRole(mission.messages || [], currentUserRole, currentUserEmail);
+  const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [newMessage, setNewMessage] = useState("");
   const [messageType, setMessageType] = useState<"chat" | "email">("chat");
   const [sending, setSending] = useState(false);
@@ -86,29 +114,8 @@ export function MissionChat({ mission, currentUserEmail, currentUserRole, lang =
           const data = await res.json();
           const allMessages = data.messages || [];
           
-          // Filtrage supplémentaire côté client pour sécurité (le filtrage principal est dans l'API)
-          // Le client ne doit voir que les messages où il est impliqué
-          let filteredMessages = allMessages;
-          if (currentUserRole === "client") {
-            filteredMessages = allMessages.filter((msg: Message) => {
-              const isFromClient = msg.from === "client" || msg.fromEmail?.toLowerCase() === currentUserEmail.toLowerCase();
-              const isToClient = msg.to === "client" || msg.toEmail?.toLowerCase() === currentUserEmail.toLowerCase();
-              // Ne pas voir les messages entre admin et prestataire
-              const isAdminPrestataireOnly = (msg.from === "admin" && msg.to === "prestataire") || 
-                                           (msg.from === "prestataire" && msg.to === "admin");
-              return (isFromClient || isToClient) && !isAdminPrestataireOnly;
-            });
-          } else if (currentUserRole === "prestataire") {
-            filteredMessages = allMessages.filter((msg: Message) => {
-              const isFromPrestataire = msg.from === "prestataire" || msg.fromEmail?.toLowerCase() === currentUserEmail.toLowerCase();
-              const isToPrestataire = msg.to === "prestataire" || msg.toEmail?.toLowerCase() === currentUserEmail.toLowerCase();
-              // Ne pas voir les messages entre admin et client
-              const isAdminClientOnly = (msg.from === "admin" && msg.to === "client") || 
-                                       (msg.from === "client" && msg.to === "admin");
-              return (isFromPrestataire || isToPrestataire) && !isAdminClientOnly;
-            });
-          }
-          // L'admin voit tous les messages (pas de filtrage)
+          // Filtrer les messages selon le rôle (le filtrage principal est dans l'API, mais on refiltre pour sécurité)
+          const filteredMessages = filterMessagesByRole(allMessages, currentUserRole, currentUserEmail);
           
           setMessages(filteredMessages);
         }
@@ -121,7 +128,7 @@ export function MissionChat({ mission, currentUserEmail, currentUserRole, lang =
     const interval = setInterval(fetchMessages, 3000); // Rafraîchir toutes les 3 secondes
 
     return () => clearInterval(interval);
-  }, [mission.id, showChat]);
+  }, [mission.id, showChat, currentUserRole, currentUserEmail]);
 
   // Scroller vers le bas quand de nouveaux messages arrivent
   useEffect(() => {
