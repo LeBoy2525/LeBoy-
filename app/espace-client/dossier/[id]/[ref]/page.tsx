@@ -397,7 +397,7 @@ export default function DossierPage() {
                       <div>
                         <div className="flex items-center justify-between mb-2">
                           <h3 className="font-heading text-base font-semibold text-[#0A1B2A]">
-                            Mission
+                            {lang === "fr" ? "Mission assignée" : "Assigned mission"}
                           </h3>
                           {/* Bouton chat - toujours visible si mission existe */}
                           {currentUserEmail && (
@@ -419,30 +419,22 @@ export default function DossierPage() {
                             </button>
                           )}
                         </div>
-                        <Link
-                          href={`/espace-client/mission/${missions[0].id}`}
-                          prefetch={false}
-                          className="block p-3 bg-[#F9F9FB] border border-[#DDDDDD] rounded-lg hover:bg-[#F2F2F5] transition"
-                        >
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="font-semibold text-sm text-[#0A1B2A]">
-                                {missions[0].ref}
-                              </p>
+                        {/* Affichage informatif de la mission (sans lien vers détail) */}
+                        <div className="p-3 bg-[#F9F9FB] border border-[#DDDDDD] rounded-lg">
+                          <div>
+                            <p className="font-semibold text-sm text-[#0A1B2A]">
+                              {missions[0].ref}
+                            </p>
+                            <p className="text-xs text-[#6B7280] mt-1">
+                              {missions[0].titre}
+                            </p>
+                            {(missions[0] as any).prestataireRef && (
                               <p className="text-xs text-[#6B7280] mt-1">
-                                {missions[0].titre}
+                                {lang === "fr" ? "Prestataire :" : "Provider :"} {(missions[0] as any).prestataireRef}
                               </p>
-                              {(missions[0] as any).prestataireRef && (
-                                <p className="text-xs text-[#6B7280] mt-1">
-                                  Prestataire : {(missions[0] as any).prestataireRef}
-                                </p>
-                              )}
-                            </div>
-                            <span className="text-xs text-[#4B4F58]">
-                              →
-                            </span>
+                            )}
                           </div>
-                        </Link>
+                        </div>
                       </div>
                       
                       {/* Chat avec l'admin */}
