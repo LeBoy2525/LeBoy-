@@ -412,6 +412,59 @@ export default function MissionDetailPage() {
             </div>
           )}
 
+          {/* Estimation soumise avec possibilité de révision */}
+          {mission.internalState === "PROVIDER_ESTIMATED" && mission.estimationPartenaire && !mission.devisGenere && (
+            <div className="pt-4 border-t border-[#E2E2E8]">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                <p className="text-sm font-medium text-green-800 mb-2">
+                  {lang === "fr" ? "✅ Estimation soumise" : "✅ Estimation submitted"}
+                </p>
+                {mission.estimationPartenaire && (
+                  <div className="text-xs text-green-700 mb-4 space-y-1">
+                    <p>
+                      <strong>{lang === "fr" ? "Prix proposé:" : "Proposed price:"}</strong>{" "}
+                      {(mission.estimationPartenaire as any).prixFournisseur?.toLocaleString()} FCFA
+                    </p>
+                    <p>
+                      <strong>{lang === "fr" ? "Délais estimés:" : "Estimated delays:"}</strong>{" "}
+                      {(mission.estimationPartenaire as any).delaisEstimes} {lang === "fr" ? "heures" : "hours"}
+                    </p>
+                    {(mission.estimationPartenaire as any).revisionNumber && (
+                      <p className="text-orange-700 font-semibold">
+                        {lang === "fr" 
+                          ? `📝 Révision #${(mission.estimationPartenaire as any).revisionNumber}`
+                          : `📝 Revision #${(mission.estimationPartenaire as any).revisionNumber}`}
+                      </p>
+                    )}
+                  </div>
+                )}
+                {/* Vérifier s'il y a des messages de l'admin demandant une révision */}
+                {mission.messages && mission.messages.length > 0 && (
+                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-4">
+                    <p className="text-xs font-semibold text-orange-800 mb-2">
+                      {lang === "fr" ? "💬 Message de l'administrateur" : "💬 Message from administrator"}
+                    </p>
+                    {mission.messages
+                      .filter((m: any) => m.from === "admin" && m.to === "prestataire")
+                      .slice(-1) // Dernier message
+                      .map((m: any) => (
+                        <p key={m.id} className="text-xs text-orange-700">
+                          {m.content}
+                        </p>
+                      ))}
+                  </div>
+                )}
+                <button
+                  onClick={() => setShowEstimationModal(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-orange-500 text-white text-sm font-semibold rounded-md hover:bg-orange-600 transition"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  {lang === "fr" ? "Réviser l'estimation" : "Revise estimation"}
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Prise en charge de mission après réception de l'avance */}
           {mission.internalState === "ADVANCE_SENT" && (
             <div className="pt-4 border-t border-[#E2E2E8]">
