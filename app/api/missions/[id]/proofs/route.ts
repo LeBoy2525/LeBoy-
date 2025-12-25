@@ -254,7 +254,13 @@ export async function GET(_req: Request, { params }: RouteParams) {
           { status: 403 }
         );
       }
-      if (!mission.proofValidatedForClient) {
+      // Autoriser l'accès si les preuves sont validées pour le client OU si la mission est confirmée/complétée
+      const canViewProofs = mission.proofValidatedForClient === true || 
+                            mission.internalState === "ADMIN_CONFIRMED" || 
+                            mission.internalState === "COMPLETED" ||
+                            mission.status === "termine_icd_canada" ||
+                            mission.status === "cloture";
+      if (!canViewProofs) {
         return NextResponse.json(
           { error: "Les preuves ne sont pas encore disponibles." },
           { status: 403 }
