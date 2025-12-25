@@ -700,15 +700,44 @@ export default function EspaceClientPage() {
                           )}
                         </div>
 
-                        <div className="flex justify-end">
-                          <Link
-                            href={`/espace-client/dossier/${demande.id}/${encodeURIComponent(
-                              demande.ref
-                            )}`}
-                            className="inline-flex items-center justify-center rounded-md border border-[#0A1B2A] text-[#0A1B2A] px-3 py-1.5 text-[11px] font-semibold hover:bg-[#0A1B2A] hover:text-white transition"
-                          >
-                            {t.viewDossier}
-                          </Link>
+                        <div className="flex justify-end gap-2">
+                          {/* Vérifier si cette demande a une mission nécessitant une action */}
+                          {(() => {
+                            const missionAssociee = missions.find(
+                              (m) => m.demandeId === demande.id && 
+                              m.internalState === "WAITING_CLIENT_PAYMENT" && 
+                              !m.deleted && 
+                              !m.archived
+                            );
+                            if (missionAssociee) {
+                              return (
+                                <div className="flex items-center gap-2">
+                                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-800 rounded text-[10px] font-semibold">
+                                    <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse"></span>
+                                    {lang === "fr" ? "Action requise" : "Action required"}
+                                  </span>
+                                  <Link
+                                    href={`/espace-client/dossier/${demande.id}/${encodeURIComponent(
+                                      demande.ref
+                                    )}`}
+                                    className="inline-flex items-center justify-center rounded-md border border-[#0A1B2A] text-[#0A1B2A] px-3 py-1.5 text-[11px] font-semibold hover:bg-[#0A1B2A] hover:text-white transition"
+                                  >
+                                    {t.viewDossier}
+                                  </Link>
+                                </div>
+                              );
+                            }
+                            return (
+                              <Link
+                                href={`/espace-client/dossier/${demande.id}/${encodeURIComponent(
+                                  demande.ref
+                                )}`}
+                                className="inline-flex items-center justify-center rounded-md border border-[#0A1B2A] text-[#0A1B2A] px-3 py-1.5 text-[11px] font-semibold hover:bg-[#0A1B2A] hover:text-white transition"
+                              >
+                                {t.viewDossier}
+                              </Link>
+                            );
+                          })()}
                         </div>
                       </div>
 
@@ -733,15 +762,44 @@ export default function EspaceClientPage() {
                             {t.lieuLabel} {demande.lieu}
                           </p>
                         )}
-                        <div className="pt-1 flex justify-end">
-                          <Link
-                            href={`/espace-client/dossier/${demande.id}/${encodeURIComponent(
-                              demande.ref
-                            )}`}
-                            className="inline-flex items-center justify-center rounded-md border border-[#0A1B2A] text-[#0A1B2A] px-3 py-1 text-[11px] font-semibold hover:bg-[#0A1B2A] hover:text-white transition"
-                          >
-                            {t.viewDossier}
-                          </Link>
+                        <div className="pt-1 flex justify-end gap-2">
+                          {/* Vérifier si cette demande a une mission nécessitant une action */}
+                          {(() => {
+                            const missionAssociee = missions.find(
+                              (m) => m.demandeId === demande.id && 
+                              m.internalState === "WAITING_CLIENT_PAYMENT" && 
+                              !m.deleted && 
+                              !m.archived
+                            );
+                            if (missionAssociee) {
+                              return (
+                                <>
+                                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-800 rounded text-[10px] font-semibold">
+                                    <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse"></span>
+                                    {lang === "fr" ? "Action requise" : "Action required"}
+                                  </span>
+                                  <Link
+                                    href={`/espace-client/dossier/${demande.id}/${encodeURIComponent(
+                                      demande.ref
+                                    )}`}
+                                    className="inline-flex items-center justify-center rounded-md border border-[#0A1B2A] text-[#0A1B2A] px-3 py-1 text-[11px] font-semibold hover:bg-[#0A1B2A] hover:text-white transition"
+                                  >
+                                    {t.viewDossier}
+                                  </Link>
+                                </>
+                              );
+                            }
+                            return (
+                              <Link
+                                href={`/espace-client/dossier/${demande.id}/${encodeURIComponent(
+                                  demande.ref
+                                )}`}
+                                className="inline-flex items-center justify-center rounded-md border border-[#0A1B2A] text-[#0A1B2A] px-3 py-1 text-[11px] font-semibold hover:bg-[#0A1B2A] hover:text-white transition"
+                              >
+                                {t.viewDossier}
+                              </Link>
+                            );
+                          })()}
                         </div>
                       </div>
                     </article>

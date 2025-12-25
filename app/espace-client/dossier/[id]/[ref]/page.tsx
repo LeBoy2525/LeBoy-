@@ -7,6 +7,8 @@ import { useLanguage } from "../../../../components/LanguageProvider";
 import BackToHomeLink from "../../../../components/BackToHomeLink";
 import { MissionProgressBar } from "../../../../components/MissionProgressBar";
 import { ClientPaymentSection } from "../../../../components/ClientPaymentSection";
+import { MissionChat } from "../../../../components/MissionChat";
+import { MessageSquare } from "lucide-react";
 import type { Mission } from "@/lib/types";
 
 // Désactiver le préchargement pour cette page dynamique
@@ -51,6 +53,24 @@ export default function DossierPage() {
   const [missions, setMissions] = useState<Mission[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [serviceCategories, setServiceCategories] = useState<ServiceCategory[]>([]);
+  const [currentUserEmail, setCurrentUserEmail] = useState<string>("");
+  const [showChat, setShowChat] = useState(false);
+  
+  // Charger l'email de l'utilisateur
+  useEffect(() => {
+    async function fetchUser() {
+      try {
+        const res = await fetch("/api/auth/me", { cache: "no-store" });
+        if (res.ok) {
+          const data = await res.json();
+          setCurrentUserEmail(data.user?.email || "");
+        }
+      } catch (err) {
+        console.error("Erreur récupération utilisateur:", err);
+      }
+    }
+    fetchUser();
+  }, []);
   
   // Fonction pour recharger les missions après paiement
   const handlePaymentSuccess = async () => {
@@ -363,9 +383,20 @@ export default function DossierPage() {
                   {missions.length > 0 && missions[0] && (
                     <div className="mt-4 space-y-4">
                       <div>
-                        <h3 className="font-heading text-base font-semibold text-[#0A1B2A] mb-2">
-                          Mission
-                        </h3>
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="font-heading text-base font-semibold text-[#0A1B2A]">
+                            Mission
+                          </h3>
+                          {/* Bouton chat */}
+                          <button
+                            onClick={() => setShowChat(!showChat)}
+                            className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-[#0A1B2A] border border-[#0A1B2A] rounded-md hover:bg-[#0A1B2A] hover:text-white transition"
+                            title={lang === "fr" ? "Ouvrir le chat avec l'administrateur" : "Open chat with administrator"}
+                          >
+                            <MessageSquare className="w-4 h-4" />
+                            {lang === "fr" ? "Chat" : "Chat"}
+                          </button>
+                        </div>
                         <Link
                           href={`/espace-client/mission/${missions[0].id}`}
                           prefetch={false}
@@ -391,6 +422,20 @@ export default function DossierPage() {
                           </div>
                         </Link>
                       </div>
+                      
+                      {/* Chat avec l'admin */}
+                      {showChat && missions[0] && currentUserEmail && (
+                        <div className="mt-4">
+                          <MissionChat
+                            mission={missions[0]}
+                            currentUserEmail={currentUserEmail}
+                            currentUserRole="client"
+                            lang={lang}
+                            autoOpen={true}
+                            onClose={() => setShowChat(false)}
+                          />
+                        </div>
+                      )}
                       
                       {/* Section de paiement si la mission nécessite un paiement */}
                       {missions[0].internalState === "WAITING_CLIENT_PAYMENT" && missions[0].devisGenere && (
