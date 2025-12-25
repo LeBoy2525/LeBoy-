@@ -76,11 +76,20 @@ export function AdminAdvancePaymentSection({
       const data = await res.json();
 
       if (res.ok) {
-        alert(
-          lang === "fr"
-            ? `✅ Avance de ${avance.toLocaleString()} FCFA envoyée au prestataire avec succès !`
-            : `✅ Advance of ${avance.toLocaleString()} FCFA sent to provider successfully!`
-        );
+        // Message différencié selon le pourcentage
+        if (avancePercentage === 100) {
+          alert(
+            lang === "fr"
+              ? `✅ Paiement complet (100%) de ${avance.toLocaleString()} FCFA envoyé au prestataire avec succès !\n\n💯 Aucun solde restant - Le prestataire recevra une notification de paiement complet.`
+              : `✅ Full payment (100%) of ${avance.toLocaleString()} FCFA sent to provider successfully!\n\n💯 No remaining balance - Provider will receive a full payment notification.`
+          );
+        } else {
+          alert(
+            lang === "fr"
+              ? `✅ Avance partielle (${avancePercentage}%) de ${avance.toLocaleString()} FCFA envoyée au prestataire avec succès !\n\nLe solde restant (${100 - avancePercentage}%) sera versé après validation de la mission.`
+              : `✅ Partial advance (${avancePercentage}%) of ${avance.toLocaleString()} FCFA sent to provider successfully!\n\nThe remaining balance (${100 - avancePercentage}%) will be paid after mission validation.`
+          );
+        }
         onAdvanceSent();
       } else {
         alert(data.error || (lang === "fr" ? "Erreur lors de l'envoi de l'avance" : "Error sending advance"));

@@ -788,17 +788,23 @@ function MissionCard({ mission, t, lang }: { mission: Mission; t: any; lang: "fr
 
   const isAdvanceSent = mission.internalState === "ADVANCE_SENT";
   const avancePercentage = mission.avancePercentage || 50; // Par défaut 50%
+  const isFullPayment = avancePercentage === 100;
 
   return (
     <div className={`bg-white border-2 ${statusColor.border} rounded-xl p-5 hover:shadow-md transition ${
       isAdvanceSent 
-        ? "relative border-l-4 border-l-green-500 animate-[gentlePulse_3s_ease-in-out_infinite] bg-green-50/30" 
+        ? `relative border-l-4 ${isFullPayment ? "border-l-emerald-500 bg-emerald-50/30" : "border-l-green-500 bg-green-50/30"} animate-[gentlePulse_3s_ease-in-out_infinite]` 
         : ""
     }`}>
       {isAdvanceSent && (
-        <div className="absolute top-3 right-3 flex items-center gap-2 px-2 py-1 bg-green-500 text-white text-[10px] font-semibold rounded-full animate-[gentlePulse_3s_ease-in-out_infinite]">
-          <span>💰</span>
-          <span>{lang === "fr" ? "Avance reçue" : "Advance received"}</span>
+        <div className={`absolute top-3 right-3 flex items-center gap-2 px-2 py-1 ${isFullPayment ? "bg-emerald-600" : "bg-green-500"} text-white text-[10px] font-semibold rounded-full animate-[gentlePulse_3s_ease-in-out_infinite]`}>
+          <span>{isFullPayment ? "💯" : "💰"}</span>
+          <span>
+            {isFullPayment 
+              ? (lang === "fr" ? "Paiement complet" : "Full payment")
+              : (lang === "fr" ? `Avance ${avancePercentage}%` : `Advance ${avancePercentage}%`)
+            }
+          </span>
         </div>
       )}
       <div className="flex items-start justify-between">
@@ -811,7 +817,11 @@ function MissionCard({ mission, t, lang }: { mission: Mission; t: any; lang: "fr
               {mission.status}
             </span>
             {isAdvanceSent && (
-              <span className="w-2 h-2 bg-green-500 rounded-full animate-[gentlePulse_3s_ease-in-out_infinite]" title={lang === "fr" ? `Avance de ${avancePercentage}% reçue - Vous pouvez maintenant prendre en charge la mission` : `Advance of ${avancePercentage}% received - You can now take over the mission`} />
+              <span className={`w-2 h-2 ${isFullPayment ? "bg-emerald-500" : "bg-green-500"} rounded-full animate-[gentlePulse_3s_ease-in-out_infinite]`} title={
+                isFullPayment
+                  ? (lang === "fr" ? "Paiement complet (100%) reçu - Vous pouvez maintenant prendre en charge la mission" : "Full payment (100%) received - You can now take over the mission")
+                  : (lang === "fr" ? `Avance de ${avancePercentage}% reçue - Vous pouvez maintenant prendre en charge la mission` : `Advance of ${avancePercentage}% received - You can now take over the mission`)
+              } />
             )}
           </div>
           <h3 className="font-heading font-semibold text-[#0A1B2A] mb-1">

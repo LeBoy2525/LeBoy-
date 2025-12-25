@@ -119,13 +119,18 @@ export async function POST(req: Request, { params }: RouteParams) {
       const platformUrl = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://localhost:3000`;
       
       if (prestataire) {
+        // Différencier selon le pourcentage : 100% = paiement complet, 25%/50% = avance partielle
+        const emailType = avancePercentage === 100 ? "payment-complete" : "advance-sent";
+        
         await sendNotificationEmail(
-          "advance-sent",
+          emailType,
           { email: prestataire.email, name: prestataire.nomEntreprise || prestataire.nomContact },
           {
             missionRef: updatedMissionPrisma.ref,
             providerName: prestataire.nomEntreprise || prestataire.nomContact,
             montantAvance: avance,
+            montantTotal: avancePercentage === 100 ? avance : undefined,
+            avancePercentage: avancePercentage,
             serviceType: updatedMissionPrisma.serviceType,
             platformUrl,
             missionId: missionUuid, // Utiliser l'UUID

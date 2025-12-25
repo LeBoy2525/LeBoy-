@@ -410,6 +410,18 @@ function getNotificationSubject(type: string, lang: "fr" | "en"): string {
       fr: "Nouveau message de l'administrateur - LeBoy",
       en: "New message from administrator - LeBoy",
     },
+    "advance-sent": {
+      fr: "Avance reçue - LeBoy",
+      en: "Advance received - LeBoy",
+    },
+    "payment-complete": {
+      fr: "Paiement complet reçu - LeBoy",
+      en: "Full payment received - LeBoy",
+    },
+    "mission-completed": {
+      fr: "Mission terminée - LeBoy",
+      en: "Mission completed - LeBoy",
+    },
   };
 
   return subjects[type]?.[lang] || "Notification LeBoy";
@@ -563,6 +575,107 @@ function getNotificationHTML(
         <p style="margin-top: 20px;">
           <a href="${loginUrl}" style="background: #D4A657; color: #0B2135; padding: 14px 28px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 16px;">
             Se connecter à mon espace prestataire
+          </a>
+        </p>
+        <p style="margin-top: 20px; color: #6B7280; font-size: 14px;">
+          Si vous avez des questions, n'hésitez pas à nous contacter à <a href="mailto:contact@leboy.com" style="color: #D4A657;">contact@leboy.com</a>
+        </p>
+      `;
+      break;
+    case "advance-sent":
+      const missionUrl = data.platformUrl ? `${data.platformUrl}/prestataires/espace/mission/${data.missionId}` : `/prestataires/espace/mission/${data.missionId}`;
+      const avancePercentage = data.avancePercentage || 50;
+      content = `
+        <div style="background: #FEF3C7; border-left: 4px solid #F59E0B; padding: 20px; margin: 20px 0; border-radius: 6px;">
+          <p style="margin: 0 0 12px 0; font-weight: bold; color: #92400E; font-size: 16px;">
+            💰 Avance partielle reçue
+          </p>
+          <p style="margin: 0; color: #78350F;">
+            Vous avez reçu une avance de <strong>${avancePercentage}%</strong> pour la mission <strong>${data.missionRef || "N/A"}</strong>.
+          </p>
+        </div>
+        <p>Bonjour ${name},</p>
+        <p>Nous vous informons qu'une avance de <strong>${avancePercentage}%</strong> a été versée pour votre mission <strong>${data.missionRef || "N/A"}</strong>.</p>
+        <div style="background: #F9FAFB; padding: 16px; border-radius: 6px; margin: 20px 0;">
+          <p style="margin: 0 0 8px 0; color: #6B7280; font-size: 14px;"><strong>Détails du paiement :</strong></p>
+          <ul style="margin: 0; padding-left: 20px; color: #4B5563;">
+            <li>Montant de l'avance : <strong>${(data.montantAvance || 0).toLocaleString()} FCFA</strong></li>
+            <li>Pourcentage : <strong>${avancePercentage}%</strong></li>
+            <li>Service : <strong>${data.serviceType || "N/A"}</strong></li>
+          </ul>
+        </div>
+        <p style="margin-top: 20px; color: #6B7280; font-size: 14px;">
+          ⚠️ <strong>Important :</strong> Le solde restant (${100 - avancePercentage}%) vous sera versé après validation de la mission par l'administrateur.
+        </p>
+        <p style="margin-top: 30px;">Vous pouvez maintenant prendre en charge la mission et commencer le travail.</p>
+        <p style="margin-top: 20px;">
+          <a href="${missionUrl}" style="background: #D4A657; color: #0B2135; padding: 14px 28px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 16px;">
+            Voir la mission
+          </a>
+        </p>
+        <p style="margin-top: 20px; color: #6B7280; font-size: 14px;">
+          Si vous avez des questions, n'hésitez pas à nous contacter à <a href="mailto:contact@leboy.com" style="color: #D4A657;">contact@leboy.com</a>
+        </p>
+      `;
+      break;
+    case "payment-complete":
+      const missionUrlComplete = data.platformUrl ? `${data.platformUrl}/prestataires/espace/mission/${data.missionId}` : `/prestataires/espace/mission/${data.missionId}`;
+      content = `
+        <div style="background: #D1FAE5; border-left: 4px solid #10B981; padding: 20px; margin: 20px 0; border-radius: 6px;">
+          <p style="margin: 0 0 12px 0; font-weight: bold; color: #065F46; font-size: 18px;">
+            ✅ Paiement complet reçu
+          </p>
+          <p style="margin: 0; color: #047857; font-size: 16px;">
+            Le paiement intégral (100%) a été effectué pour la mission <strong>${data.missionRef || "N/A"}</strong>.
+          </p>
+        </div>
+        <p>Bonjour ${name},</p>
+        <p style="font-size: 16px; color: #10B981; font-weight: bold; margin-bottom: 20px;">
+          🎉 Excellente nouvelle ! Le paiement complet a été effectué pour votre mission.
+        </p>
+        <p>Nous vous informons que le <strong>paiement intégral (100%)</strong> a été versé pour votre mission <strong>${data.missionRef || "N/A"}</strong>.</p>
+        <div style="background: #F9FAFB; padding: 16px; border-radius: 6px; margin: 20px 0;">
+          <p style="margin: 0 0 8px 0; color: #6B7280; font-size: 14px;"><strong>Détails du paiement :</strong></p>
+          <ul style="margin: 0; padding-left: 20px; color: #4B5563;">
+            <li>Montant total : <strong>${(data.montantAvance || data.montantTotal || 0).toLocaleString()} FCFA</strong></li>
+            <li>Pourcentage : <strong>100%</strong></li>
+            <li>Service : <strong>${data.serviceType || "N/A"}</strong></li>
+          </ul>
+        </div>
+        <p style="margin-top: 20px; color: #10B981; font-size: 14px; font-weight: bold;">
+          ✅ Aucun solde restant - Le paiement est complet.
+        </p>
+        <p style="margin-top: 30px;">Vous pouvez maintenant prendre en charge la mission et commencer le travail.</p>
+        <p style="margin-top: 20px;">
+          <a href="${missionUrlComplete}" style="background: #10B981; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 16px;">
+            Voir la mission
+          </a>
+        </p>
+        <p style="margin-top: 20px; color: #6B7280; font-size: 14px;">
+          Si vous avez des questions, n'hésitez pas à nous contacter à <a href="mailto:contact@leboy.com" style="color: #D4A657;">contact@leboy.com</a>
+        </p>
+      `;
+      break;
+    case "mission-completed":
+      const missionUrlCompleted = data.platformUrl ? `${data.platformUrl}/espace-client/mission/${data.missionId}` : `/espace-client/mission/${data.missionId}`;
+      content = `
+        <p style="font-size: 18px; color: #10B981; font-weight: bold; margin-bottom: 20px;">
+          🎉 Félicitations ! Votre mission est terminée.
+        </p>
+        <p>Bonjour ${name},</p>
+        <p>Nous avons le plaisir de vous informer que votre mission <strong>${data.missionRef || "N/A"}</strong> a été complétée avec succès.</p>
+        <div style="background: #F9FAFB; padding: 16px; border-radius: 6px; margin: 20px 0;">
+          <p style="margin: 0 0 8px 0; color: #6B7280; font-size: 14px;"><strong>Détails de la mission :</strong></p>
+          <ul style="margin: 0; padding-left: 20px; color: #4B5563;">
+            <li>Référence : <strong>${data.missionRef || "N/A"}</strong></li>
+            <li>Service : <strong>${data.serviceType || "N/A"}</strong></li>
+            <li>Date de clôture : <strong>${data.dateCloture ? new Date(data.dateCloture).toLocaleDateString("fr-FR") : "N/A"}</strong></li>
+          </ul>
+        </div>
+        <p style="margin-top: 30px;">Vous pouvez maintenant consulter les preuves d'accomplissement et télécharger le rapport de mission.</p>
+        <p style="margin-top: 20px;">
+          <a href="${missionUrlCompleted}" style="background: #D4A657; color: #0B2135; padding: 14px 28px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 16px;">
+            Voir la mission
           </a>
         </p>
         <p style="margin-top: 20px; color: #6B7280; font-size: 14px;">

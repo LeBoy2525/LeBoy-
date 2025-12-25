@@ -468,23 +468,45 @@ export default function MissionDetailPage() {
           {/* Prise en charge de mission après réception de l'avance */}
           {mission.internalState === "ADVANCE_SENT" && (
             <div className="pt-4 border-t border-[#E2E2E8]">
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
-                <p className="text-sm font-medium text-green-800 mb-2">
-                  {lang === "fr" ? "✅ Avance reçue" : "✅ Advance received"}
-                </p>
-                <p className="text-xs text-green-700">
-                  {lang === "fr" 
-                    ? "L'avance de 50% a été versée. Vous pouvez maintenant prendre en charge la mission et commencer le travail."
-                    : "The 50% advance has been paid. You can now take charge of the mission and start working."}
-                </p>
-              </div>
-              <button
-                onClick={handleStartMission}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-[#C8A55F] text-white text-sm font-semibold rounded-md hover:bg-[#B8944F] transition"
-              >
-                <CheckCircle2 className="w-4 h-4" />
-                {lang === "fr" ? "Prise en charge" : "Take charge"}
-              </button>
+              {(() => {
+                const avancePercentage = mission.avancePercentage || 50;
+                const isFullPayment = avancePercentage === 100;
+                
+                return (
+                  <>
+                    <div className={`${isFullPayment ? "bg-emerald-50 border-emerald-300" : "bg-green-50 border-green-200"} border rounded-lg p-4 mb-4`}>
+                      <p className={`text-sm font-medium mb-2 ${isFullPayment ? "text-emerald-800" : "text-green-800"}`}>
+                        {isFullPayment 
+                          ? (lang === "fr" ? "✅ Paiement complet reçu (100%)" : "✅ Full payment received (100%)")
+                          : (lang === "fr" ? `✅ Avance partielle reçue (${avancePercentage}%)` : `✅ Partial advance received (${avancePercentage}%)`)
+                        }
+                      </p>
+                      <p className={`text-xs ${isFullPayment ? "text-emerald-700" : "text-green-700"}`}>
+                        {isFullPayment
+                          ? (lang === "fr"
+                            ? "Le paiement intégral (100%) a été effectué. Aucun solde restant. Vous pouvez maintenant prendre en charge la mission et commencer le travail."
+                            : "Full payment (100%) has been made. No remaining balance. You can now take charge of the mission and start working.")
+                          : (lang === "fr"
+                            ? `L'avance de ${avancePercentage}% a été versée. Le solde restant (${100 - avancePercentage}%) vous sera versé après validation de la mission. Vous pouvez maintenant prendre en charge la mission et commencer le travail.`
+                            : `The ${avancePercentage}% advance has been paid. The remaining balance (${100 - avancePercentage}%) will be paid after mission validation. You can now take charge of the mission and start working.`)
+                        }
+                      </p>
+                      {isFullPayment && (
+                        <p className="text-xs font-semibold text-emerald-800 mt-2">
+                          {lang === "fr" ? "💯 Aucun solde restant - Paiement complet" : "💯 No remaining balance - Full payment"}
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      onClick={handleStartMission}
+                      className={`inline-flex items-center gap-2 px-4 py-2 ${isFullPayment ? "bg-emerald-600 hover:bg-emerald-700" : "bg-[#C8A55F] hover:bg-[#B8944F]"} text-white text-sm font-semibold rounded-md transition`}
+                    >
+                      <CheckCircle2 className="w-4 h-4" />
+                      {lang === "fr" ? "Prise en charge" : "Take charge"}
+                    </button>
+                  </>
+                );
+              })()}
             </div>
           )}
 
