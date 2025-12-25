@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { getMissionById, saveMissions } from "@/lib/missionsStore";
+import { getMissionById } from "@/lib/dataAccess";
+import { getPrestataireByEmail } from "@/lib/dataAccess";
 import { getUserRoleAsync } from "@/lib/auth";
 import { storeFile } from "@/lib/filesStore";
 import type { MissionProof } from "@/lib/types";
@@ -36,13 +37,34 @@ export async function POST(req: Request, { params }: RouteParams) {
     }
 
     const resolvedParams = await params;
-    const missionId = parseInt(resolvedParams.id);
-    const mission = await getMissionById(missionId);
+    const missionUuid = resolvedParams.id;
+
+    // Validation UUID
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!missionUuid || typeof missionUuid !== "string" || !UUID_REGEX.test(missionUuid)) {
+      return NextResponse.json(
+        { error: "UUID invalide." },
+        { status: 400 }
+      );
+    }
+
+    console.log(`[proofs POST] 🔍 Recherche mission avec UUID: ${missionUuid}`);
+    const mission = await getMissionById(missionUuid);
+    console.log(`[proofs POST] ${mission ? "✅ Mission trouvée" : "❌ Mission non trouvée"}: ${mission ? mission.ref : "N/A"}`);
 
     if (!mission) {
       return NextResponse.json(
         { error: "Mission non trouvée." },
         { status: 404 }
+      );
+    }
+
+    // Vérifier que le prestataire est bien assigné à cette mission
+    const prestataire = await getPrestataireByEmail(userEmail);
+    if (!prestataire || mission.prestataireId !== prestataire.id) {
+      return NextResponse.json(
+        { error: "Vous n'êtes pas autorisé à uploader des preuves pour cette mission." },
+        { status: 403 }
       );
     }
 
@@ -65,11 +87,19 @@ export async function POST(req: Request, { params }: RouteParams) {
       );
     }
 
-    // Initialiser proofs si nécessaire
-    if (!mission.proofs) {
-      mission.proofs = [];
+    // Récupérer les preuves existantes depuis Prisma
+    const { getMissionById: getMissionByIdDB } = await import("@/repositories/missionsRepo");
+    const missionPrisma = await getMissionByIdDB(missionUuid);
+    
+    if (!missionPrisma) {
+      return NextResponse.json(
+        { error: "Mission non trouvée dans la base de données." },
+        { status: 404 }
+      );
     }
 
+    // Initialiser proofs si nécessaire
+    const existingProofs = missionPrisma.proofs ? JSON.parse(JSON.stringify(missionPrisma.proofs)) : [];
     const uploadedProofs: MissionProof[] = [];
 
     for (const file of files) {
@@ -107,29 +137,42 @@ export async function POST(req: Request, { params }: RouteParams) {
       // Créer la preuve
       const proof: MissionProof = {
         id: `proof-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+        missionId: missionUuid,
         fileId: stored.id,
         fileName: file.name,
         fileType: file.type,
         fileSize: file.size,
-        fileUrl: stored.storageUrl || `/api/files/${stored.id}`, // URL publique Blob ou fallback API
         uploadedAt: new Date().toISOString(),
-        uploadedBy: userEmail.toLowerCase(),
+        uploadedBy: "prestataire",
         description: description || undefined,
-        validatedByAdmin: false,
+        validated: false,
       };
 
-      mission.proofs.push(proof);
+      existingProofs.push(proof);
       uploadedProofs.push(proof);
     }
 
+    // Mettre à jour la mission via Prisma
+    const { updateMission } = await import("@/repositories/missionsRepo");
+    const now = new Date();
+    
     // Mettre à jour la date de soumission si c'est la première fois
-    if (!mission.proofSubmissionDate) {
-      mission.proofSubmissionDate = new Date().toISOString();
+    const updateData: any = {
+      proofs: existingProofs,
+    };
+    
+    if (!missionPrisma.proofSubmissionDate) {
+      updateData.proofSubmissionDate = now;
     }
 
-    // Ne pas changer l'état ici - l'état sera changé quand le prestataire clique sur "Terminer et envoyer pour validation"
-    // L'état reste IN_PROGRESS jusqu'à la soumission finale
-    await saveMissions();
+    const updatedMissionPrisma = await updateMission(missionUuid, updateData);
+    
+    if (!updatedMissionPrisma) {
+      return NextResponse.json(
+        { error: "Erreur lors de la mise à jour de la mission." },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json(
       {
@@ -162,8 +205,20 @@ export async function GET(_req: Request, { params }: RouteParams) {
     }
 
     const resolvedParams = await params;
-    const missionId = parseInt(resolvedParams.id);
-    const mission = await getMissionById(missionId);
+    const missionUuid = resolvedParams.id;
+
+    // Validation UUID
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!missionUuid || typeof missionUuid !== "string" || !UUID_REGEX.test(missionUuid)) {
+      return NextResponse.json(
+        { error: "UUID invalide." },
+        { status: 400 }
+      );
+    }
+
+    console.log(`[proofs GET] 🔍 Recherche mission avec UUID: ${missionUuid}`);
+    const mission = await getMissionById(missionUuid);
+    console.log(`[proofs GET] ${mission ? "✅ Mission trouvée" : "❌ Mission non trouvée"}: ${mission ? mission.ref : "N/A"}`);
 
     if (!mission) {
       return NextResponse.json(
@@ -177,12 +232,9 @@ export async function GET(_req: Request, { params }: RouteParams) {
     // Prestataire peut voir ses propres preuves
     if (userRole === "prestataire" && mission.prestataireId) {
       // Vérifier que c'est bien le prestataire de la mission
-      const prestatairesStore = (await import("@/lib/prestatairesStore")).prestatairesStore;
-      const prestataire = prestatairesStore.find(
-        (p) => p.id === mission.prestataireId && p.email.toLowerCase() === userEmail.toLowerCase()
-      );
+      const prestataire = await getPrestataireByEmail(userEmail);
       
-      if (!prestataire) {
+      if (!prestataire || mission.prestataireId !== prestataire.id) {
         return NextResponse.json(
           { error: "Non autorisé." },
           { status: 403 }
