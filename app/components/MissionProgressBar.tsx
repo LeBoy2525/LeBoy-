@@ -2,7 +2,7 @@
 
 import { AlertTriangle, CheckCircle2, Clock } from "lucide-react";
 import type { Mission, MissionProgress, ClientMissionStatus } from "@/lib/types";
-import { mapStatusToClient, mapInternalStateToStatus } from "@/lib/types";
+import { mapStatusToClient, mapInternalStateToStatus, getProgressFromInternalState } from "@/lib/types";
 
 interface MissionProgressBarProps {
   mission: Mission;
@@ -35,41 +35,73 @@ const TEXT = {
 
 export function MissionProgressBar({ mission, lang = "fr", compact = false }: MissionProgressBarProps) {
   const t = TEXT[lang];
-  const progress = mission.currentProgress || 0;
   const progressHistory = mission.progress || [];
   
   // Obtenir le statut client simplifié en utilisant internalState pour un mapping précis
   const clientStatus = mapStatusToClient(mission.status || mapInternalStateToStatus(mission.internalState || "CREATED"), mission.internalState);
+  
+  // Calculer dynamiquement le pourcentage de progression basé sur internalState
+  // Utiliser getProgressFromInternalState pour avoir une valeur toujours à jour
+  const calculatedProgress = getProgressFromInternalState(mission.internalState || "CREATED");
+  // Utiliser currentProgress si disponible et plus récent, sinon utiliser le calcul
+  const progress = mission.currentProgress !== undefined && mission.currentProgress >= calculatedProgress 
+    ? mission.currentProgress 
+    : calculatedProgress;
 
   // Déterminer les étapes simplifiées pour le client
   const etapes = [
-    { key: "analyse", label: t.analyse, pourcentage: 10 },
-    { key: "evaluation", label: t.evaluation, pourcentage: 30 },
-    { key: "attentePaiement", label: t.attentePaiement, pourcentage: 50 },
-    { key: "en_cours", label: t.enCours, pourcentage: 80 },
-    { key: "terminee", label: t.terminee, pourcentage: 100 },
+    { key: "analyse", label: t.analyse, pourcentage: 10, internalStates: ["CREATED"] },
+    { key: "evaluation", label: t.evaluation, pourcentage: 30, internalStates: ["ASSIGNED_TO_PROVIDER", "PROVIDER_ESTIMATED"] },
+    { key: "attentePaiement", label: t.attentePaiement, pourcentage: 50, internalStates: ["WAITING_CLIENT_PAYMENT", "PAID_WAITING_TAKEOVER", "ADVANCE_SENT"] },
+    { key: "en_cours", label: t.enCours, pourcentage: 80, internalStates: ["IN_PROGRESS", "PROVIDER_VALIDATION_SUBMITTED"] },
+    { key: "terminee", label: t.terminee, pourcentage: 100, internalStates: ["ADMIN_CONFIRMED", "COMPLETED"] },
   ];
   
-  // Mapping des statuts client vers les étapes
-  const getStepFromStatus = (status: ClientMissionStatus): string => {
-    switch (status) {
-      case "en_analyse":
-        return "analyse";
-      case "en_evaluation":
-        return "evaluation";
-      case "en_attente_paiement":
-        return "attentePaiement";
-      case "en_cours":
-        return "en_cours";
-      case "termine":
-        return "terminee";
-      default:
-        return "analyse";
+  // Déterminer quelles étapes sont complétées basées sur internalState
+  const currentInternalState = mission.internalState || "CREATED";
+  const getCompletedSteps = (): string[] => {
+    const completed: string[] = [];
+    
+    // Analyse : complétée si on a dépassé CREATED
+    if (currentInternalState !== "CREATED") {
+      completed.push("analyse");
     }
+    
+    // Évaluation : complétée si on a dépassé ASSIGNED_TO_PROVIDER
+    if (["PROVIDER_ESTIMATED", "WAITING_CLIENT_PAYMENT", "PAID_WAITING_TAKEOVER", "ADVANCE_SENT", "IN_PROGRESS", "PROVIDER_VALIDATION_SUBMITTED", "ADMIN_CONFIRMED", "COMPLETED"].includes(currentInternalState)) {
+      completed.push("evaluation");
+    }
+    
+    // Attente paiement : complétée si on a dépassé WAITING_CLIENT_PAYMENT
+    if (["PAID_WAITING_TAKEOVER", "ADVANCE_SENT", "IN_PROGRESS", "PROVIDER_VALIDATION_SUBMITTED", "ADMIN_CONFIRMED", "COMPLETED"].includes(currentInternalState)) {
+      completed.push("attentePaiement");
+    }
+    
+    // En cours : complétée si on a dépassé IN_PROGRESS
+    if (["PROVIDER_VALIDATION_SUBMITTED", "ADMIN_CONFIRMED", "COMPLETED"].includes(currentInternalState)) {
+      completed.push("en_cours");
+    }
+    
+    // Terminée : complétée si ADMIN_CONFIRMED ou COMPLETED
+    if (["ADMIN_CONFIRMED", "COMPLETED"].includes(currentInternalState)) {
+      completed.push("terminee");
+    }
+    
+    return completed;
   };
-
-  // Trouver l'étape actuelle basée sur le statut client
-  const currentStepKey = getStepFromStatus(clientStatus);
+  
+  const completedSteps = getCompletedSteps();
+  
+  // Trouver l'étape actuelle
+  const getCurrentStep = (): string => {
+    if (completedSteps.includes("terminee")) return "terminee";
+    if (completedSteps.includes("en_cours")) return "en_cours";
+    if (completedSteps.includes("attentePaiement")) return "attentePaiement";
+    if (completedSteps.includes("evaluation")) return "evaluation";
+    return "analyse";
+  };
+  
+  const currentStepKey = getCurrentStep();
   const currentEtapeIndex = etapes.findIndex((e) => e.key === currentStepKey);
 
   // Vérifier les retards
@@ -130,11 +162,10 @@ export function MissionProgressBar({ mission, lang = "fr", compact = false }: Mi
       {/* Étapes détaillées */}
       <div className="grid grid-cols-5 gap-2">
         {etapes.map((etape, index) => {
-          // Déterminer si l'étape est complétée, en cours ou à venir
-          // Si on est à l'étape "terminee" (index 4), toutes les étapes sont complétées
-          const isCompleted = index <= currentEtapeIndex;
-          const isCurrent = index === currentEtapeIndex && currentEtapeIndex < 4; // "Terminée" n'est jamais "en cours", elle est complétée
-          const isFuture = index > currentEtapeIndex;
+          // Déterminer si l'étape est complétée basée sur internalState
+          const isCompleted = completedSteps.includes(etape.key);
+          const isCurrent = etape.key === currentStepKey && !isCompleted && currentEtapeIndex < 4; // "Terminée" n'est jamais "en cours", elle est complétée
+          const isFuture = !isCompleted && !isCurrent;
           // Vérifier les retards dans l'historique de progression
           const etapeProgress = progressHistory.find((p) => p.etape === etape.key);
           const isRetard = etapeProgress?.retard === true;

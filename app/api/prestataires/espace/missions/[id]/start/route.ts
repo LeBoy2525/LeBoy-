@@ -21,15 +21,18 @@ export async function POST(_req: Request, { params }: RouteParams) {
     }
 
     const resolvedParams = await params;
-    const missionId = parseInt(resolvedParams.id);
-    if (isNaN(missionId)) {
+    const missionUuid = resolvedParams.id;
+
+    // Validation UUID
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!missionUuid || typeof missionUuid !== "string" || !UUID_REGEX.test(missionUuid)) {
       return NextResponse.json(
-        { error: "ID invalide." },
+        { error: "UUID invalide." },
         { status: 400 }
       );
     }
 
-    const mission = await getMissionById(missionId);
+    const mission = await getMissionById(missionUuid);
     if (!mission) {
       return NextResponse.json(
         { error: "Mission non trouvée." },
@@ -55,17 +58,28 @@ export async function POST(_req: Request, { params }: RouteParams) {
       );
     }
 
-    // Mettre à jour l'état interne vers IN_PROGRESS
-    const updated = await updateMissionInternalState(missionId, "IN_PROGRESS", userEmail);
+    // Mettre à jour l'état interne vers IN_PROGRESS via Prisma
+    const { updateMission } = await import("@/repositories/missionsRepo");
+    const { mapInternalStateToStatus } = await import("@/lib/types");
+    const now = new Date();
+    
+    const updatedMissionPrisma = await updateMission(missionUuid, {
+      internalState: "IN_PROGRESS" as any,
+      status: mapInternalStateToStatus("IN_PROGRESS" as any),
+      datePriseEnCharge: now.toISOString(),
+      dateDebut: now.toISOString(),
+    });
 
-    if (!updated) {
+    if (!updatedMissionPrisma) {
       return NextResponse.json(
         { error: "Erreur lors de la mise à jour." },
         { status: 500 }
       );
     }
 
-    await saveMissions();
+    // Convertir en JSON pour la réponse
+    const { convertPrismaMissionToJSON } = await import("@/lib/dataAccess");
+    const updated = convertPrismaMissionToJSON(updatedMissionPrisma);
 
     // Ajouter une notification pour l'admin
     try {

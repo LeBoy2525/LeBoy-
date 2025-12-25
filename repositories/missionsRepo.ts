@@ -394,7 +394,12 @@ export async function updateMission(id: string, data: Partial<Mission>) {
   const updateData: any = {};
   
   // Mapper les champs simples
-  if (data.internalState !== undefined) updateData.internalState = data.internalState;
+  if (data.internalState !== undefined) {
+    updateData.internalState = data.internalState;
+    // Calculer automatiquement currentProgress si internalState change
+    const { getProgressFromInternalState } = await import("@/lib/types");
+    updateData.currentProgress = getProgressFromInternalState(data.internalState as any);
+  }
   if (data.status !== undefined) updateData.status = data.status;
   if (data.currentProgress !== undefined) updateData.currentProgress = data.currentProgress;
   if (data.devisGenere !== undefined) updateData.devisGenere = data.devisGenere;
