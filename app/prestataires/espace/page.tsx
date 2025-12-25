@@ -403,8 +403,8 @@ export default function EspacePrestatairePage() {
                           <span className="font-medium">{t.dateReception}:</span>{" "}
                           {formatDateWithTimezones(demande.createdAt).cameroon}
                         </div>
-                        {(demande.dateLimite || demande.dateLimiteProposition) && (() => {
-                          const tempsRestant = getTempsRestant(demande.dateLimite || demande.dateLimiteProposition);
+                        {demande.dateLimiteProposition && (() => {
+                          const tempsRestant = getTempsRestant(demande.dateLimiteProposition);
                           if (tempsRestant) {
                             if (tempsRestant.expire) {
                               return (
@@ -625,8 +625,8 @@ export default function EspacePrestatairePage() {
                 </div>
                 <div className="mt-2 space-y-1">
                   <p className="text-xs text-[#6B7280]">{selectedDemande.ref}</p>
-                  {(selectedDemande.dateLimite || selectedDemande.dateLimiteProposition) && (() => {
-                    const tempsRestant = getTempsRestant(selectedDemande.dateLimite || selectedDemande.dateLimiteProposition);
+                  {selectedDemande.dateLimiteProposition && (() => {
+                    const tempsRestant = getTempsRestant(selectedDemande.dateLimiteProposition);
                     if (tempsRestant) {
                       if (tempsRestant.expire) {
                         return (
