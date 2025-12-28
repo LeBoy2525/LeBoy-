@@ -333,10 +333,11 @@ export default function AdminPrestatairesPage() {
       return;
     }
 
-    const prestataireId = selectedPrestataireForReject.id;
+    // S'assurer que l'ID est toujours un string
+    const prestataireId = String(selectedPrestataireForReject.id).trim();
     
     // Vérifier que l'ID est valide avant de continuer
-    if (!prestataireId || (typeof prestataireId === "string" && prestataireId.trim() === "")) {
+    if (!prestataireId || prestataireId === "") {
       console.error(`[Frontend] ❌ ID invalide dans handleRejectConfirm: ${prestataireId}`);
       alert(lang === "fr" ? "ID invalide. Veuillez réessayer." : "Invalid ID. Please try again.");
       setRejectModalOpen(false);
@@ -344,7 +345,17 @@ export default function AdminPrestatairesPage() {
       return;
     }
 
-    console.log(`[Frontend] handleRejectConfirm appelé avec ID: ${prestataireId} (type: ${typeof prestataireId})`);
+    // Vérifier le format UUID
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(prestataireId) && isNaN(Number(prestataireId))) {
+      console.error(`[Frontend] ❌ ID invalide (ni UUID ni nombre): ${prestataireId}`);
+      alert(lang === "fr" ? "ID invalide. Veuillez réessayer." : "Invalid ID. Please try again.");
+      setRejectModalOpen(false);
+      setSelectedPrestataireForReject(null);
+      return;
+    }
+
+    console.log(`[Frontend] handleRejectConfirm appelé avec ID: ${prestataireId} (type original: ${typeof selectedPrestataireForReject.id})`);
 
     const raisonRejet = customReason || reason;
     setRejectModalOpen(false);
