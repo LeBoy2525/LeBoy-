@@ -147,11 +147,36 @@ export default function AdminPrestatairesPage() {
   useEffect(() => {
     async function fetchPrestataires() {
       try {
+        console.log("[Admin Prestataires] 🔍 Récupération des prestataires...");
         const res = await fetch("/api/prestataires", { cache: "no-store" });
+        console.log("[Admin Prestataires] 📡 Réponse API:", res.status, res.statusText);
+        
+        if (!res.ok) {
+          const errorText = await res.text();
+          console.error("[Admin Prestataires] ❌ Erreur HTTP:", res.status, errorText);
+          throw new Error(`Erreur ${res.status}: ${errorText}`);
+        }
+        
         const data = await res.json();
+        console.log("[Admin Prestataires] 📊 Données reçues:", {
+          total: data.prestataires?.length || 0,
+          stats: data.stats,
+          premiersPrestataires: data.prestataires?.slice(0, 3).map((p: any) => ({
+            id: p.id,
+            ref: p.ref,
+            email: p.email,
+            statut: p.statut,
+            type: typeof p.id,
+          })),
+        });
+        
         setPrestataires(data.prestataires || []);
+        
+        if (!data.prestataires || data.prestataires.length === 0) {
+          console.warn("[Admin Prestataires] ⚠️ Aucun prestataire trouvé dans la réponse");
+        }
       } catch (err) {
-        console.error("Erreur chargement prestataires:", err);
+        console.error("[Admin Prestataires] ❌ Erreur chargement prestataires:", err);
       } finally {
         setLoading(false);
       }
@@ -160,7 +185,7 @@ export default function AdminPrestatairesPage() {
     fetchPrestataires();
   }, []);
 
-  const handleAction = async (id: number, action: string) => {
+  const handleAction = async (id: string | number, action: string) => {
     if (!confirm(t[`confirm${action.charAt(0).toUpperCase() + action.slice(1)}` as keyof typeof t])) {
       return;
     }
@@ -198,7 +223,7 @@ export default function AdminPrestatairesPage() {
     }
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string | number) => {
     if (!confirm(t.confirmSupprimer)) {
       return;
     }
