@@ -707,7 +707,16 @@ export default function AdminPrestatairesPage() {
                             >
                               <FileText className="w-4 h-4" />
                             </Link>
-                            {prestataire.statut === "en_attente" && (
+                            {(() => {
+                              // Debug: vérifier le statut
+                              const statut = prestataire.statut;
+                              const isEnAttente = statut === "en_attente";
+                              console.log(`[DEBUG] Prestataire ${prestataire.email} - Statut: "${statut}" (type: ${typeof statut}), isEnAttente: ${isEnAttente}`);
+                              if (!isEnAttente && statut) {
+                                console.warn(`[DEBUG] ⚠️ Statut inattendu: "${statut}" (longueur: ${statut.length})`);
+                              }
+                              return isEnAttente;
+                            })() && (
                               <>
                                 <button
                                   onClick={(e) => {
