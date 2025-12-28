@@ -16,6 +16,9 @@
       "NODE_OPTIONS": "--max-old-space-size=6144"
     }
   },
-  "crons": []
+  "crons": [],
+  "env": {
+    "PRISMA_GENERATE_DATAPROXY": "true"
+  }
 }
 
