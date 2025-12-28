@@ -150,6 +150,7 @@ export default function AdminPrestatairesPage() {
     id: string | number;
     name: string;
   } | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     async function fetchPrestataires() {
@@ -224,10 +225,22 @@ export default function AdminPrestatairesPage() {
   }, []);
 
   const executeAction = async (id: string | number, action: string, raisonRejet?: string) => {
-    console.log(`[Frontend] executeAction appelé avec ID: ${id}, Action: ${action}, Raison: ${raisonRejet || "N/A"}`);
+    // Vérifier que l'ID est valide
+    if (!id || (typeof id === "string" && id.trim() === "")) {
+      console.error(`[Frontend] ❌ ID invalide: ${id}`);
+      alert(lang === "fr" ? "ID invalide" : "Invalid ID");
+      return;
+    }
+
+    console.log(`[Frontend] executeAction appelé avec ID: ${id} (type: ${typeof id}), Action: ${action}, Raison: ${raisonRejet || "N/A"}`);
     console.log(`[Frontend] URL: /api/admin/prestataires/${id}`);
 
+    setIsProcessing(true);
+
     try {
+      // Utiliser setTimeout pour rendre l'opération non-bloquante et améliorer INP
+      await new Promise(resolve => setTimeout(resolve, 0));
+
       const res = await fetch(`/api/admin/prestataires/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -245,15 +258,27 @@ export default function AdminPrestatairesPage() {
       const result = await res.json();
       console.log(`[Frontend] ✅ Action réussie:`, result);
 
-      // Recharger la liste
-      const resList = await fetch("/api/prestataires", { cache: "no-store" });
-      const data = await resList.json();
-      setPrestataires(data.prestataires || []);
+      // Recharger la liste en arrière-plan (non-bloquant)
+      fetch("/api/prestataires", { cache: "no-store" })
+        .then(res => res.json())
+        .then(data => {
+          setPrestataires(data.prestataires || []);
+        })
+        .catch(err => {
+          console.error("[Frontend] Erreur rechargement liste:", err);
+        });
       
-      alert(lang === "fr" ? "Opération réussie" : "Operation successful");
+      // Utiliser setTimeout pour éviter de bloquer l'UI avec alert
+      setTimeout(() => {
+        alert(lang === "fr" ? "Opération réussie" : "Operation successful");
+      }, 0);
     } catch (err: any) {
       console.error("[Frontend] ❌ Erreur action:", err);
-      alert(err.message || (lang === "fr" ? "Erreur lors de l'opération" : "Error during operation"));
+      setTimeout(() => {
+        alert(err.message || (lang === "fr" ? "Erreur lors de l'opération" : "Error during operation"));
+      }, 0);
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -278,14 +303,32 @@ export default function AdminPrestatairesPage() {
   };
 
   const handleRejectConfirm = async (reason: string, customReason?: string) => {
-    if (!selectedPrestataireForReject) return;
+    if (!selectedPrestataireForReject) {
+      console.error("[Frontend] ❌ selectedPrestataireForReject est null");
+      return;
+    }
+
+    const prestataireId = selectedPrestataireForReject.id;
+    
+    // Vérifier que l'ID est valide avant de continuer
+    if (!prestataireId || (typeof prestataireId === "string" && prestataireId.trim() === "")) {
+      console.error(`[Frontend] ❌ ID invalide dans handleRejectConfirm: ${prestataireId}`);
+      alert(lang === "fr" ? "ID invalide. Veuillez réessayer." : "Invalid ID. Please try again.");
+      setRejectModalOpen(false);
+      setSelectedPrestataireForReject(null);
+      return;
+    }
+
+    console.log(`[Frontend] handleRejectConfirm appelé avec ID: ${prestataireId} (type: ${typeof prestataireId})`);
 
     const raisonRejet = customReason || reason;
     setRejectModalOpen(false);
     
-    await executeAction(selectedPrestataireForReject.id, "rejeter", raisonRejet);
-    
-    setSelectedPrestataireForReject(null);
+    // Utiliser setTimeout pour rendre l'opération non-bloquante
+    setTimeout(async () => {
+      await executeAction(prestataireId, "rejeter", raisonRejet);
+      setSelectedPrestataireForReject(null);
+    }, 0);
   };
 
   const handleDelete = async (id: string | number) => {

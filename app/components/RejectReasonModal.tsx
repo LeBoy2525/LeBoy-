@@ -60,7 +60,10 @@ export function RejectReasonModal({
       ? customReason.trim()
       : reasons.find((r) => r.value === selectedReason)?.label || selectedReason;
 
-    onConfirm(selectedReason, reasonText);
+    // Utiliser setTimeout pour éviter de bloquer l'UI
+    setTimeout(() => {
+      onConfirm(selectedReason, reasonText);
+    }, 0);
     
     // Reset form
     setSelectedReason("");
