@@ -255,6 +255,17 @@ export default function AdminPrestatairesPage() {
     }
   };
 
+  const handleRejectConfirm = async (reason: string, customReason?: string) => {
+    if (!selectedPrestataireForReject) return;
+
+    const raisonRejet = customReason || reason;
+    setRejectModalOpen(false);
+    
+    await executeAction(selectedPrestataireForReject.id, "rejeter", raisonRejet);
+    
+    setSelectedPrestataireForReject(null);
+  };
+
   const handleDelete = async (id: string | number) => {
     if (!confirm(t.confirmSupprimer)) {
       return;

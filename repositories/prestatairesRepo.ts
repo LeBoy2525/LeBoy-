@@ -134,6 +134,19 @@ export async function updatePrestataire(id: string, data: Partial<Prestataire>) 
   
   if (data.statut !== undefined) {
     updateData.statut = data.statut;
+    
+    // Gérer les champs de rejet
+    if (data.statut === "rejete") {
+      updateData.rejeteAt = (data as any).rejeteAt ? new Date((data as any).rejeteAt) : new Date();
+      updateData.rejeteBy = (data as any).rejeteBy || undefined;
+      updateData.raisonRejet = (data as any).raisonRejet || undefined;
+    } else if (data.statut !== "rejete") {
+      // Si le statut change et n'est plus "rejete", réinitialiser les champs de rejet
+      updateData.rejeteAt = null;
+      updateData.rejeteBy = null;
+      updateData.raisonRejet = null;
+    }
+    
     // Mettre à jour les dates selon le statut
     if (data.statut === "actif") {
       if (data.dateValidation) {

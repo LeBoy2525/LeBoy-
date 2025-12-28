@@ -140,9 +140,14 @@ export async function PATCH(
         console.log(`[API PATCH] 📧 Le prestataire recevra ce mot de passe temporaire dans l'email de validation`);
       }
     } else if (action === "rejeter") {
+      const { raisonRejet } = body;
       statutUpdate = {
         statut: "rejete" as const,
+        raisonRejet: raisonRejet || null,
+        rejeteAt: new Date().toISOString(),
+        rejeteBy: userEmail,
       };
+      console.log(`[API PATCH] Rejet du prestataire ${existingPrestataire.email} avec raison: ${raisonRejet || "Non spécifiée"}`);
     } else if (action === "suspendre") {
       statutUpdate = {
         statut: "suspendu" as const,
