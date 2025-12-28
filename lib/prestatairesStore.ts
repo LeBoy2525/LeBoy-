@@ -90,6 +90,7 @@ export type Prestataire = {
 
   // Ajouter ces champs :
   passwordHash?: string; // Hash bcrypt (optionnel pour compatibilité)
+  raisonRejet?: string; // Raison de rejet si le prestataire a été rejeté
   
   // Documents justificatifs
   documents?: {
