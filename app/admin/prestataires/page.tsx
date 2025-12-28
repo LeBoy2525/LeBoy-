@@ -692,6 +692,21 @@ export default function AdminPrestatairesPage() {
           </div>
         )}
       </div>
+
+      {/* Modal de raison de rejet */}
+      <RejectReasonModal
+        isOpen={rejectModalOpen}
+        onClose={() => {
+          if (!isProcessing) {
+            setRejectModalOpen(false);
+            setSelectedPrestataireForReject(null);
+          }
+        }}
+        onConfirm={handleRejectConfirm}
+        prestataireName={selectedPrestataireForReject?.name}
+        lang={lang}
+        isProcessing={isProcessing}
+      />
     </div>
   );
 }
