@@ -182,6 +182,33 @@ export async function PATCH(
     
     console.log(`[API PATCH] ✅ Prestataire mis à jour avec succès: ${updated.email} (nouveau statut: ${updated.statut})`);
 
+    // Envoyer un email de notification si rejet
+    if (action === "rejeter") {
+      try {
+        const { sendNotificationEmail } = await import("@/lib/emailService");
+        const protocol = process.env.NEXT_PUBLIC_APP_URL?.startsWith("https") ? "https" : "http";
+        const platformUrl = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://localhost:3000`;
+        
+        const raisonRejet = body.raisonRejet || "Raison non spécifiée";
+        
+        await sendNotificationEmail(
+          "provider-rejected",
+          { email: updated.email, name: updated.nomContact || updated.nomEntreprise },
+          {
+            prestataireRef: updated.ref,
+            prestataireName: updated.nomEntreprise,
+            raisonRejet,
+            platformUrl,
+          },
+          "fr"
+        );
+        console.log(`[API PATCH] ✅ Email de rejet envoyé à ${updated.email}`);
+      } catch (error) {
+        console.error("[API PATCH] ❌ Erreur envoi email de rejet:", error);
+        // Ne pas bloquer le rejet si l'email échoue
+      }
+    }
+
     // Si validation, envoyer email de confirmation
     if (action === "valider") {
       try {

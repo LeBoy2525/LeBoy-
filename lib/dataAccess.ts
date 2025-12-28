@@ -189,6 +189,7 @@ function convertPrismaPrestataireToJSON(prestataire: any): Prestataire {
     deletedBy: prestataire.deletedBy || undefined,
     passwordHash: prestataire.passwordHash || undefined, // ⚠️ IMPORTANT: Inclure passwordHash
     typePrestataire: prestataire.typePrestataire || "freelance", // Type de prestataire (entreprise | freelance)
+    raisonRejet: prestataire.raisonRejet || undefined, // Raison de rejet si applicable
   };
   
   // Log pour diagnostic si passwordHash manquant
