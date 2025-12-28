@@ -486,11 +486,14 @@ function getNotificationHTML(
     case "provider-registered":
       content = `
         <p style="font-size: 18px; color: #3B82F6; font-weight: bold; margin-bottom: 20px;">
-          ✅ Votre demande d'inscription a été reçue
+          📝 Votre demande d'inscription a été reçue
         </p>
         <p>Bonjour ${name},</p>
         <p>Nous avons bien reçu votre demande d'inscription en tant que prestataire LeBoy.</p>
-        <p>Votre dossier (<strong>${data.prestataireRef || "N/A"}</strong>) est actuellement <strong style="color: #F59E0B;">en attente de validation</strong> par notre équipe.</p>
+        <p><strong style="color: #EF4444;">⚠️ IMPORTANT :</strong> Votre dossier (<strong>${data.prestataireRef || "N/A"}</strong>) est actuellement <strong style="color: #F59E0B;">en attente de validation</strong> par notre équipe.</p>
+        <p style="color: #6B7280; font-size: 14px; margin-top: 10px;">
+          <strong>Votre compte n'est pas encore activé.</strong> Vous recevrez un email de confirmation avec les instructions de connexion une fois que notre équipe aura validé votre dossier.
+        </p>
         <div style="background: #EFF6FF; border-left: 4px solid #3B82F6; padding: 16px; margin: 20px 0; border-radius: 6px;">
           <p style="margin: 0 0 8px 0; font-weight: bold; color: #1E40AF;">
             ⏳ Prochaines étapes
