@@ -43,46 +43,168 @@ export async function POST() {
       try {
         console.log("🔧 Application manuelle de la migration add_prestataire_type...");
         
-        // Appliquer la migration SQL directement
-        await prisma.$executeRaw`
-          ALTER TABLE "prestataires" ADD COLUMN IF NOT EXISTS "typePrestataire" TEXT NOT NULL DEFAULT 'freelance';
+        // Étape 1: Vérifier si la table existe
+        const tableExists = await prisma.$queryRaw<Array<{ table_name: string }>>`
+          SELECT table_name 
+          FROM information_schema.tables 
+          WHERE table_schema = 'public' 
+          AND table_name = 'prestataires';
         `;
         
-        // Mettre à jour les prestataires existants
-        await prisma.$executeRaw`
-          UPDATE "prestataires" SET "typePrestataire" = 'freelance' WHERE "typePrestataire" IS NULL;
-        `;
-        
-        // Marquer la migration comme appliquée dans _prisma_migrations
-        const migrationName = "20250123000000_add_prestataire_type";
-        const migrationExists = await prisma.$queryRaw<Array<{ migration_name: string }>>`
-          SELECT migration_name FROM "_prisma_migrations" WHERE migration_name = ${migrationName};
-        `;
-        
-        if (migrationExists.length === 0) {
-          await prisma.$executeRaw`
-            INSERT INTO "_prisma_migrations" (migration_name, checksum, finished_at, started_at, applied_steps_count)
-            VALUES (${migrationName}, '', NOW(), NOW(), 1);
-          `;
-        } else {
-          await prisma.$executeRaw`
-            UPDATE "_prisma_migrations" 
-            SET finished_at = NOW(), applied_steps_count = 1
-            WHERE migration_name = ${migrationName} AND finished_at IS NULL;
-          `;
+        if (tableExists.length === 0) {
+          throw new Error("La table 'prestataires' n'existe pas dans la base de données");
         }
         
         results.push({
-          action: "add_typePrestataire_column",
+          action: "check_table_exists",
           success: true,
-          message: "Colonne typePrestataire ajoutée avec succès",
+          message: "Table prestataires trouvée",
         });
+        
+        // Étape 2: Essayer d'ajouter la colonne avec différentes méthodes
+        let columnAdded = false;
+        let addColumnError = null;
+        
+        // Méthode 1: ALTER TABLE avec IF NOT EXISTS (PostgreSQL 9.5+)
+        try {
+          await prisma.$executeRawUnsafe(`
+            ALTER TABLE "prestataires" 
+            ADD COLUMN IF NOT EXISTS "typePrestataire" TEXT NOT NULL DEFAULT 'freelance';
+          `);
+          columnAdded = true;
+          results.push({
+            action: "add_column_method1",
+            success: true,
+            message: "Colonne ajoutée avec IF NOT EXISTS",
+          });
+        } catch (err: any) {
+          addColumnError = err.message;
+          console.error("Méthode 1 échouée:", err);
+          
+          // Méthode 2: Vérifier d'abord puis ajouter
+          try {
+            const columnCheck = await prisma.$queryRawUnsafe(`
+              SELECT column_name 
+              FROM information_schema.columns 
+              WHERE table_name = 'prestataires' 
+              AND column_name = 'typePrestataire';
+            `);
+            
+            if (columnCheck.length === 0) {
+              await prisma.$executeRawUnsafe(`
+                ALTER TABLE "prestataires" 
+                ADD COLUMN "typePrestataire" TEXT NOT NULL DEFAULT 'freelance';
+              `);
+              columnAdded = true;
+              results.push({
+                action: "add_column_method2",
+                success: true,
+                message: "Colonne ajoutée avec vérification préalable",
+              });
+            } else {
+              columnAdded = true;
+              results.push({
+                action: "add_column_method2",
+                success: true,
+                message: "Colonne existe déjà (détectée par méthode 2)",
+                skipped: true,
+              });
+            }
+          } catch (err2: any) {
+            console.error("Méthode 2 échouée:", err2);
+            throw new Error(`Méthode 1: ${err.message}; Méthode 2: ${err2.message}`);
+          }
+        }
+        
+        if (!columnAdded) {
+          throw new Error(`Impossible d'ajouter la colonne. Dernière erreur: ${addColumnError}`);
+        }
+        
+        // Étape 3: Vérifier que la colonne existe maintenant
+        const verifyColumn = await prisma.$queryRawUnsafe(`
+          SELECT column_name, data_type, column_default
+          FROM information_schema.columns 
+          WHERE table_name = 'prestataires' 
+          AND column_name = 'typePrestataire';
+        `);
+        
+        if (verifyColumn.length === 0) {
+          throw new Error("La colonne n'a pas été créée malgré l'absence d'erreur");
+        }
+        
+        results.push({
+          action: "verify_column",
+          success: true,
+          message: `Colonne vérifiée: ${JSON.stringify(verifyColumn[0])}`,
+        });
+        
+        // Étape 4: Mettre à jour les prestataires existants (si nécessaire)
+        try {
+          const updateResult = await prisma.$executeRawUnsafe(`
+            UPDATE "prestataires" 
+            SET "typePrestataire" = 'freelance' 
+            WHERE "typePrestataire" IS NULL OR "typePrestataire" = '';
+          `);
+          results.push({
+            action: "update_existing_prestataires",
+            success: true,
+            message: `Prestataires mis à jour (affectés: ${updateResult})`,
+          });
+        } catch (err: any) {
+          results.push({
+            action: "update_existing_prestataires",
+            success: false,
+            error: err.message,
+            warning: "La colonne existe mais la mise à jour a échoué",
+          });
+        }
+        
+        // Étape 5: Marquer la migration comme appliquée dans _prisma_migrations
+        try {
+          const migrationName = "20250123000000_add_prestataire_type";
+          const migrationExists = await prisma.$queryRawUnsafe(`
+            SELECT migration_name FROM "_prisma_migrations" WHERE migration_name = '${migrationName}';
+          `);
+          
+          if (migrationExists.length === 0) {
+            await prisma.$executeRawUnsafe(`
+              INSERT INTO "_prisma_migrations" (migration_name, checksum, finished_at, started_at, applied_steps_count)
+              VALUES ('${migrationName}', '', NOW(), NOW(), 1);
+            `);
+            results.push({
+              action: "mark_migration_applied",
+              success: true,
+              message: "Migration marquée comme appliquée (nouvelle entrée)",
+            });
+          } else {
+            await prisma.$executeRawUnsafe(`
+              UPDATE "_prisma_migrations" 
+              SET finished_at = NOW(), applied_steps_count = 1
+              WHERE migration_name = '${migrationName}' AND finished_at IS NULL;
+            `);
+            results.push({
+              action: "mark_migration_applied",
+              success: true,
+              message: "Migration marquée comme appliquée (mise à jour)",
+            });
+          }
+        } catch (err: any) {
+          results.push({
+            action: "mark_migration_applied",
+            success: false,
+            error: err.message,
+            warning: "La colonne a été ajoutée mais la migration n'a pas pu être marquée",
+          });
+        }
+        
       } catch (error: any) {
+        console.error("❌ Erreur lors de l'ajout de la colonne:", error);
         results.push({
           action: "add_typePrestataire_column",
           success: false,
           error: error.message,
           code: error.code,
+          stack: error.stack?.substring(0, 500),
         });
       }
     } else {
