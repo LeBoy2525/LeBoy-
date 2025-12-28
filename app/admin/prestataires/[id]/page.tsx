@@ -22,6 +22,7 @@ import Link from "next/link";
 import type { Prestataire } from "@/lib/prestatairesStore";
 import { formatDateWithTimezones } from "@/lib/dateUtils";
 import { PrestataireTypeBadge } from "../../../components/PrestataireTypeBadge";
+import { RejectReasonModal } from "../../../components/RejectReasonModal";
 // Import du type seulement (pas de logique serveur)
 type Country = {
   code: string;
@@ -150,6 +151,8 @@ export default function AdminPrestataireDetailPage() {
   const [prestataire, setPrestataire] = useState<Prestataire | null>(null);
   const [loading, setLoading] = useState(true);
   const [availableCountries, setAvailableCountries] = useState<Country[]>([]);
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     async function fetchPrestataire() {
@@ -751,6 +754,20 @@ export default function AdminPrestataireDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Modal de raison de rejet */}
+      <RejectReasonModal
+        isOpen={rejectModalOpen}
+        onClose={() => {
+          if (!isProcessing) {
+            setRejectModalOpen(false);
+          }
+        }}
+        onConfirm={handleRejectConfirm}
+        prestataireName={prestataire?.nomEntreprise || prestataire?.nomContact}
+        lang={lang}
+        isProcessing={isProcessing}
+      />
     </main>
   );
 }
