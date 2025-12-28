@@ -23,6 +23,7 @@ import { AdminPageHeader } from "../_components/AdminPageHeader";
 import type { Prestataire, StatutPrestataire } from "@/lib/prestatairesStore";
 import { formatDateWithTimezones } from "@/lib/dateUtils";
 import { PrestataireTypeBadge } from "../../components/PrestataireTypeBadge";
+import { RejectReasonModal } from "../../components/RejectReasonModal";
 
 const TEXT = {
   fr: {
@@ -144,6 +145,11 @@ export default function AdminPrestatairesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatut, setFilterStatut] = useState<StatutPrestataire | "all">("all");
   const [filterType, setFilterType] = useState<"all" | "entreprise" | "freelance">("all");
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [selectedPrestataireForReject, setSelectedPrestataireForReject] = useState<{
+    id: string | number;
+    name: string;
+  } | null>(null);
 
   useEffect(() => {
     async function fetchPrestataires() {
@@ -217,19 +223,15 @@ export default function AdminPrestatairesPage() {
     fetchPrestataires();
   }, []);
 
-  const handleAction = async (id: string | number, action: string) => {
-    if (!confirm(t[`confirm${action.charAt(0).toUpperCase() + action.slice(1)}` as keyof typeof t])) {
-      return;
-    }
-
-    console.log(`[Frontend] handleAction appelé avec ID: ${id}, Action: ${action}`);
+  const executeAction = async (id: string | number, action: string, raisonRejet?: string) => {
+    console.log(`[Frontend] executeAction appelé avec ID: ${id}, Action: ${action}, Raison: ${raisonRejet || "N/A"}`);
     console.log(`[Frontend] URL: /api/admin/prestataires/${id}`);
 
     try {
       const res = await fetch(`/api/admin/prestataires/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action }),
+        body: JSON.stringify({ action, raisonRejet }),
       });
 
       console.log(`[Frontend] Réponse reçue: status ${res.status}`);
@@ -253,6 +255,26 @@ export default function AdminPrestatairesPage() {
       console.error("[Frontend] ❌ Erreur action:", err);
       alert(err.message || (lang === "fr" ? "Erreur lors de l'opération" : "Error during operation"));
     }
+  };
+
+  const handleAction = async (id: string | number, action: string) => {
+    // Pour le rejet, ouvrir le modal au lieu de confirmer directement
+    if (action === "rejeter") {
+      const prestataire = prestataires.find((p) => p.id === id);
+      setSelectedPrestataireForReject({
+        id,
+        name: prestataire?.nomEntreprise || prestataire?.nomContact || "Prestataire",
+      });
+      setRejectModalOpen(true);
+      return;
+    }
+
+    // Pour les autres actions, confirmation standard
+    if (!confirm(t[`confirm${action.charAt(0).toUpperCase() + action.slice(1)}` as keyof typeof t])) {
+      return;
+    }
+
+    await executeAction(id, action);
   };
 
   const handleRejectConfirm = async (reason: string, customReason?: string) => {
