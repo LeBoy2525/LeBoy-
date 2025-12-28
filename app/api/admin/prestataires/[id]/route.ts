@@ -47,31 +47,28 @@ export async function PATCH(
     
     console.log(`[API PATCH] ID reçu (param): "${idParam}"`);
     
-    // L'ID peut être un nombre (JSON) ou un UUID (Prisma)
-    // Essayer de parser comme nombre d'abord
-    let id: number;
-    if (idParam.includes("-")) {
-      // C'est probablement un UUID, on doit le convertir en ID numérique
-      // Pour l'instant, on essaie de trouver le prestataire par email ou autre identifiant
-      // Mais normalement le frontend devrait envoyer l'ID numérique
-      console.error(`[API PATCH] ❌ Format UUID détecté: "${idParam}"`);
-      return NextResponse.json(
-        { error: "Format d'ID invalide. Attendu: ID numérique." },
-        { status: 400 }
-      );
+    // L'ID est maintenant un UUID (string) depuis la migration vers Prisma
+    // Valider le format UUID
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    
+    let id: string;
+    if (!uuidRegex.test(idParam)) {
+      // Si ce n'est pas un UUID, essayer de parser comme nombre (rétrocompatibilité JSON)
+      const idNum = parseInt(idParam);
+      if (isNaN(idNum)) {
+        console.error(`[API PATCH] ❌ ID invalide reçu: "${idParam}" (ni UUID ni nombre)`);
+        return NextResponse.json(
+          { error: "ID invalide." },
+          { status: 400 }
+        );
+      }
+      // Convertir le nombre en string pour compatibilité
+      id = String(idNum);
+      console.log(`[API PATCH] ✅ ID numérique converti en string: ${id}`);
+    } else {
+      id = idParam; // Utiliser directement l'UUID string
+      console.log(`[API PATCH] ✅ UUID valide: ${id}`);
     }
-    
-    id = parseInt(idParam);
-    
-    if (isNaN(id)) {
-      console.error(`[API PATCH] ❌ ID invalide reçu: "${idParam}" (parseInt = NaN)`);
-      return NextResponse.json(
-        { error: "ID invalide." },
-        { status: 400 }
-      );
-    }
-    
-    console.log(`[API PATCH] ✅ ID numérique parsé: ${id}`);
 
     const body = await req.json();
     const { action } = body;
@@ -95,7 +92,7 @@ export async function PATCH(
       statut: p.statut
     })));
     
-    const existingPrestataire = await getPrestataireById(id);
+    const existingPrestataire = await getPrestataireById(id); // id est maintenant un string (UUID)
     if (!existingPrestataire) {
       console.error(`[API PATCH] ❌❌❌ PRESTATAIRE NON TROUVÉ ❌❌❌`);
       console.error(`[API PATCH] ID recherché: ${id}`);
@@ -262,18 +259,30 @@ export async function GET(
     const idParam = resolvedParams.id;
     console.log(`[API GET] ID reçu: "${idParam}"`);
     
-    const id = parseInt(idParam);
+    // L'ID est maintenant un UUID (string) depuis la migration vers Prisma
+    // Valider le format UUID
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     
-    if (isNaN(id)) {
-      console.error(`[API GET] ❌ ID invalide: "${idParam}"`);
-      return NextResponse.json(
-        { error: "ID invalide." },
-        { status: 400 }
-      );
+    let id: string;
+    if (!uuidRegex.test(idParam)) {
+      // Si ce n'est pas un UUID, essayer de parser comme nombre (rétrocompatibilité JSON)
+      const idNum = parseInt(idParam);
+      if (isNaN(idNum)) {
+        console.error(`[API GET] ❌ ID invalide: "${idParam}" (ni UUID ni nombre)`);
+        return NextResponse.json(
+          { error: "ID invalide." },
+          { status: 400 }
+        );
+      }
+      id = String(idNum);
+      console.log(`[API GET] ✅ ID numérique converti en string: ${id}`);
+    } else {
+      id = idParam;
+      console.log(`[API GET] ✅ UUID valide: ${id}`);
     }
 
     console.log(`[API GET] Recherche prestataire avec ID: ${id}`);
-    const prestataire = await getPrestataireById(id);
+    const prestataire = await getPrestataireById(id); // id est maintenant un string (UUID)
     if (!prestataire) {
       console.error(`[API GET] ❌ Prestataire non trouvé avec ID: ${id}`);
       return NextResponse.json(
