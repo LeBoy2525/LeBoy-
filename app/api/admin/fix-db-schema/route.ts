@@ -67,52 +67,97 @@ export async function POST() {
         
         // Méthode 1: ALTER TABLE avec IF NOT EXISTS (PostgreSQL 9.5+)
         try {
-          await prisma.$executeRawUnsafe(`
+          console.log("🔧 Tentative méthode 1: ALTER TABLE avec IF NOT EXISTS...");
+          const result1 = await prisma.$executeRawUnsafe(`
             ALTER TABLE "prestataires" 
             ADD COLUMN IF NOT EXISTS "typePrestataire" TEXT NOT NULL DEFAULT 'freelance';
           `);
+          console.log("✅ Méthode 1 réussie, résultat:", result1);
           columnAdded = true;
           results.push({
             action: "add_column_method1",
             success: true,
             message: "Colonne ajoutée avec IF NOT EXISTS",
+            result: result1,
           });
         } catch (err: any) {
           addColumnError = err.message;
-          console.error("Méthode 1 échouée:", err);
+          console.error("❌ Méthode 1 échouée:", err);
+          console.error("Code erreur:", err.code);
+          console.error("Message complet:", JSON.stringify(err, null, 2));
           
-          // Méthode 2: Vérifier d'abord puis ajouter
+          // Méthode 2: Vérifier d'abord puis ajouter sans IF NOT EXISTS
           try {
+            console.log("🔧 Tentative méthode 2: Vérification préalable...");
             const columnCheck = await prisma.$queryRawUnsafe(`
-              SELECT column_name 
+              SELECT column_name, data_type, column_default
               FROM information_schema.columns 
-              WHERE table_name = 'prestataires' 
+              WHERE table_schema = 'public'
+              AND table_name = 'prestataires' 
               AND column_name = 'typePrestataire';
             `);
             
+            console.log("📋 Résultat vérification colonne:", columnCheck);
+            
             if (columnCheck.length === 0) {
-              await prisma.$executeRawUnsafe(`
+              console.log("🔧 Colonne n'existe pas, ajout...");
+              const result2 = await prisma.$executeRawUnsafe(`
                 ALTER TABLE "prestataires" 
                 ADD COLUMN "typePrestataire" TEXT NOT NULL DEFAULT 'freelance';
               `);
+              console.log("✅ Méthode 2 réussie, résultat:", result2);
               columnAdded = true;
               results.push({
                 action: "add_column_method2",
                 success: true,
                 message: "Colonne ajoutée avec vérification préalable",
+                result: result2,
               });
             } else {
+              console.log("✅ Colonne existe déjà selon méthode 2");
               columnAdded = true;
               results.push({
                 action: "add_column_method2",
                 success: true,
                 message: "Colonne existe déjà (détectée par méthode 2)",
+                columnInfo: columnCheck[0],
                 skipped: true,
               });
             }
           } catch (err2: any) {
-            console.error("Méthode 2 échouée:", err2);
-            throw new Error(`Méthode 1: ${err.message}; Méthode 2: ${err2.message}`);
+            console.error("❌ Méthode 2 échouée:", err2);
+            console.error("Code erreur:", err2.code);
+            console.error("Message complet:", JSON.stringify(err2, null, 2));
+            
+            // Méthode 3: Essayer avec une transaction et gestion d'erreur PostgreSQL
+            try {
+              console.log("🔧 Tentative méthode 3: Transaction avec DO block...");
+              const result3 = await prisma.$executeRawUnsafe(`
+                DO $$
+                BEGIN
+                  IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_schema = 'public' 
+                    AND table_name = 'prestataires' 
+                    AND column_name = 'typePrestataire'
+                  ) THEN
+                    ALTER TABLE "prestataires" 
+                    ADD COLUMN "typePrestataire" TEXT NOT NULL DEFAULT 'freelance';
+                  END IF;
+                END $$;
+              `);
+              console.log("✅ Méthode 3 réussie, résultat:", result3);
+              columnAdded = true;
+              results.push({
+                action: "add_column_method3",
+                success: true,
+                message: "Colonne ajoutée avec DO block PostgreSQL",
+                result: result3,
+              });
+            } catch (err3: any) {
+              console.error("❌ Méthode 3 échouée:", err3);
+              throw new Error(`Toutes les méthodes ont échoué. Méthode 1: ${err.message}; Méthode 2: ${err2.message}; Méthode 3: ${err3.message}`);
+            }
           }
         }
         
