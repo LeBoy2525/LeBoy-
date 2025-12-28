@@ -280,6 +280,13 @@ export default function AdminPrestatairesPage() {
     return matchesSearch && matchesFilter && matchesType;
   });
 
+  // Statistiques par type (calculées depuis prestataires)
+  const statsByType = {
+    total: prestataires.filter((p) => !p.deletedAt).length,
+    entreprises: prestataires.filter((p) => (p.typePrestataire || "freelance") === "entreprise" && !p.deletedAt).length,
+    freelances: prestataires.filter((p) => (p.typePrestataire || "freelance") === "freelance" && !p.deletedAt).length,
+  };
+
   return (
     <div className="bg-gray-50 min-h-screen">
       <AdminPageHeader
