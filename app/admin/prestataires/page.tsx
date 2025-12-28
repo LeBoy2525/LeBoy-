@@ -232,8 +232,19 @@ export default function AdminPrestatairesPage() {
       return;
     }
 
-    console.log(`[Frontend] executeAction appelé avec ID: ${id} (type: ${typeof id}), Action: ${action}, Raison: ${raisonRejet || "N/A"}`);
-    console.log(`[Frontend] URL: /api/admin/prestataires/${id}`);
+    // S'assurer que l'ID est toujours un string (UUID)
+    const idString = String(id).trim();
+    
+    // Vérifier le format UUID
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(idString) && isNaN(Number(idString))) {
+      console.error(`[Frontend] ❌ ID invalide (ni UUID ni nombre): ${idString}`);
+      alert(lang === "fr" ? "ID invalide" : "Invalid ID");
+      return;
+    }
+
+    console.log(`[Frontend] executeAction appelé avec ID: ${idString} (type original: ${typeof id}), Action: ${action}, Raison: ${raisonRejet || "N/A"}`);
+    console.log(`[Frontend] URL: /api/admin/prestataires/${encodeURIComponent(idString)}`);
 
     setIsProcessing(true);
 
@@ -241,7 +252,8 @@ export default function AdminPrestatairesPage() {
       // Utiliser setTimeout pour rendre l'opération non-bloquante et améliorer INP
       await new Promise(resolve => setTimeout(resolve, 0));
 
-      const res = await fetch(`/api/admin/prestataires/${id}`, {
+      // Encoder l'ID dans l'URL pour éviter les problèmes d'encodage
+      const res = await fetch(`/api/admin/prestataires/${encodeURIComponent(idString)}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action, raisonRejet }),
@@ -283,11 +295,24 @@ export default function AdminPrestatairesPage() {
   };
 
   const handleAction = async (id: string | number, action: string) => {
+    // S'assurer que l'ID est toujours un string pour éviter les problèmes
+    const idString = String(id).trim();
+    
+    console.log(`[Frontend] handleAction appelé avec ID: ${idString} (type original: ${typeof id}), Action: ${action}`);
+    
     // Pour le rejet, ouvrir le modal au lieu de confirmer directement
     if (action === "rejeter") {
-      const prestataire = prestataires.find((p) => p.id === id);
+      const prestataire = prestataires.find((p) => String(p.id).trim() === idString);
+      if (!prestataire) {
+        console.error(`[Frontend] ❌ Prestataire non trouvé avec ID: ${idString}`);
+        alert(lang === "fr" ? "Prestataire non trouvé" : "Provider not found");
+        return;
+      }
+      
+      console.log(`[Frontend] ✅ Prestataire trouvé: ${prestataire.email}, ID: ${prestataire.id}`);
+      
       setSelectedPrestataireForReject({
-        id,
+        id: idString, // Toujours stocker comme string
         name: prestataire?.nomEntreprise || prestataire?.nomContact || "Prestataire",
       });
       setRejectModalOpen(true);
@@ -299,7 +324,7 @@ export default function AdminPrestatairesPage() {
       return;
     }
 
-    await executeAction(id, action);
+    await executeAction(idString, action);
   };
 
   const handleRejectConfirm = async (reason: string, customReason?: string) => {
