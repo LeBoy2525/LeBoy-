@@ -519,17 +519,32 @@ export default function AdminPage() {
             </div>
           </Link>
 
-          <button
-            onClick={async () => {
-              try {
-                const res = await fetch("/api/admin/check-db-schema", { cache: "no-store" });
-                const data = await res.json();
-                
-                // Afficher les résultats dans une alerte formatée
-                const summary = data.summary || {};
-                const diagnostics = data.diagnostics || {};
-                
-                const message = `
+          <div className="bg-white border border-[#DDDDDD] rounded-xl p-6 space-y-3">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-lg bg-[#0A1B2A] flex items-center justify-center">
+                <Database className="w-6 h-6 text-[#D4A657]" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-heading font-semibold text-[#0A1B2A]">
+                  {t.diagnosticDB}
+                </h3>
+                <p className="text-xs text-[#6B7280]">
+                  {t.diagnosticDBDesc}
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2 pt-2 border-t border-[#DDDDDD]">
+              <button
+                onClick={async () => {
+                  try {
+                    const res = await fetch("/api/admin/check-db-schema", { cache: "no-store" });
+                    const data = await res.json();
+                    
+                    // Afficher les résultats dans une alerte formatée
+                    const summary = data.summary || {};
+                    const diagnostics = data.diagnostics || {};
+                    
+                    const message = `
 🔍 DIAGNOSTIC BASE DE DONNÉES
 
 ✅ Colonne typePrestataire: ${summary.typePrestataireColumnExists ? "EXISTE" : "MANQUANTE"}
@@ -542,33 +557,60 @@ ${diagnostics.prestatairesColumns ? `\n📋 Colonnes prestataires (${diagnostics
 ${diagnostics.prismaMigrations ? `\n🔄 Migrations Prisma (${diagnostics.totalMigrations}):\n${diagnostics.prismaMigrations.slice(0, 5).map((m: any) => `  - ${m.name}: ${m.finished ? "✅ Appliquée" : "⏳ En attente"}`).join("\n")}` : ""}
 
 ${diagnostics.prestatairesCountError ? `\n❌ Erreur: ${diagnostics.prestatairesCountError}` : ""}
-                `.trim();
-                
-                alert(message);
-                
-                // Afficher aussi dans la console pour copier facilement
-                console.log("🔍 Diagnostic DB complet:", data);
-              } catch (err: any) {
-                alert(`Erreur lors du diagnostic: ${err.message}`);
-                console.error("Erreur diagnostic:", err);
-              }
-            }}
-            className="bg-white border border-[#DDDDDD] rounded-xl p-6 hover:shadow-md hover:border-[#D4A657] transition text-left w-full"
-          >
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-lg bg-[#0A1B2A] flex items-center justify-center">
-                <Database className="w-6 h-6 text-[#D4A657]" />
-              </div>
-              <div>
-                <h3 className="font-heading font-semibold text-[#0A1B2A]">
-                  {t.diagnosticDB}
-                </h3>
-                <p className="text-xs text-[#6B7280]">
-                  {t.diagnosticDBDesc}
-                </p>
-              </div>
+                    `.trim();
+                    
+                    alert(message);
+                    
+                    // Afficher aussi dans la console pour copier facilement
+                    console.log("🔍 Diagnostic DB complet:", data);
+                  } catch (err: any) {
+                    alert(`Erreur lors du diagnostic: ${err.message}`);
+                    console.error("Erreur diagnostic:", err);
+                  }
+                }}
+                className="flex-1 px-4 py-2 text-sm font-semibold text-[#0A1B2A] bg-gray-100 hover:bg-gray-200 rounded-md transition"
+              >
+                {lang === "fr" ? "Vérifier" : "Check"}
+              </button>
+              <button
+                onClick={async () => {
+                  if (!confirm(lang === "fr" 
+                    ? "Appliquer les migrations manquantes ? Cette opération peut prendre quelques secondes."
+                    : "Apply missing migrations? This operation may take a few seconds."
+                  )) {
+                    return;
+                  }
+                  
+                  try {
+                    const res = await fetch("/api/admin/fix-db-schema", { 
+                      method: "POST",
+                      cache: "no-store" 
+                    });
+                    const data = await res.json();
+                    
+                    const message = data.success
+                      ? `✅ ${data.message}\n\n${data.results?.map((r: any) => `- ${r.message || r.action}`).join("\n")}`
+                      : `❌ Erreur: ${data.error || data.message}`;
+                    
+                    alert(message);
+                    
+                    if (data.success) {
+                      // Recharger la page pour voir les changements
+                      setTimeout(() => window.location.reload(), 2000);
+                    }
+                    
+                    console.log("🔧 Fix DB Schema résultat:", data);
+                  } catch (err: any) {
+                    alert(`Erreur lors de la correction: ${err.message}`);
+                    console.error("Erreur fix:", err);
+                  }
+                }}
+                className="flex-1 px-4 py-2 text-sm font-semibold text-white bg-[#D4A657] hover:bg-[#C49647] rounded-md transition"
+              >
+                {lang === "fr" ? "Corriger" : "Fix"}
+              </button>
             </div>
-          </button>
+          </div>
         </div>
       </div>
     </div>
