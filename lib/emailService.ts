@@ -505,6 +505,9 @@ function getNotificationHTML(
           </ul>
         </div>
         <p style="margin-top: 20px; color: #6B7280; font-size: 14px;">
+          <strong>Rappel :</strong> Vous ne pouvez pas encore vous connecter à votre espace prestataire. Un email vous sera envoyé une fois votre dossier validé.
+        </p>
+        <p style="margin-top: 20px; color: #6B7280; font-size: 14px;">
           Si vous avez des questions ou souhaitez suivre l'état de votre demande, n'hésitez pas à nous contacter à <a href="mailto:contact@leboy.com" style="color: #D4A657;">contact@leboy.com</a>
         </p>
         <p style="margin-top: 20px; color: #6B7280; font-size: 14px;">
