@@ -544,6 +544,54 @@ function getNotificationHTML(
         </p>
       `;
       break;
+    case "provider-rejected":
+      const rejectionPlatformUrl = data.platformUrl || (process.env.NEXT_PUBLIC_APP_URL || "https://leboy.com");
+      const raisonRejet = data.raisonRejet || "Raison non spécifiée";
+      content = `
+        <div style="background: #FEE2E2; border-left: 4px solid #EF4444; padding: 20px; margin: 20px 0; border-radius: 6px;">
+          <p style="margin: 0 0 12px 0; font-weight: bold; color: #991B1B; font-size: 16px;">
+            ❌ Demande d'inscription non retenue
+          </p>
+          <p style="margin: 0; color: #7F1D1D;">
+            Votre demande d'inscription <strong>${data.prestataireRef || "N/A"}</strong> n'a pas été retenue.
+          </p>
+        </div>
+        <p>Bonjour ${name},</p>
+        <p>Nous avons examiné votre demande d'inscription en tant que prestataire LeBoy (<strong>${data.prestataireRef || "N/A"}</strong>).</p>
+        <p>Après analyse de votre dossier, nous ne sommes malheureusement pas en mesure de valider votre inscription dans le cadre actuel de nos critères de sélection.</p>
+        <div style="background: #F9FAFB; border-left: 4px solid #D4A657; padding: 16px; margin: 20px 0; border-radius: 6px;">
+          <p style="margin: 0 0 8px 0; font-weight: bold; color: #0A1B2A;">
+            📋 Raison du rejet :
+          </p>
+          <p style="margin: 0; color: #4B4F58; line-height: 1.6;">
+            ${raisonRejet.replace(/\n/g, '<br>')}
+          </p>
+        </div>
+        <div style="background: #EFF6FF; border-left: 4px solid #3B82F6; padding: 16px; margin: 20px 0; border-radius: 6px;">
+          <p style="margin: 0 0 8px 0; font-weight: bold; color: #1E40AF;">
+            💡 Que faire maintenant ?
+          </p>
+          <ul style="margin: 8px 0 0 0; padding-left: 20px; color: #1E3A8A;">
+            <li>Corrigez les éléments mentionnés dans la raison du rejet</li>
+            <li>Complétez votre dossier avec les documents manquants si nécessaire</li>
+            <li>Vous pouvez soumettre une nouvelle demande d'inscription une fois les corrections effectuées</li>
+          </ul>
+        </div>
+        <p style="margin-top: 30px;">Nous vous remercions pour votre intérêt et restons à votre disposition pour toute question.</p>
+        <p style="margin-top: 20px;">
+          <a href="${rejectionPlatformUrl}/prestataires/connexion" style="background: #D4A657; color: #0B2135; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
+            Accéder à la page de connexion
+          </a>
+        </p>
+        <p style="margin-top: 20px; color: #6B7280; font-size: 14px;">
+          Si vous avez des questions ou souhaitez plus d'informations, n'hésitez pas à nous contacter à <a href="mailto:contact@leboy.com" style="color: #D4A657;">contact@leboy.com</a>
+        </p>
+        <p style="margin-top: 20px; color: #6B7280; font-size: 14px;">
+          Cordialement,<br>
+          L'équipe LeBoy
+        </p>
+      `;
+      break;
     case "password-reset":
       content = `
         <p>Vous avez demandé la réinitialisation de votre mot de passe.</p>
