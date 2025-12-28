@@ -143,9 +143,9 @@ export default function AdminPrestataireDetailPage() {
   const params = useParams();
   const router = useRouter();
   
-  // Récupérer l'ID de manière sécurisée
+  // Récupérer l'ID de manière sécurisée (UUID string maintenant)
   const idParam = params?.id;
-  const id = idParam ? parseInt(Array.isArray(idParam) ? idParam[0] : idParam) : NaN;
+  const id = idParam ? (Array.isArray(idParam) ? idParam[0] : idParam) : null;
 
   const [prestataire, setPrestataire] = useState<Prestataire | null>(null);
   const [loading, setLoading] = useState(true);
@@ -153,22 +153,27 @@ export default function AdminPrestataireDetailPage() {
 
   useEffect(() => {
     async function fetchPrestataire() {
-      if (!id || isNaN(id)) {
-        console.error("ID invalide:", idParam);
+      if (!id || typeof id !== "string") {
+        console.error("ID invalide (UUID attendu):", idParam);
         setLoading(false);
         return;
       }
 
       try {
+        console.log(`[Admin Prestataire Detail] Récupération prestataire avec UUID: ${id}`);
         const res = await fetch(`/api/prestataires/${id}`, { cache: "no-store" });
         const data = await res.json();
         
         if (!res.ok) {
-          console.error("Erreur API:", data.error);
+          console.error("Erreur API:", data.error, data.message);
+          if (res.status === 503) {
+            alert("Erreur de base de données. Les migrations Prisma doivent être appliquées.");
+          }
           setLoading(false);
           return;
         }
         
+        console.log(`[Admin Prestataire Detail] ✅ Prestataire récupéré: ${data.prestataire?.email}`);
         setPrestataire(data.prestataire);
       } catch (err) {
         console.error("Erreur:", err);

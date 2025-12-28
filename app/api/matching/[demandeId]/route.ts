@@ -32,10 +32,43 @@ export async function GET(
     }
 
     // Récupérer tous les prestataires depuis la DB
-    const allPrestataires = await getAllPrestataires();
-    console.log(`[API MATCHING] ========================================`);
-    console.log(`[API MATCHING] Demande ID: ${demandeId}, Ref: ${demande.ref}`);
-    console.log(`[API MATCHING] Prestataires récupérés depuis DB: ${allPrestataires.length}`);
+    let allPrestataires: any[] = [];
+    try {
+      allPrestataires = await getAllPrestataires();
+      console.log(`[API MATCHING] ========================================`);
+      console.log(`[API MATCHING] Demande ID: ${demandeId}, Ref: ${demande.ref}`);
+      console.log(`[API MATCHING] Prestataires récupérés depuis DB: ${allPrestataires.length}`);
+    } catch (error: any) {
+      console.error(`[API MATCHING] ❌ Erreur récupération prestataires:`, error);
+      console.error(`[API MATCHING] Code erreur:`, error?.code);
+      // Si erreur Prisma (migration manquante), retourner une réponse vide plutôt que d'échouer
+      if (error?.code === "P2022" || error?.code === "P2021") {
+        console.warn(`[API MATCHING] ⚠️ Migrations Prisma non appliquées - retour réponse vide`);
+        return NextResponse.json(
+          {
+            demande: {
+              id: demande.id,
+              ref: demande.ref,
+              serviceType: demande.serviceType,
+              lieu: demande.lieu,
+            },
+            matches: [],
+            otherPrestataires: [],
+            error: "Les migrations Prisma n'ont pas été appliquées. Veuillez exécuter 'prisma migrate deploy' en production.",
+          },
+          {
+            status: 503,
+            headers: {
+              "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "Pragma": "no-cache",
+              "Expires": "0",
+            },
+          }
+        );
+      }
+      // Pour les autres erreurs, propager
+      throw error;
+    }
     console.log(`[API MATCHING] Prestataires par statut:`, {
       actif: allPrestataires.filter(p => p.statut === "actif").length,
       en_attente: allPrestataires.filter(p => p.statut === "en_attente").length,
