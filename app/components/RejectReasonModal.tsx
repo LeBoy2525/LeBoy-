@@ -48,6 +48,11 @@ export function RejectReasonModal({
   const showCustomInput = selectedReason === "autre";
 
   const handleConfirm = () => {
+    if (isProcessing) {
+      console.warn("[Modal] Déjà en cours de traitement, ignore le clic");
+      return;
+    }
+
     if (!selectedReason) {
       alert(lang === "fr" ? "Veuillez sélectionner une raison de rejet" : "Please select a rejection reason");
       return;
@@ -62,14 +67,21 @@ export function RejectReasonModal({
       ? customReason.trim()
       : reasons.find((r) => r.value === selectedReason)?.label || selectedReason;
 
-    // Utiliser setTimeout pour éviter de bloquer l'UI
-    setTimeout(() => {
-      onConfirm(selectedReason, reasonText);
-    }, 0);
+    console.log("[Modal] handleConfirm appelé avec:", { selectedReason, reasonText });
     
-    // Reset form
-    setSelectedReason("");
-    setCustomReason("");
+    // Appeler directement onConfirm sans setTimeout pour éviter les problèmes de timing
+    try {
+      onConfirm(selectedReason, reasonText);
+    } catch (error) {
+      console.error("[Modal] Erreur lors de onConfirm:", error);
+      alert(lang === "fr" ? "Erreur lors de la confirmation" : "Error during confirmation");
+    }
+    
+    // Reset form après un court délai pour permettre l'exécution
+    setTimeout(() => {
+      setSelectedReason("");
+      setCustomReason("");
+    }, 100);
   };
 
   const handleCancel = () => {

@@ -298,24 +298,49 @@ export default function AdminPrestatairesPage() {
     // S'assurer que l'ID est toujours un string pour éviter les problèmes
     const idString = String(id).trim();
     
-    console.log(`[Frontend] handleAction appelé avec ID: ${idString} (type original: ${typeof id}), Action: ${action}`);
+    console.log(`[Frontend] ========== handleAction DÉBUT ==========`);
+    console.log(`[Frontend] ID reçu: ${idString} (type original: ${typeof id})`);
+    console.log(`[Frontend] Action: ${action}`);
+    console.log(`[Frontend] Total prestataires dans la liste: ${prestataires.length}`);
     
     // Pour le rejet, ouvrir le modal au lieu de confirmer directement
     if (action === "rejeter") {
-      const prestataire = prestataires.find((p) => String(p.id).trim() === idString);
+      console.log(`[Frontend] Recherche du prestataire avec ID: ${idString}`);
+      
+      // Afficher tous les IDs disponibles pour debug
+      console.log(`[Frontend] IDs disponibles:`, prestataires.map(p => ({ id: p.id, type: typeof p.id, email: p.email })));
+      
+      const prestataire = prestataires.find((p) => {
+        const pId = String(p.id).trim();
+        const match = pId === idString;
+        if (match) {
+          console.log(`[Frontend] ✅ Match trouvé: ${pId} === ${idString}`);
+        }
+        return match;
+      });
+      
       if (!prestataire) {
-        console.error(`[Frontend] ❌ Prestataire non trouvé avec ID: ${idString}`);
-        alert(lang === "fr" ? "Prestataire non trouvé" : "Provider not found");
+        const errorMsg = `[Frontend] ❌ Prestataire non trouvé avec ID: "${idString}"`;
+        console.error(errorMsg);
+        console.error(`[Frontend] IDs disponibles:`, prestataires.map(p => String(p.id).trim()));
+        alert(errorMsg + "\nVeuillez réessayer.");
         return;
       }
       
-      console.log(`[Frontend] ✅ Prestataire trouvé: ${prestataire.email}, ID: ${prestataire.id}`);
+      console.log(`[Frontend] ✅ Prestataire trouvé: ${prestataire.email}, ID: ${prestataire.id} (type: ${typeof prestataire.id})`);
       
-      setSelectedPrestataireForReject({
-        id: idString, // Toujours stocker comme string
+      const prestataireForReject = {
+        id: String(prestataire.id).trim(), // Toujours stocker comme string
         name: prestataire?.nomEntreprise || prestataire?.nomContact || "Prestataire",
-      });
+      };
+      
+      console.log(`[Frontend] Stockage dans selectedPrestataireForReject:`, prestataireForReject);
+      
+      setSelectedPrestataireForReject(prestataireForReject);
       setRejectModalOpen(true);
+      
+      console.log(`[Frontend] Modal ouvert`);
+      console.log(`[Frontend] ========== handleAction FIN (rejet) ==========`);
       return;
     }
 
@@ -328,18 +353,27 @@ export default function AdminPrestatairesPage() {
   };
 
   const handleRejectConfirm = async (reason: string, customReason?: string) => {
+    console.log("[Frontend] ========== handleRejectConfirm DÉBUT ==========");
+    console.log("[Frontend] reason:", reason);
+    console.log("[Frontend] customReason:", customReason);
+    console.log("[Frontend] selectedPrestataireForReject:", selectedPrestataireForReject);
+    
     if (!selectedPrestataireForReject) {
-      console.error("[Frontend] ❌ selectedPrestataireForReject est null");
+      const errorMsg = "[Frontend] ❌ selectedPrestataireForReject est null";
+      console.error(errorMsg);
+      alert(errorMsg + "\nVeuillez réessayer.");
       return;
     }
 
     // S'assurer que l'ID est toujours un string
     const prestataireId = String(selectedPrestataireForReject.id).trim();
+    console.log("[Frontend] prestataireId (après conversion):", prestataireId, "type:", typeof prestataireId);
     
     // Vérifier que l'ID est valide avant de continuer
-    if (!prestataireId || prestataireId === "") {
-      console.error(`[Frontend] ❌ ID invalide dans handleRejectConfirm: ${prestataireId}`);
-      alert(lang === "fr" ? "ID invalide. Veuillez réessayer." : "Invalid ID. Please try again.");
+    if (!prestataireId || prestataireId === "" || prestataireId === "undefined" || prestataireId === "null") {
+      const errorMsg = `[Frontend] ❌ ID invalide dans handleRejectConfirm: "${prestataireId}"`;
+      console.error(errorMsg);
+      alert(errorMsg + "\nVeuillez réessayer.");
       setRejectModalOpen(false);
       setSelectedPrestataireForReject(null);
       return;
@@ -347,24 +381,40 @@ export default function AdminPrestatairesPage() {
 
     // Vérifier le format UUID
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(prestataireId) && isNaN(Number(prestataireId))) {
-      console.error(`[Frontend] ❌ ID invalide (ni UUID ni nombre): ${prestataireId}`);
-      alert(lang === "fr" ? "ID invalide. Veuillez réessayer." : "Invalid ID. Please try again.");
+    const isValidUUID = uuidRegex.test(prestataireId);
+    const isValidNumber = !isNaN(Number(prestataireId));
+    
+    console.log("[Frontend] Validation ID - isValidUUID:", isValidUUID, "isValidNumber:", isValidNumber);
+    
+    if (!isValidUUID && !isValidNumber) {
+      const errorMsg = `[Frontend] ❌ ID invalide (ni UUID ni nombre): "${prestataireId}"`;
+      console.error(errorMsg);
+      alert(errorMsg + "\nVeuillez réessayer.");
       setRejectModalOpen(false);
       setSelectedPrestataireForReject(null);
       return;
     }
 
-    console.log(`[Frontend] handleRejectConfirm appelé avec ID: ${prestataireId} (type original: ${typeof selectedPrestataireForReject.id})`);
+    console.log(`[Frontend] ✅ ID valide: ${prestataireId}`);
 
     const raisonRejet = customReason || reason;
-    setRejectModalOpen(false);
+    console.log("[Frontend] raisonRejet:", raisonRejet);
     
-    // Utiliser setTimeout pour rendre l'opération non-bloquante
-    setTimeout(async () => {
+    setRejectModalOpen(false);
+    setIsProcessing(true);
+    
+    // Appeler directement executeAction sans setTimeout pour éviter les problèmes de timing
+    try {
       await executeAction(prestataireId, "rejeter", raisonRejet);
       setSelectedPrestataireForReject(null);
-    }, 0);
+    } catch (error) {
+      console.error("[Frontend] Erreur dans handleRejectConfirm:", error);
+      setRejectModalOpen(true); // Rouvrir le modal en cas d'erreur
+    } finally {
+      setIsProcessing(false);
+    }
+    
+    console.log("[Frontend] ========== handleRejectConfirm FIN ==========");
   };
 
   const handleDelete = async (id: string | number) => {
