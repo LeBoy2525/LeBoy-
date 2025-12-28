@@ -153,6 +153,8 @@ function convertPrismaDemandeToJSON(demande: any): DemandeICD {
 }
 
 function convertPrismaPrestataireToJSON(prestataire: any): Prestataire {
+  // Gérer le cas où typePrestataire n'existe pas encore dans la base
+  const typePrestataire = prestataire.typePrestataire || "freelance";
   // typePrestataire est maintenant dans le schéma Prisma
   // Utiliser directement l'UUID string (plus de conversion)
   const prestataireId = typeof prestataire.id === "string" ? prestataire.id : String(prestataire.id);

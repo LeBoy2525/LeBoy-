@@ -16,6 +16,7 @@ import {
   Phone,
   MapPin,
   Trash2,
+  User,
 } from "lucide-react";
 import Link from "next/link";
 import { AdminPageHeader } from "../_components/AdminPageHeader";
@@ -166,11 +167,33 @@ export default function AdminPrestatairesPage() {
             ref: p.ref,
             email: p.email,
             statut: p.statut,
+            typePrestataire: p.typePrestataire,
             type: typeof p.id,
           })),
         });
         
-        setPrestataires(data.prestataires || []);
+        const prestatairesList = data.prestataires || [];
+        setPrestataires(prestatairesList);
+        
+        // Calculer les statistiques par type
+        const entreprises = prestatairesList.filter((p: any) => 
+          (p.typePrestataire || "freelance") === "entreprise" && !p.deletedAt
+        ).length;
+        const freelances = prestatairesList.filter((p: any) => 
+          (p.typePrestataire || "freelance") === "freelance" && !p.deletedAt
+        ).length;
+        
+        setStatsByType({
+          total: prestatairesList.filter((p: any) => !p.deletedAt).length,
+          entreprises,
+          freelances,
+        });
+        
+        console.log("[Admin Prestataires] 📊 Stats par type:", {
+          total: prestatairesList.filter((p: any) => !p.deletedAt).length,
+          entreprises,
+          freelances,
+        });
         
         if (!data.prestataires || data.prestataires.length === 0) {
           console.warn("[Admin Prestataires] ⚠️ Aucun prestataire trouvé dans la réponse");
@@ -279,6 +302,48 @@ export default function AdminPrestatairesPage() {
       />
 
       <div className="px-6 py-6">
+        {/* Répartition par type */}
+        {statsByType.total > 0 && (
+          <div className="bg-white border border-[#DDDDDD] rounded-xl p-6 mb-6">
+            <h3 className="font-heading text-lg font-semibold text-[#0A1B2A] mb-4">
+              {lang === "fr" ? "Répartition par type" : "Distribution by type"}
+            </h3>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="flex items-center gap-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center">
+                  <Building2 className="w-6 h-6 text-blue-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm text-[#6B7280]">{t.filterTypeEntreprise}</p>
+                  <p className="text-2xl font-semibold text-blue-600">
+                    {loading ? "..." : statsByType.entreprises}
+                  </p>
+                  {statsByType.total > 0 && (
+                    <p className="text-xs text-[#6B7280] mt-1">
+                      {Math.round((statsByType.entreprises / statsByType.total) * 100)}% du total
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                <div className="w-12 h-12 rounded-lg bg-green-100 flex items-center justify-center">
+                  <User className="w-6 h-6 text-green-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm text-[#6B7280]">{t.filterTypeFreelance}</p>
+                  <p className="text-2xl font-semibold text-green-600">
+                    {loading ? "..." : statsByType.freelances}
+                  </p>
+                  {statsByType.total > 0 && (
+                    <p className="text-xs text-[#6B7280] mt-1">
+                      {Math.round((statsByType.freelances / statsByType.total) * 100)}% du total
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
           {/* Filtres */}
           <div className="bg-white border border-[#DDDDDD] rounded-xl p-4 space-y-4">

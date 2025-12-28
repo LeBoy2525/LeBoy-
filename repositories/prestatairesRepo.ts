@@ -2,14 +2,54 @@ import { prisma } from "@/lib/db";
 import type { Prestataire } from "@/lib/prestatairesStore";
 
 export async function getAllPrestataires() {
-  return prisma.prestataire.findMany({
-    where: {
-      deletedAt: null,
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
+  try {
+    // Essayer d'abord avec tous les champs (y compris typePrestataire)
+    return await prisma.prestataire.findMany({
+      where: {
+        deletedAt: null,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+  } catch (error: any) {
+    // Si erreur P2022 (colonne manquante), essayer avec select explicite sans typePrestataire
+    if (error.code === "P2022") {
+      console.warn("[prestatairesRepo] Colonne typePrestataire manquante, récupération sans ce champ...");
+      return await prisma.prestataire.findMany({
+        where: {
+          deletedAt: null,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+        select: {
+          id: true,
+          ref: true,
+          createdAt: true,
+          nomEntreprise: true,
+          nomContact: true,
+          email: true,
+          phone: true,
+          adresse: true,
+          ville: true,
+          specialites: true,
+          zonesIntervention: true,
+          passwordHash: true,
+          statut: true,
+          actifAt: true,
+          suspenduAt: true,
+          rejeteAt: true,
+          rejeteBy: true,
+          raisonRejet: true,
+          deletedAt: true,
+          deletedBy: true,
+          // Ne pas inclure typePrestataire si la colonne n'existe pas
+        },
+      });
+    }
+    throw error;
+  }
 }
 
 export async function getPrestataireById(id: string) {
