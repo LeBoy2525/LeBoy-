@@ -9,6 +9,7 @@ interface RejectReasonModalProps {
   onConfirm: (reason: string, customReason?: string) => void;
   prestataireName?: string;
   lang?: "fr" | "en";
+  isProcessing?: boolean;
 }
 
 const REJECTION_REASONS = {
@@ -36,6 +37,7 @@ export function RejectReasonModal({
   onConfirm,
   prestataireName,
   lang = "fr",
+  isProcessing = false,
 }: RejectReasonModalProps) {
   const [selectedReason, setSelectedReason] = useState<string>("");
   const [customReason, setCustomReason] = useState<string>("");
@@ -71,6 +73,7 @@ export function RejectReasonModal({
   };
 
   const handleCancel = () => {
+    if (isProcessing) return; // Empêcher la fermeture pendant le traitement
     setSelectedReason("");
     setCustomReason("");
     onClose();
@@ -144,15 +147,20 @@ export function RejectReasonModal({
         <div className="flex gap-3 pt-4 border-t border-[#DDDDDD]">
           <button
             onClick={handleCancel}
-            className="flex-1 px-4 py-2 text-sm font-semibold text-[#0A1B2A] bg-gray-100 hover:bg-gray-200 rounded-md transition"
+            disabled={isProcessing}
+            className="flex-1 px-4 py-2 text-sm font-semibold text-[#0A1B2A] bg-gray-100 hover:bg-gray-200 rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {lang === "fr" ? "Annuler" : "Cancel"}
           </button>
           <button
             onClick={handleConfirm}
-            className="flex-1 px-4 py-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-md transition"
+            disabled={isProcessing}
+            className="flex-1 px-4 py-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {lang === "fr" ? "Confirmer le rejet" : "Confirm Rejection"}
+            {isProcessing 
+              ? (lang === "fr" ? "Traitement..." : "Processing...")
+              : (lang === "fr" ? "Confirmer le rejet" : "Confirm Rejection")
+            }
           </button>
         </div>
       </div>
