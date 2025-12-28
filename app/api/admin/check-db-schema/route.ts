@@ -3,9 +3,22 @@
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { cookies } from "next/headers";
+import { getUserRoleAsync } from "@/lib/auth";
 
 export async function GET() {
   try {
+    // Vérifier l'authentification admin
+    const cookieStore = await cookies();
+    const userEmail = cookieStore.get("icd_user_email")?.value;
+
+    if (!userEmail || (await getUserRoleAsync(userEmail)) !== "admin") {
+      return NextResponse.json(
+        { error: "Non autorisé. Accès réservé aux administrateurs." },
+        { status: 403 }
+      );
+    }
+
     if (!prisma) {
       return NextResponse.json(
         { error: "Prisma non disponible", USE_DB: process.env.USE_DB },
