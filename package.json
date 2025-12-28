@@ -30,7 +30,7 @@
     "diagnose:user": "tsx scripts/diagnose-user-issue.ts",
     "diagnose:prestataires": "tsx scripts/diagnose-prestataire-ids.ts",
     "postinstall": "echo 'skip prisma generate on install'",
-    "vercel-build": "NEXT_PUBLIC_BUILD_TIME=$(date +%s)000 prisma generate && prisma migrate deploy && NEXT_PUBLIC_BUILD_TIME=$(date +%s)000 next build",
+    "vercel-build": "prisma generate && prisma migrate deploy && next build",
     "postbuild": "prisma generate"
   },
   "dependencies": {
