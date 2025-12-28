@@ -165,9 +165,14 @@ export async function POST(req: Request) {
         });
         console.log(`✅ Notification admin créée dans le store JSON pour ${prestataire.ref}`);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erreur création notification admin:", error);
+      console.error("Détails:", error?.message, error?.code);
       // Ne pas bloquer l'inscription si la notification échoue
+      // Si c'est une erreur de table manquante, c'est normal en production avant migration
+      if (error?.code === "P2021") {
+        console.warn("⚠️ Table admin_notifications n'existe pas encore. La migration sera appliquée au prochain déploiement.");
+      }
     }
 
     // Envoyer email de confirmation au prestataire
