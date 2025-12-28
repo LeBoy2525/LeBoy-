@@ -418,11 +418,16 @@ export default function AdminPrestataireDetailPage() {
                   {t.valider}
                 </button>
                 <button
-                  onClick={() => handleAction("rejeter")}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white text-sm font-semibold rounded-md hover:bg-red-700 transition"
+                  onClick={() => {
+                    console.log("🔴 BOUTON REJETER CLIQUÉ (Detail Page) - ID:", id, "Type:", typeof id);
+                    console.log("🔴 Prestataire:", prestataire);
+                    handleAction("rejeter");
+                  }}
+                  disabled={isProcessing}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white text-sm font-semibold rounded-md hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <XCircle className="w-4 h-4" />
-                  {t.rejeter}
+                  {isProcessing ? (lang === "fr" ? "Traitement..." : "Processing...") : t.rejeter}
                 </button>
               </>
             )}
