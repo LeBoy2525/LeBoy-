@@ -175,24 +175,10 @@ export default function AdminPrestatairesPage() {
         const prestatairesList = data.prestataires || [];
         setPrestataires(prestatairesList);
         
-        // Calculer les statistiques par type
-        const entreprises = prestatairesList.filter((p: any) => 
-          (p.typePrestataire || "freelance") === "entreprise" && !p.deletedAt
-        ).length;
-        const freelances = prestatairesList.filter((p: any) => 
-          (p.typePrestataire || "freelance") === "freelance" && !p.deletedAt
-        ).length;
-        
-        setStatsByType({
-          total: prestatairesList.filter((p: any) => !p.deletedAt).length,
-          entreprises,
-          freelances,
-        });
-        
         console.log("[Admin Prestataires] 📊 Stats par type:", {
           total: prestatairesList.filter((p: any) => !p.deletedAt).length,
-          entreprises,
-          freelances,
+          entreprises: prestatairesList.filter((p: any) => (p.typePrestataire || "freelance") === "entreprise" && !p.deletedAt).length,
+          freelances: prestatairesList.filter((p: any) => (p.typePrestataire || "freelance") === "freelance" && !p.deletedAt).length,
         });
         
         if (!data.prestataires || data.prestataires.length === 0) {
