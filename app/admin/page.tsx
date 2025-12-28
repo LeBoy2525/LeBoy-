@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useLanguage } from "../components/LanguageProvider";
-import { Building2, FileText, Users, TrendingUp, DollarSign, AlertCircle, Bell, X, User } from "lucide-react";
+import { Building2, FileText, Users, TrendingUp, DollarSign, AlertCircle, Bell, X, User, Database, Settings } from "lucide-react";
 import Link from "next/link";
 import { AdminPageHeader } from "./_components/AdminPageHeader";
 
@@ -23,6 +23,8 @@ const TEXT = {
     unauthorizedText: "Cette page est réservée aux administrateurs LeBoy.",
     actionsEnAttente: "action(s) en attente",
     prestatairesEnAttente: "prestataire(s) en attente de validation",
+    diagnosticDB: "Diagnostic Base de données",
+    diagnosticDBDesc: "Vérifier l'état de la base de données et des migrations",
   },
   en: {
     title: "LeBoy Dashboard",
@@ -40,6 +42,8 @@ const TEXT = {
     unauthorizedText: "This page is reserved for LeBoy administrators.",
     actionsEnAttente: "action(s) pending",
     prestatairesEnAttente: "provider(s) pending validation",
+    diagnosticDB: "Database Diagnostic",
+    diagnosticDBDesc: "Check database status and migrations",
   },
 } as const;
 
@@ -514,6 +518,57 @@ export default function AdminPage() {
               </div>
             </div>
           </Link>
+
+          <button
+            onClick={async () => {
+              try {
+                const res = await fetch("/api/admin/check-db-schema", { cache: "no-store" });
+                const data = await res.json();
+                
+                // Afficher les résultats dans une alerte formatée
+                const summary = data.summary || {};
+                const diagnostics = data.diagnostics || {};
+                
+                const message = `
+🔍 DIAGNOSTIC BASE DE DONNÉES
+
+✅ Colonne typePrestataire: ${summary.typePrestataireColumnExists ? "EXISTE" : "MANQUANTE"}
+✅ Migration appliquée: ${summary.typePrestataireMigrationApplied ? "OUI" : "NON"}
+📊 Prestataires dans la DB: ${summary.prestatairesCount || 0}
+✅ Table admin_notifications: ${summary.adminNotificationsTableExists ? "EXISTE" : "MANQUANTE"}
+
+${diagnostics.prestatairesColumns ? `\n📋 Colonnes prestataires (${diagnostics.prestatairesColumnCount}):\n${diagnostics.prestatairesColumns.map((c: any) => `  - ${c.column_name}`).join("\n")}` : ""}
+
+${diagnostics.prismaMigrations ? `\n🔄 Migrations Prisma (${diagnostics.totalMigrations}):\n${diagnostics.prismaMigrations.slice(0, 5).map((m: any) => `  - ${m.name}: ${m.finished ? "✅ Appliquée" : "⏳ En attente"}`).join("\n")}` : ""}
+
+${diagnostics.prestatairesCountError ? `\n❌ Erreur: ${diagnostics.prestatairesCountError}` : ""}
+                `.trim();
+                
+                alert(message);
+                
+                // Afficher aussi dans la console pour copier facilement
+                console.log("🔍 Diagnostic DB complet:", data);
+              } catch (err: any) {
+                alert(`Erreur lors du diagnostic: ${err.message}`);
+                console.error("Erreur diagnostic:", err);
+              }
+            }}
+            className="bg-white border border-[#DDDDDD] rounded-xl p-6 hover:shadow-md hover:border-[#D4A657] transition text-left w-full"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-lg bg-[#0A1B2A] flex items-center justify-center">
+                <Database className="w-6 h-6 text-[#D4A657]" />
+              </div>
+              <div>
+                <h3 className="font-heading font-semibold text-[#0A1B2A]">
+                  {t.diagnosticDB}
+                </h3>
+                <p className="text-xs text-[#6B7280]">
+                  {t.diagnosticDBDesc}
+                </p>
+              </div>
+            </div>
+          </button>
         </div>
       </div>
     </div>
