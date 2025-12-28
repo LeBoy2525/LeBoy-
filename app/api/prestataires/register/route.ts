@@ -111,6 +111,7 @@ export async function POST(req: Request) {
     const documents = documentsRaw ? JSON.parse(documentsRaw) : [];
 
     // Création du prestataire
+    console.log(`[API Register] 🚀 Création prestataire avec email: ${email.toLowerCase()}, type: ${typePrestataire}`);
     const prestataire = await createPrestataire({
       nomEntreprise,
       nomContact,
@@ -136,6 +137,15 @@ export async function POST(req: Request) {
         url: doc.url,
         uploadedAt: new Date().toISOString(),
       })),
+    });
+    
+    console.log(`[API Register] ✅ Prestataire créé:`, {
+      id: prestataire.id,
+      ref: prestataire.ref,
+      email: prestataire.email,
+      statut: prestataire.statut,
+      typePrestataire: prestataire.typePrestataire,
+      createdAt: prestataire.createdAt,
     });
 
     // Créer une notification admin pour la nouvelle inscription
