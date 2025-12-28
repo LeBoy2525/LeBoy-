@@ -76,11 +76,54 @@ export async function GET() {
     } catch (error: any) {
       diagnostics.adminNotificationsError = error.message;
     }
+    
+    // Vérifier l'état des migrations Prisma dans la table _prisma_migrations
+    try {
+      const migrations = await prisma.$queryRaw<Array<{ migration_name: string; finished_at: Date | null; started_at: Date }>>`
+        SELECT migration_name, finished_at, started_at
+        FROM "_prisma_migrations" 
+        ORDER BY started_at DESC 
+        LIMIT 20;
+      `;
+      diagnostics.prismaMigrations = migrations.map(m => ({
+        name: m.migration_name,
+        finished: m.finished_at !== null,
+        startedAt: m.started_at,
+        finishedAt: m.finished_at,
+      }));
+      diagnostics.pendingMigrations = migrations.filter(m => m.finished_at === null).length;
+      diagnostics.totalMigrations = migrations.length;
+      
+      // Vérifier spécifiquement les migrations importantes
+      const typePrestataireMigration = migrations.find(m => m.migration_name.includes("add_prestataire_type"));
+      diagnostics.typePrestataireMigrationApplied = typePrestataireMigration ? (typePrestataireMigration.finished_at !== null) : false;
+      
+      const adminNotificationsMigration = migrations.find(m => m.migration_name.includes("admin_notifications"));
+      diagnostics.adminNotificationsMigrationApplied = adminNotificationsMigration ? (adminNotificationsMigration.finished_at !== null) : false;
+    } catch (error: any) {
+      diagnostics.prismaMigrationsError = `Error: ${error.message}`;
+    }
+    
+    // Vérifier le nombre total de prestataires via SQL direct
+    try {
+      const countResult = await prisma.$queryRaw<Array<{ count: bigint }>>`
+        SELECT COUNT(*) as count FROM "prestataires";
+      `;
+      diagnostics.prestatairesTotalCountSQL = Number(countResult[0]?.count || 0);
+    } catch (error: any) {
+      diagnostics.prestatairesTotalCountSQLError = `Error: ${error.message}`;
+    }
 
     return NextResponse.json(
       {
         success: true,
         diagnostics,
+        summary: {
+          typePrestataireColumnExists: diagnostics.hasTypePrestataire,
+          typePrestataireMigrationApplied: diagnostics.typePrestataireMigrationApplied,
+          prestatairesCount: diagnostics.prestatairesCount || diagnostics.prestatairesTotalCountSQL,
+          adminNotificationsTableExists: diagnostics.adminNotificationsExists,
+        },
       },
       { status: 200 }
     );
