@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X, AlertCircle } from "lucide-react";
 
 interface RejectReasonModalProps {
@@ -41,6 +41,14 @@ export function RejectReasonModal({
 }: RejectReasonModalProps) {
   const [selectedReason, setSelectedReason] = useState<string>("");
   const [customReason, setCustomReason] = useState<string>("");
+
+  // Reset form quand le modal se ferme (pas pendant le traitement)
+  useEffect(() => {
+    if (!isOpen && !isProcessing) {
+      setSelectedReason("");
+      setCustomReason("");
+    }
+  }, [isOpen, isProcessing]);
 
   if (!isOpen) return null;
 
