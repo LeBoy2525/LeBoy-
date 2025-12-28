@@ -543,15 +543,44 @@ async function verifyEmailJSON(email: string, code: string): Promise<boolean> {
 export async function getAllPrestataires(): Promise<Prestataire[]> {
   if (USE_DB) {
     try {
+      console.log("[dataAccess] getAllPrestataires - Utilisation de Prisma");
       const { getAllPrestataires: getAllPrestatairesDB } = await import("@/repositories/prestatairesRepo");
       const prestataires = await getAllPrestatairesDB() as any[];
       
-      return prestataires.map(convertPrismaPrestataireToJSON);
-    } catch (error) {
-      console.error("Erreur getAllPrestataires (DB):", error);
+      console.log(`[dataAccess] ✅ ${prestataires.length} prestataire(s) récupéré(s) depuis Prisma`);
+      
+      if (prestataires.length > 0) {
+        console.log(`[dataAccess] 📋 Exemple prestataire:`, {
+          id: prestataires[0].id,
+          ref: prestataires[0].ref,
+          email: prestataires[0].email,
+          statut: prestataires[0].statut,
+          typePrestataire: prestataires[0].typePrestataire,
+        });
+      }
+      
+      const converted = prestataires.map(convertPrismaPrestataireToJSON);
+      console.log(`[dataAccess] ✅ ${converted.length} prestataire(s) converti(s) en JSON`);
+      return converted;
+    } catch (error: any) {
+      console.error("[dataAccess] ❌ Erreur getAllPrestataires (DB):", error);
+      console.error("[dataAccess] Code erreur:", error?.code);
+      console.error("[dataAccess] Message:", error?.message);
+      console.error("[dataAccess] Stack:", error?.stack?.substring(0, 500));
+      
+      // Si c'est une erreur de colonne manquante, ne pas fallback sur JSON
+      // mais propager l'erreur pour que l'API puisse la gérer
+      if (error?.code === "P2022" || error?.code === "P2021") {
+        console.error("[dataAccess] ⚠️ Erreur Prisma (migration manquante) - propagation de l'erreur");
+        throw error; // Propager l'erreur pour que l'API puisse la gérer
+      }
+      
+      // Pour les autres erreurs, fallback sur JSON
+      console.warn("[dataAccess] ⚠️ Fallback sur JSON store");
       return getAllPrestatairesJSON();
     }
   } else {
+    console.log("[dataAccess] getAllPrestataires - Utilisation du store JSON");
     return getAllPrestatairesJSON();
   }
 }
