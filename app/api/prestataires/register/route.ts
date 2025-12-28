@@ -138,9 +138,81 @@ export async function POST(req: Request) {
       })),
     });
 
-    // TODO: Envoyer email de confirmation (dossier en attente)
-    console.log(`📧 Email à envoyer à ${prestataire.email}: Votre dossier est en attente d'étude`);
-    console.log(`📧 Contenu: Votre demande d'inscription en tant que prestataire LeBoy (${prestataire.ref}) a été reçue. Elle sera examinée par notre équipe sous 48-72h. Vous recevrez un email de confirmation une fois votre dossier validé.`);
+    // Créer une notification admin pour la nouvelle inscription
+    try {
+      const { USE_DB } = await import("@/lib/dbFlag");
+      
+      if (USE_DB) {
+        // Notification via Prisma
+        const { createNotification } = await import("@/repositories/notificationsRepo");
+        await createNotification({
+          type: "other",
+          title: "Nouvelle inscription prestataire",
+          message: `Un nouveau prestataire s'est inscrit : ${prestataire.nomEntreprise} (${prestataire.ref}). Type : ${typePrestataire === "entreprise" ? "Entreprise" : "Freelance"}. Ville : ${ville}.`,
+          prestataireName: prestataire.nomEntreprise,
+          createdAt: new Date().toISOString(),
+          read: false,
+        });
+        console.log(`✅ Notification admin créée dans la base de données pour ${prestataire.ref}`);
+      } else {
+        // Notification via JSON store
+        const { addAdminNotification } = await import("@/lib/adminNotificationsStore");
+        addAdminNotification({
+          type: "other",
+          title: "Nouvelle inscription prestataire",
+          message: `Un nouveau prestataire s'est inscrit : ${prestataire.nomEntreprise} (${prestataire.ref}). Type : ${typePrestataire === "entreprise" ? "Entreprise" : "Freelance"}. Ville : ${ville}.`,
+          prestataireName: prestataire.nomEntreprise,
+        });
+        console.log(`✅ Notification admin créée dans le store JSON pour ${prestataire.ref}`);
+      }
+    } catch (error) {
+      console.error("Erreur création notification admin:", error);
+      // Ne pas bloquer l'inscription si la notification échoue
+    }
+
+    // Envoyer email de confirmation au prestataire
+    try {
+      const { sendNotificationEmail } = await import("@/lib/emailService");
+      const protocol = process.env.NEXT_PUBLIC_APP_URL?.startsWith("https") ? "https" : "http";
+      const platformUrl = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://localhost:3000`;
+      
+      await sendNotificationEmail(
+        "provider-validated", // Utiliser le template existant (sera adapté pour "en attente")
+        { email: prestataire.email, name: prestataire.nomContact },
+        {
+          prestataireRef: prestataire.ref,
+          prestataireName: prestataire.nomEntreprise,
+          platformUrl,
+        },
+        "fr"
+      );
+      console.log(`✅ Email de confirmation envoyé à ${prestataire.email}`);
+    } catch (error) {
+      console.error("Erreur envoi email confirmation prestataire:", error);
+      // Ne pas bloquer l'inscription si l'email échoue
+    }
+
+    // Envoyer notification email à l'admin
+    try {
+      const { sendNotificationEmail } = await import("@/lib/emailService");
+      const { getAdminEmail } = await import("@/lib/auth");
+      
+      await sendNotificationEmail(
+        "demande-created", // Réutiliser le template de demande (sera adapté)
+        { email: getAdminEmail() },
+        {
+          ref: prestataire.ref,
+          clientName: prestataire.nomEntreprise,
+          serviceType: `Inscription prestataire (${typePrestataire})`,
+          clientEmail: prestataire.email,
+        },
+        "fr"
+      );
+      console.log(`✅ Email de notification envoyé à l'admin pour ${prestataire.ref}`);
+    } catch (error) {
+      console.error("Erreur envoi email notification admin:", error);
+      // Ne pas bloquer l'inscription si l'email échoue
+    }
 
     return NextResponse.json(
       {
