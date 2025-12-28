@@ -198,9 +198,18 @@ export default function AdminPrestataireDetailPage() {
     fetchCountries();
   }, [id, idParam]);
 
-  const handleAction = async (action: string) => {
-    if (!id || isNaN(id)) {
+  const handleAction = async (action: string, raisonRejet?: string) => {
+    // Vérifier que l'ID est valide (UUID string)
+    if (!id || (typeof id === "string" && id.trim() === "")) {
+      console.error(`[Detail Page] ❌ ID invalide: ${id}`);
       alert(lang === "fr" ? "ID invalide." : "Invalid ID.");
+      return;
+    }
+
+    // Pour le rejet, ouvrir le modal au lieu de confirmer directement
+    if (action === "rejeter") {
+      console.log(`[Detail Page] Ouverture modal rejet pour prestataire: ${prestataire?.nomEntreprise || prestataire?.nomContact}`);
+      setRejectModalOpen(true);
       return;
     }
 
@@ -209,11 +218,15 @@ export default function AdminPrestataireDetailPage() {
       return;
     }
 
+    setIsProcessing(true);
+
     try {
-      const res = await fetch(`/api/admin/prestataires/${id}`, {
+      console.log(`[Detail Page] handleAction appelé avec ID: ${id} (type: ${typeof id}), Action: ${action}`);
+      
+      const res = await fetch(`/api/admin/prestataires/${encodeURIComponent(String(id).trim())}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action }),
+        body: JSON.stringify({ action, raisonRejet }),
       });
 
       const data = await res.json();
@@ -239,8 +252,35 @@ export default function AdminPrestataireDetailPage() {
       // Afficher un message de succès
       alert(lang === "fr" ? "Action effectuée avec succès." : "Action completed successfully.");
     } catch (err: any) {
-      console.error("Erreur action:", err);
+      console.error("[Detail Page] Erreur action:", err);
       alert(err?.message || (lang === "fr" ? "Erreur lors de l'opération" : "Error during operation"));
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleRejectConfirm = async (reason: string, customReason?: string) => {
+    if (!id) {
+      console.error("[Detail Page] ❌ ID manquant dans handleRejectConfirm");
+      alert(lang === "fr" ? "ID invalide. Veuillez réessayer." : "Invalid ID. Please try again.");
+      return;
+    }
+
+    const prestataireId = String(id).trim();
+    const raisonRejet = customReason || reason;
+    
+    console.log(`[Detail Page] handleRejectConfirm appelé avec ID: ${prestataireId}, Raison: ${raisonRejet}`);
+    
+    setRejectModalOpen(false);
+    setIsProcessing(true);
+    
+    try {
+      await handleAction("rejeter", raisonRejet);
+    } catch (error) {
+      console.error("[Detail Page] Erreur dans handleRejectConfirm:", error);
+      setRejectModalOpen(true); // Rouvrir le modal en cas d'erreur
+    } finally {
+      setIsProcessing(false);
     }
   };
 
