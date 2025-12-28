@@ -28,8 +28,9 @@ const nextConfig: NextConfig = {
   // turbopack: {}, // Activé par défaut dans Next.js 16
   
   // Variables d'environnement publiques pour la détection de version
+  // NEXT_PUBLIC_BUILD_TIME sera défini au moment du build pour détecter les nouveaux déploiements
   env: {
-    NEXT_PUBLIC_BUILD_TIME: new Date().toISOString(),
+    NEXT_PUBLIC_BUILD_TIME: process.env.NEXT_PUBLIC_BUILD_TIME || Date.now().toString(),
   },
 };
 
