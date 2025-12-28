@@ -575,21 +575,35 @@ ${diagnostics.prestatairesCountError ? `\n❌ Erreur: ${diagnostics.prestataires
               <button
                 onClick={async () => {
                   if (!confirm(lang === "fr" 
-                    ? "Appliquer les migrations manquantes ? Cette opération peut prendre quelques secondes."
-                    : "Apply missing migrations? This operation may take a few seconds."
+                    ? "Appliquer les migrations manquantes ? Cette opération peut prendre quelques secondes.\n\nMéthode: Connexion PostgreSQL directe (contourne Prisma Accelerate)"
+                    : "Apply missing migrations? This operation may take a few seconds.\n\nMethod: Direct PostgreSQL connection (bypasses Prisma Accelerate)"
                   )) {
                     return;
                   }
                   
                   try {
-                    const res = await fetch("/api/admin/fix-db-schema", { 
+                    // Essayer d'abord la méthode directe (avec pg)
+                    let res = await fetch("/api/admin/apply-migration-direct", { 
                       method: "POST",
                       cache: "no-store" 
                     });
+                    
+                    // Si la méthode directe n'est pas disponible, fallback sur fix-db-schema
+                    if (res.status === 503) {
+                      const errorData = await res.json();
+                      if (errorData.error === "Module pg non disponible") {
+                        console.warn("Module pg non disponible, utilisation de fix-db-schema...");
+                        res = await fetch("/api/admin/fix-db-schema", { 
+                          method: "POST",
+                          cache: "no-store" 
+                        });
+                      }
+                    }
+                    
                     const data = await res.json();
                     
                     const message = data.success
-                      ? `✅ ${data.message}\n\n${data.results?.map((r: any) => `- ${r.message || r.action}`).join("\n")}`
+                      ? `✅ ${data.message}\n\n${data.results?.map((r: any) => `- ${r.message || r.action}`).join("\n")}\n\n${data.note || ""}`
                       : `❌ Erreur: ${data.error || data.message}`;
                     
                     alert(message);
@@ -599,10 +613,10 @@ ${diagnostics.prestatairesCountError ? `\n❌ Erreur: ${diagnostics.prestataires
                       setTimeout(() => window.location.reload(), 2000);
                     }
                     
-                    console.log("🔧 Fix DB Schema résultat:", data);
+                    console.log("🔧 Migration résultat:", data);
                   } catch (err: any) {
                     alert(`Erreur lors de la correction: ${err.message}`);
-                    console.error("Erreur fix:", err);
+                    console.error("Erreur migration:", err);
                   }
                 }}
                 className="flex-1 px-4 py-2 text-sm font-semibold text-white bg-[#D4A657] hover:bg-[#C49647] rounded-md transition"
