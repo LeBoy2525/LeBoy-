@@ -394,6 +394,10 @@ function getNotificationSubject(type: string, lang: "fr" | "en"): string {
       fr: "Nouvelle proposition reçue - LeBoy",
       en: "New proposal received - LeBoy",
     },
+    "provider-registered": {
+      fr: "Votre demande d'inscription a été reçue - LeBoy",
+      en: "Your registration request has been received - LeBoy",
+    },
     "provider-validated": {
       fr: "Félicitations ! Votre compte prestataire est activé - LeBoy",
       en: "Congratulations! Your provider account is activated - LeBoy",
@@ -472,6 +476,32 @@ function getNotificationHTML(
           <a href="${data.platformUrl || (process.env.NEXT_PUBLIC_APP_URL || "https://leboy.com")}/connexion" style="background: #D4A657; color: #0B2135; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
             Se connecter à mon espace admin
           </a>
+        </p>
+      `;
+      break;
+    case "provider-registered":
+      content = `
+        <p style="font-size: 18px; color: #3B82F6; font-weight: bold; margin-bottom: 20px;">
+          ✅ Votre demande d'inscription a été reçue
+        </p>
+        <p>Bonjour ${name},</p>
+        <p>Nous avons bien reçu votre demande d'inscription en tant que prestataire LeBoy.</p>
+        <p>Votre dossier (<strong>${data.prestataireRef || "N/A"}</strong>) est actuellement <strong style="color: #F59E0B;">en attente de validation</strong> par notre équipe.</p>
+        <div style="background: #EFF6FF; border-left: 4px solid #3B82F6; padding: 16px; margin: 20px 0; border-radius: 6px;">
+          <p style="margin: 0 0 8px 0; font-weight: bold; color: #1E40AF;">
+            ⏳ Prochaines étapes
+          </p>
+          <ul style="margin: 8px 0 0 0; padding-left: 20px; color: #1E3A8A;">
+            <li>Notre équipe va examiner votre dossier sous <strong>48 à 72 heures</strong></li>
+            <li>Vous recevrez un email de confirmation une fois votre dossier validé</li>
+            <li>Une fois validé, vous pourrez vous connecter et commencer à recevoir des missions</li>
+          </ul>
+        </div>
+        <p style="margin-top: 20px; color: #6B7280; font-size: 14px;">
+          Si vous avez des questions ou souhaitez suivre l'état de votre demande, n'hésitez pas à nous contacter à <a href="mailto:contact@leboy.com" style="color: #D4A657;">contact@leboy.com</a>
+        </p>
+        <p style="margin-top: 20px; color: #6B7280; font-size: 14px;">
+          Merci de votre confiance et à bientôt sur LeBoy !
         </p>
       `;
       break;

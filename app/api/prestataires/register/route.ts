@@ -175,14 +175,14 @@ export async function POST(req: Request) {
       }
     }
 
-    // Envoyer email de confirmation au prestataire
+    // Envoyer email de confirmation au prestataire (dossier en attente)
     try {
       const { sendNotificationEmail } = await import("@/lib/emailService");
       const protocol = process.env.NEXT_PUBLIC_APP_URL?.startsWith("https") ? "https" : "http";
       const platformUrl = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://localhost:3000`;
       
       await sendNotificationEmail(
-        "provider-validated", // Utiliser le template existant (sera adapté pour "en attente")
+        "provider-registered", // Template pour inscription en attente (pas de validation)
         { email: prestataire.email, name: prestataire.nomContact },
         {
           prestataireRef: prestataire.ref,
@@ -191,7 +191,7 @@ export async function POST(req: Request) {
         },
         "fr"
       );
-      console.log(`✅ Email de confirmation envoyé à ${prestataire.email}`);
+      console.log(`✅ Email de confirmation d'inscription envoyé à ${prestataire.email}`);
     } catch (error) {
       console.error("Erreur envoi email confirmation prestataire:", error);
       // Ne pas bloquer l'inscription si l'email échoue
