@@ -97,6 +97,7 @@ export async function GET() {
     // Exclure les prestataires supprimés de la liste principale
     const prestatairesNonSupprimes = allPrestataires.filter((p) => !p.deletedAt);
     
+    // Logs détaillés pour diagnostic
     console.log(`[API Prestataires] ✅ Prestataires non supprimés: ${prestatairesNonSupprimes.length}`);
     console.log(`[API Prestataires] 📊 Stats:`, {
       total: allPrestataires.length,
@@ -105,6 +106,25 @@ export async function GET() {
       suspendus: allPrestataires.filter((p) => p.statut === "suspendu" && !p.deletedAt).length,
       rejetes: allPrestataires.filter((p) => p.statut === "rejete" && !p.deletedAt).length,
     });
+    
+    // Logs détaillés des prestataires en attente
+    if (enAttente.length > 0) {
+      console.log(`[API Prestataires] 📋 Prestataires en attente (${enAttente.length}):`, enAttente.map(p => ({
+        id: p.id,
+        ref: p.ref,
+        email: p.email,
+        statut: p.statut,
+        deletedAt: p.deletedAt,
+      })));
+    } else {
+      console.warn(`[API Prestataires] ⚠️ Aucun prestataire en attente trouvé. Total prestataires: ${allPrestataires.length}`);
+      // Afficher tous les statuts pour diagnostic
+      const statuts = allPrestataires.reduce((acc: any, p: any) => {
+        acc[p.statut] = (acc[p.statut] || 0) + 1;
+        return acc;
+      }, {});
+      console.log(`[API Prestataires] 📊 Répartition par statut:`, statuts);
+    }
 
     return NextResponse.json(
       {

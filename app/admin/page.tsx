@@ -314,48 +314,6 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* Répartition par type */}
-        {stats.prestataires > 0 && (
-          <div className="bg-white border border-[#DDDDDD] rounded-xl p-6 mb-8">
-            <h3 className="font-heading text-lg font-semibold text-[#0A1B2A] mb-4">
-              {t.repartitionType}
-            </h3>
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="flex items-center gap-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center">
-                  <Building2 className="w-6 h-6 text-blue-600" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm text-[#6B7280]">{t.statsEntreprises}</p>
-                  <p className="text-2xl font-semibold text-blue-600">
-                    {loading ? "..." : stats.entreprises}
-                  </p>
-                  {stats.prestataires > 0 && (
-                    <p className="text-xs text-[#6B7280] mt-1">
-                      {Math.round((stats.entreprises / stats.prestataires) * 100)}% du total
-                    </p>
-                  )}
-                </div>
-              </div>
-              <div className="flex items-center gap-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-                <div className="w-12 h-12 rounded-lg bg-green-100 flex items-center justify-center">
-                  <User className="w-6 h-6 text-green-600" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm text-[#6B7280]">{t.statsFreelances}</p>
-                  <p className="text-2xl font-semibold text-green-600">
-                    {loading ? "..." : stats.freelances}
-                  </p>
-                  {stats.prestataires > 0 && (
-                    <p className="text-xs text-[#6B7280] mt-1">
-                      {Math.round((stats.freelances / stats.prestataires) * 100)}% du total
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Actions rapides */}
         <div className="grid md:grid-cols-2 gap-6">

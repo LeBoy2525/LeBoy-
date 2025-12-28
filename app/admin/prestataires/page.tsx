@@ -168,12 +168,35 @@ export default function AdminPrestatairesPage() {
             email: p.email,
             statut: p.statut,
             typePrestataire: p.typePrestataire,
+            deletedAt: p.deletedAt,
             type: typeof p.id,
           })),
         });
         
         const prestatairesList = data.prestataires || [];
         setPrestataires(prestatairesList);
+        
+        // Logs détaillés pour diagnostic des prestataires en attente
+        const enAttente = prestatairesList.filter((p: any) => p.statut === "en_attente" && !p.deletedAt);
+        console.log(`[Admin Prestataires] 📋 Prestataires en attente dans la liste: ${enAttente.length}`);
+        if (enAttente.length > 0) {
+          console.log("[Admin Prestataires] 📋 Détails prestataires en attente:", enAttente.map((p: any) => ({
+            id: p.id,
+            ref: p.ref,
+            email: p.email,
+            statut: p.statut,
+          })));
+        } else {
+          console.warn("[Admin Prestataires] ⚠️ Aucun prestataire en attente trouvé dans la liste");
+          // Afficher la répartition par statut
+          const statuts = prestatairesList.reduce((acc: any, p: any) => {
+            if (!p.deletedAt) {
+              acc[p.statut] = (acc[p.statut] || 0) + 1;
+            }
+            return acc;
+          }, {});
+          console.log("[Admin Prestataires] 📊 Répartition par statut:", statuts);
+        }
         
         console.log("[Admin Prestataires] 📊 Stats par type:", {
           total: prestatairesList.filter((p: any) => !p.deletedAt).length,
