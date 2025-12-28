@@ -69,6 +69,9 @@ export function RejectReasonModal({
 
     console.log("[Modal] handleConfirm appelé avec:", { selectedReason, reasonText });
     
+    // Ne pas reset le formulaire immédiatement pour éviter la désélection visuelle
+    // Le reset sera fait lors de la fermeture du modal
+    
     // Appeler directement onConfirm sans setTimeout pour éviter les problèmes de timing
     try {
       onConfirm(selectedReason, reasonText);
@@ -76,16 +79,11 @@ export function RejectReasonModal({
       console.error("[Modal] Erreur lors de onConfirm:", error);
       alert(lang === "fr" ? "Erreur lors de la confirmation" : "Error during confirmation");
     }
-    
-    // Reset form après un court délai pour permettre l'exécution
-    setTimeout(() => {
-      setSelectedReason("");
-      setCustomReason("");
-    }, 100);
   };
 
   const handleCancel = () => {
     if (isProcessing) return; // Empêcher la fermeture pendant le traitement
+    // Reset form lors de la fermeture
     setSelectedReason("");
     setCustomReason("");
     onClose();

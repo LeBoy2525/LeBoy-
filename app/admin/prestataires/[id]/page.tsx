@@ -210,7 +210,8 @@ export default function AdminPrestataireDetailPage() {
     }
 
     // Pour le rejet, ouvrir le modal au lieu de confirmer directement
-    if (action === "rejeter") {
+    // SAUF si raisonRejet est fourni (ce qui signifie qu'on vient du modal)
+    if (action === "rejeter" && !raisonRejet) {
       console.log(`[Detail Page] Ouverture modal rejet pour prestataire: ${prestataire?.nomEntreprise || prestataire?.nomContact}`);
       setRejectModalOpen(true);
       return;
