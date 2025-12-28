@@ -722,6 +722,9 @@ export default function AdminPrestatairesPage() {
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
+                                    console.log("🔴 BOUTON REJETER CLIQUÉ - ID:", prestataire.id, "Type:", typeof prestataire.id);
+                                    console.log("🔴 Prestataire complet:", prestataire);
+                                    alert(`DEBUG: Clic sur Rejeter - ID: ${prestataire.id} (type: ${typeof prestataire.id})`);
                                     handleAction(prestataire.id, "rejeter");
                                   }}
                                   className="p-1.5 text-red-600 hover:bg-red-50 rounded transition"
