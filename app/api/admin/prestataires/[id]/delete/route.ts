@@ -8,6 +8,7 @@ import {
   getPrestataireById,
   softDeletePrestataire,
 } from "@/lib/dataAccess";
+import { validateUUID } from "@/lib/uuidValidation";
 
 export const runtime = "nodejs";
 
@@ -27,15 +28,17 @@ export async function DELETE(
     }
 
     const resolvedParams = await params;
-    const prestataireId = parseInt(resolvedParams.id);
-    if (isNaN(prestataireId)) {
+    const prestataireUuid = resolvedParams.id;
+    
+    const uuidValidation = validateUUID(prestataireUuid, "Prestataire ID");
+    if (!uuidValidation.valid) {
       return NextResponse.json(
-        { error: "ID invalide." },
+        { error: uuidValidation.error },
         { status: 400 }
       );
     }
 
-    const prestataire = await getPrestataireById(prestataireId);
+    const prestataire = await getPrestataireById(prestataireUuid);
     if (!prestataire) {
       return NextResponse.json(
         { error: "Prestataire non trouvé." },
@@ -59,7 +62,7 @@ export async function DELETE(
       );
     }
 
-    const deleted = await softDeletePrestataire(prestataireId, userEmail);
+    const deleted = await softDeletePrestataire(prestataireUuid, userEmail);
     if (!deleted) {
       return NextResponse.json(
         { error: "Erreur lors de la suppression." },

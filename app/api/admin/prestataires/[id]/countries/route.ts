@@ -6,6 +6,7 @@ import { cookies } from "next/headers";
 import { getUserRoleAsync } from "@/lib/auth";
 import { updatePrestataire, getPrestataireById } from "@/lib/dataAccess";
 import { getActiveCountries } from "@/lib/countriesStore";
+import { validateUUID } from "@/lib/uuidValidation";
 
 type RouteParams = {
   params: Promise<{ id: string }>;
@@ -17,7 +18,15 @@ export async function PATCH(
 ) {
   try {
     const resolvedParams = await params;
-    const prestataireId = parseInt(resolvedParams.id);
+    const prestataireUuid = resolvedParams.id;
+    
+    const uuidValidation = validateUUID(prestataireUuid, "Prestataire ID");
+    if (!uuidValidation.valid) {
+      return NextResponse.json(
+        { error: uuidValidation.error },
+        { status: 400 }
+      );
+    }
     
     // Vérifier l'authentification admin
     const cookieStore = await cookies();
@@ -51,7 +60,7 @@ export async function PATCH(
     }
 
     // Trouver le prestataire
-    const prestataire = await getPrestataireById(prestataireId);
+    const prestataire = await getPrestataireById(prestataireUuid);
 
     if (!prestataire) {
       return NextResponse.json(
@@ -61,7 +70,7 @@ export async function PATCH(
     }
 
     // Mettre à jour les pays
-    const updated = await updatePrestataire(prestataireId, { countries });
+    const updated = await updatePrestataire(prestataireUuid, { countries });
 
     return NextResponse.json({
       ok: true,

@@ -24,17 +24,32 @@ export async function POST(
     }
 
     const resolvedParams = await params;
-    const propositionId = parseInt(resolvedParams.id);
+    const propositionUuid = resolvedParams.id;
     
-    if (isNaN(propositionId)) {
+    const uuidValidation = validateUUID(propositionUuid, "Proposition ID");
+    if (!uuidValidation.valid) {
       return NextResponse.json(
-        { error: "ID invalide." },
+        { error: uuidValidation.error },
         { status: 400 }
       );
     }
 
     // Récupérer la proposition
-    const proposition = await getPropositionById(propositionId);
+    // Note: getPropositionById accepte number pour JSON store, mais UUID pour Prisma
+    // On doit utiliser directement le repository Prisma si USE_DB
+    const { USE_DB } = await import("@/lib/dbFlag");
+    let proposition: any = null;
+    
+    if (USE_DB) {
+      const { getPropositionById } = await import("@/repositories/propositionsRepo");
+      const propPrisma = await getPropositionById(propositionUuid);
+      if (propPrisma) {
+        const { convertPrismaPropositionToJSON } = await import("@/lib/dataAccess");
+        proposition = convertPrismaPropositionToJSON(propPrisma);
+      }
+    } else {
+      proposition = await getPropositionById(parseInt(propositionUuid)); // JSON fallback
+    }
     if (!proposition) {
       return NextResponse.json(
         { error: "Proposition non trouvée." },
@@ -129,12 +144,15 @@ export async function POST(
     saveMissions();
 
     // Mettre à jour le statut de la proposition acceptée
-    await updatePropositionStatut(propositionId, "acceptee", userEmail, mission.id);
+    await updatePropositionStatut(propositionUuid, "acceptee", userEmail, mission.id);
 
     // Refuser automatiquement toutes les autres propositions pour cette demande
     const toutesPropositions = await getPropositionsByDemandeId(demande.id);
     for (const prop of toutesPropositions) {
-      if (prop.id !== propositionId && prop.statut === "en_attente") {
+      // Comparer les IDs (peuvent être UUIDs ou numbers selon le store)
+      const propId = typeof prop.id === "string" ? prop.id : String(prop.id);
+      const currentPropId = typeof propositionUuid === "string" ? propositionUuid : String(propositionUuid);
+      if (propId !== currentPropId && prop.statut === "en_attente") {
         await updatePropositionStatut(prop.id, "refusee", userEmail, null, "Proposition non retenue - Autre prestataire sélectionné");
       }
     }
@@ -163,7 +181,17 @@ export async function POST(
     }
 
     // Récupérer la proposition mise à jour
-    const updatedProposition = await getPropositionById(propositionId);
+    let updatedProposition: any = null;
+    if (USE_DB) {
+      const { getPropositionById } = await import("@/repositories/propositionsRepo");
+      const propPrisma = await getPropositionById(propositionUuid);
+      if (propPrisma) {
+        const { convertPrismaPropositionToJSON } = await import("@/lib/dataAccess");
+        updatedProposition = convertPrismaPropositionToJSON(propPrisma);
+      }
+    } else {
+      updatedProposition = await getPropositionById(parseInt(propositionUuid)); // JSON fallback
+    }
 
     return NextResponse.json(
       {

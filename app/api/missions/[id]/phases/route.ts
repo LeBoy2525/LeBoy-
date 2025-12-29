@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { getMissionById, updateMissionStatus, saveMissions } from "@/lib/dataAccess";
 import { getUserRoleAsync } from "@/lib/auth";
 import type { ExecutionPhase } from "@/lib/types";
+import { validateUUID } from "@/lib/uuidValidation";
 
 type RouteParams = {
   params: Promise<{ id: string }>;
@@ -22,8 +23,17 @@ export async function POST(req: Request, { params }: RouteParams) {
     }
 
     const resolvedParams = await params;
-    const missionId = parseInt(resolvedParams.id);
-    const mission = await getMissionById(missionId);
+    const missionUuid = resolvedParams.id;
+    
+    const uuidValidation = validateUUID(missionUuid, "Mission ID");
+    if (!uuidValidation.valid) {
+      return NextResponse.json(
+        { error: uuidValidation.error },
+        { status: 400 }
+      );
+    }
+    
+    const mission = await getMissionById(missionUuid);
 
     if (!mission) {
       return NextResponse.json(
@@ -40,7 +50,7 @@ export async function POST(req: Request, { params }: RouteParams) {
     }
 
     mission.phases.push(phase);
-    await updateMissionStatus(missionId, mission.status, userEmail);
+    await updateMissionStatus(missionUuid, mission.status, userEmail);
     await saveMissions();
 
     return NextResponse.json({ phase }, { status: 201 });

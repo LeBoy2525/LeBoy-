@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { getMissionById, saveMissions } from "@/lib/dataAccess";
 import { getUserRoleAsync } from "@/lib/auth";
 import { getDemandeById } from "@/lib/dataAccess";
+import { validateUUID } from "@/lib/uuidValidation";
 
 type RouteParams = {
   params: Promise<{ id: string }>;
@@ -21,15 +22,17 @@ export async function POST(req: Request, { params }: RouteParams) {
     }
 
     const resolvedParams = await params;
-    const missionId = parseInt(resolvedParams.id);
-    if (isNaN(missionId)) {
+    const missionUuid = resolvedParams.id;
+    
+    const uuidValidation = validateUUID(missionUuid, "Mission ID");
+    if (!uuidValidation.valid) {
       return NextResponse.json(
-        { error: "ID invalide." },
+        { error: uuidValidation.error },
         { status: 400 }
       );
     }
 
-    const mission = await getMissionById(missionId);
+    const mission = await getMissionById(missionUuid);
     if (!mission) {
       return NextResponse.json(
         { error: "Mission non trouvée." },
@@ -109,15 +112,17 @@ export async function DELETE(req: Request, { params }: RouteParams) {
     }
 
     const resolvedParams = await params;
-    const missionId = parseInt(resolvedParams.id);
-    if (isNaN(missionId)) {
+    const missionUuid = resolvedParams.id;
+    
+    const uuidValidation = validateUUID(missionUuid, "Mission ID");
+    if (!uuidValidation.valid) {
       return NextResponse.json(
-        { error: "ID invalide." },
+        { error: uuidValidation.error },
         { status: 400 }
       );
     }
 
-    const mission = await getMissionById(missionId);
+    const mission = await getMissionById(missionUuid);
     if (!mission) {
       return NextResponse.json(
         { error: "Mission non trouvée." },

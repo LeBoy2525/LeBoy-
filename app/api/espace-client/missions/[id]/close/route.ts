@@ -29,15 +29,17 @@ export async function POST(req: Request, { params }: RouteParams) {
     }
 
     const resolvedParams = await params;
-    const missionId = parseInt(resolvedParams.id);
-    if (isNaN(missionId)) {
+    const missionUuid = resolvedParams.id;
+    
+    const uuidValidation = validateUUID(missionUuid, "Mission ID");
+    if (!uuidValidation.valid) {
       return NextResponse.json(
-        { error: "ID invalide." },
+        { error: uuidValidation.error },
         { status: 400 }
       );
     }
 
-    const mission = await getMissionById(missionId);
+    const mission = await getMissionById(missionUuid);
     if (!mission) {
       return NextResponse.json(
         { error: "Mission non trouvée." },
@@ -89,7 +91,7 @@ export async function POST(req: Request, { params }: RouteParams) {
     mission.closedAt = new Date().toISOString();
 
     // Mettre à jour l'état interne vers COMPLETED
-    const updated = await updateMissionInternalState(missionId, "COMPLETED", userEmail);
+    const updated = await updateMissionInternalState(missionUuid, "COMPLETED", userEmail);
 
     if (!updated) {
       return NextResponse.json(
@@ -104,7 +106,7 @@ export async function POST(req: Request, { params }: RouteParams) {
     updated.archivedBy = "client";
 
     // Ajouter une mise à jour pour informer que le client a fermé la mission
-    await addMissionUpdate(missionId, {
+    await addMissionUpdate(missionUuid, {
       type: "status_change",
       author: "client",
       authorEmail: userEmail,

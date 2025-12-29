@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { updateMissionStatus, getMissionById } from "@/lib/dataAccess";
 import { getPrestataireByEmail } from "@/lib/dataAccess";
+import { validateUUID } from "@/lib/uuidValidation";
 
 type RouteParams = {
   params: Promise<{ id: string }>;
@@ -22,17 +23,10 @@ export async function POST(_req: Request, { params }: RouteParams) {
     const resolvedParams = await params;
     const missionUuid = resolvedParams.id;
     
-    // Validation UUID
-    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    if (!missionUuid || typeof missionUuid !== "string" || !UUID_REGEX.test(missionUuid)) {
+    const uuidValidation = validateUUID(missionUuid, "Mission ID");
+    if (!uuidValidation.valid) {
       return NextResponse.json(
-        { error: "UUID invalide." },
-        { status: 400 }
-      );
-    }
-    if (isNaN(missionId)) {
-      return NextResponse.json(
-        { error: "ID invalide." },
+        { error: uuidValidation.error },
         { status: 400 }
       );
     }

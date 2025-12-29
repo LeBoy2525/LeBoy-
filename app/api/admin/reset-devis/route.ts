@@ -19,17 +19,15 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { demandeId } = body;
 
-    if (!demandeId || isNaN(parseInt(String(demandeId)))) {
+    if (!demandeId || typeof demandeId !== "string") {
       return NextResponse.json(
-        { error: "ID de demande invalide." },
+        { error: "ID de demande invalide (UUID attendu)." },
         { status: 400 }
       );
     }
 
-    const demandeIdNum = parseInt(String(demandeId));
-
     // Trouver toutes les missions de cette demande avec devis généré
-    const allMissions = await getMissionsByDemandeId(demandeIdNum);
+    const allMissions = await getMissionsByDemandeId(demandeId);
     const missionsToReset = allMissions.filter(
       (m) => m.devisGenere === true
     );
@@ -64,7 +62,7 @@ export async function POST(req: Request) {
     }
 
     // Réinitialiser les propositions acceptées pour cette demande
-    const propositions = await getPropositionsByDemandeId(demandeIdNum);
+    const propositions = await getPropositionsByDemandeId(demandeId);
     for (const prop of propositions) {
       if (prop.statut === "acceptee") {
         await updatePropositionStatut(prop.id, "en_attente", userEmail);

@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getUserRole } from "@/lib/auth";
-import { markNotificationAsRead, deleteNotification } from "@/lib/adminNotificationsStore";
+import { USE_DB } from "@/lib/dbFlag";
+import { validateUUID } from "@/lib/uuidValidation";
 
 type RouteParams = {
   params: Promise<{ id: string }>;
@@ -20,11 +21,12 @@ export async function PATCH(req: Request, { params }: RouteParams) {
     }
 
     const resolvedParams = await params;
-    const notificationId = parseInt(resolvedParams.id);
+    const notificationUuid = resolvedParams.id;
     
-    if (isNaN(notificationId)) {
+    const uuidValidation = validateUUID(notificationUuid, "Notification ID");
+    if (!uuidValidation.valid) {
       return NextResponse.json(
-        { error: "ID invalide." },
+        { error: uuidValidation.error },
         { status: 400 }
       );
     }
@@ -33,7 +35,15 @@ export async function PATCH(req: Request, { params }: RouteParams) {
     const { action } = body;
 
     if (action === "mark_read") {
-      const success = markNotificationAsRead(notificationId);
+      let success = false;
+      if (USE_DB) {
+        const { markNotificationAsRead } = await import("@/repositories/notificationsRepo");
+        const updated = await markNotificationAsRead(notificationUuid);
+        success = !!updated;
+      } else {
+        const { markNotificationAsRead } = await import("@/lib/adminNotificationsStore");
+        success = markNotificationAsRead(parseInt(notificationUuid)); // JSON store still uses number
+      }
       if (success) {
         return NextResponse.json(
           { success: true, message: "Notification marquée comme lue." },
@@ -73,16 +83,25 @@ export async function DELETE(req: Request, { params }: RouteParams) {
     }
 
     const resolvedParams = await params;
-    const notificationId = parseInt(resolvedParams.id);
+    const notificationUuid = resolvedParams.id;
     
-    if (isNaN(notificationId)) {
+    const uuidValidation = validateUUID(notificationUuid, "Notification ID");
+    if (!uuidValidation.valid) {
       return NextResponse.json(
-        { error: "ID invalide." },
+        { error: uuidValidation.error },
         { status: 400 }
       );
     }
 
-    const success = deleteNotification(notificationId);
+    let success = false;
+    if (USE_DB) {
+      const { deleteNotification } = await import("@/repositories/notificationsRepo");
+      const deleted = await deleteNotification(notificationUuid);
+      success = !!deleted;
+    } else {
+      const { deleteNotification } = await import("@/lib/adminNotificationsStore");
+      success = deleteNotification(parseInt(notificationUuid)); // JSON store still uses number
+    }
     if (success) {
       return NextResponse.json(
         { success: true, message: "Notification supprimée." },
