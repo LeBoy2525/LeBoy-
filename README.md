@@ -1,36 +1,93 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# LeBoy Platform - Documentation Technique
 
-## Getting Started
+**Plateforme de mise en relation entre clients (diaspora africaine) et prestataires de services locaux**
 
-First, run the development server:
+---
+
+## 📋 Documentation pour Audit
+
+Cette documentation est préparée pour un audit de sécurité et paiements Stripe. Tous les documents nécessaires sont disponibles dans ce repository.
+
+### 📚 Documents Essentiels
+
+#### Pour l'Audit Technique
+- **[Présentation Technique Complète](./PRESENTATION_TECHNIQUE_POUR_DEVELOPPEUR.md)** - Vue d'ensemble technique complète
+- **[Documentation de Sauvegarde](./DOCUMENTATION_SAUVEGARDE_COMPLETE.md)** - Architecture, installation, configuration
+- **[Structure du Projet](./PROJECT_TREE_DIAGRAM.md)** - Organisation du code
+- **[Audit Stripe & Sécurité](./AUDIT_STRIPE_SECURITY.md)** - Documentation spécifique paiements et sécurité
+
+#### Architecture & Workflow
+- **[Workflow Complet](./WORKFLOW_CHECKLIST.md)** - Processus métier détaillé
+- **[Schéma Prisma](./prisma/schema.prisma)** - Modèles de données
+
+#### Configuration & Déploiement
+- **[Variables d'Environnement](./VERCEL_ENV_VARIABLES.md)** - Configuration complète
+- **[Checklist Déploiement](./CHECKLIST_DEPLOIEMENT_VERCEL.md)** - Guide de déploiement
+
+---
+
+## 🚀 Quick Start
 
 ```bash
+# Installation
+npm install
+
+# Configuration base de données locale (Docker)
+docker-compose up -d
+
+# Migrations Prisma
+npx prisma migrate dev
+
+# Démarrage développement
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🔐 Accès au Repository
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+**Repository GitHub :** `https://github.com/LeBoy2525/LeBoy-`
 
-## Learn More
+Pour obtenir un accès en lecture :
+1. Contactez l'administrateur du projet
+2. Fournissez votre email GitHub ou nom d'utilisateur
+3. Accès en lecture seule sera accordé
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 📖 Structure du Projet
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+LeBoy Platform
+├── app/                    # Next.js App Router
+│   ├── api/               # Routes API (81 routes)
+│   ├── admin/            # Espace administrateur
+│   ├── espace-client/     # Espace client
+│   └── prestataires/     # Espace prestataire
+├── lib/                   # Bibliothèques et utilitaires
+├── repositories/          # Repositories Prisma
+├── prisma/                # Schéma et migrations
+└── public/               # Assets statiques
+```
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🛠️ Stack Technique
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Framework :** Next.js 16.0.10 (App Router)
+- **Langage :** TypeScript 5.x (strict mode)
+- **Base de données :** PostgreSQL + Prisma 7.1.0
+- **Paiements :** Stripe
+- **Email :** Resend API
+- **Stockage :** Vercel Blob Storage
+- **Authentification :** Iron Session + Bcrypt
+
+---
+
+## 📞 Contact
+
+Pour toute question concernant l'audit ou l'accès au repository, contactez l'administrateur du projet.
+
+---
+
+**Dernière mise à jour :** Janvier 2025
