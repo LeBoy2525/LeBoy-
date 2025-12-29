@@ -3,10 +3,11 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getUserRoleAsync } from "@/lib/auth";
-import { getPropositionById, updatePropositionStatut, getPropositionsByDemandeId } from "@/lib/dataAccess";
+import { getPropositionById, updatePropositionStatut, getPropositionsByDemandeId, getPrestataireById } from "@/lib/dataAccess";
 import { getDemandeById } from "@/lib/dataAccess";
 import { getMissionsByDemandeId, getMissionById, updateMissionInternalState, saveMissions } from "@/lib/missionsStore";
-import { getPrestataireByEmail } from "@/lib/dataAccess";
+import { validateUUID } from "@/lib/uuidValidation";
+import { USE_DB } from "@/lib/dbFlag";
 
 export async function POST(
   req: Request,
@@ -37,7 +38,6 @@ export async function POST(
     // Récupérer la proposition
     // Note: getPropositionById accepte number pour JSON store, mais UUID pour Prisma
     // On doit utiliser directement le repository Prisma si USE_DB
-    const { USE_DB } = await import("@/lib/dbFlag");
     let proposition: any = null;
     
     if (USE_DB) {
@@ -73,34 +73,16 @@ export async function POST(
       );
     }
 
-    // Récupérer le prestataire - on doit trouver le prestataire par son ID
-    // Pour l'instant, on utilise le fallback JSON car on n'a pas de fonction getPrestataireById dans dataAccess
-    const { getAllPrestataires } = await import("@/repositories/prestatairesRepo");
-    const { USE_DB } = await import("@/lib/dbFlag");
-    let prestataire: any = null;
-
-    if (USE_DB) {
-      try {
-        const allPrestataires = await getAllPrestataires();
-        prestataire = allPrestataires.find((p: any) => {
-          if (typeof p.id === "string" && p.id.includes("-")) {
-            const hash = p.id.split("").reduce((acc: number, char: string) => {
-              return ((acc << 5) - acc) + char.charCodeAt(0);
-            }, 0);
-            const idNumber = Math.abs(hash) % 1000000;
-            return idNumber === proposition.prestataireId;
-          }
-          return parseInt(String(p.id)) === proposition.prestataireId;
-        });
-      } catch (error) {
-        console.error("Erreur recherche prestataire (DB):", error);
-        const { prestatairesStore } = await import("@/lib/prestatairesStore");
-        prestataire = prestatairesStore.find((p) => p.id === proposition.prestataireId);
-      }
-    } else {
-      const { prestatairesStore } = await import("@/lib/prestatairesStore");
-      prestataire = prestatairesStore.find((p) => p.id === proposition.prestataireId);
+    // Récupérer le prestataire par son ID (UUID)
+    const prestataireId = proposition.prestataireId;
+    if (!prestataireId) {
+      return NextResponse.json(
+        { error: "Prestataire ID manquant dans la proposition." },
+        { status: 400 }
+      );
     }
+    
+    const prestataire = await getPrestataireById(prestataireId);
 
     if (!prestataire) {
       return NextResponse.json(
