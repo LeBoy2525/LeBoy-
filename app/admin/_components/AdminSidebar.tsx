@@ -73,12 +73,13 @@ export function AdminSidebar({ onClose }: AdminSidebarProps) {
           labelFr: "Demandes",
           labelEn: "Requests",
         },
-        {
-          href: "/admin/missions",
-          icon: Briefcase,
-          labelFr: "Missions",
-          labelEn: "Missions",
-        },
+        // Missions sont gérées via les demandes, pas besoin d'une page séparée
+        // {
+        //   href: "/admin/missions",
+        //   icon: Briefcase,
+        //   labelFr: "Missions",
+        //   labelEn: "Missions",
+        // },
         {
           href: "/admin/prestataires",
           icon: Users,
