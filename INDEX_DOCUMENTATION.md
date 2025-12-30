@@ -21,7 +21,30 @@
    - Risques identifiés
    - Recommandations
 
-3. **[README.md](./README.md)** - Vue d'ensemble et quick start
+3. **[DOCUMENT_AUDIT_SCHEMA_DONNEES.md](./DOCUMENT_AUDIT_SCHEMA_DONNEES.md)** ⭐ **SCHÉMA DE DONNÉES**
+   - Modèles de données complets
+   - Relations et contraintes
+   - Champs JSONB et structures complexes
+   - Index et performance
+   - Types et validations
+
+4. **[DOCUMENT_AUDIT_LOGIQUE_METIER.md](./DOCUMENT_AUDIT_LOGIQUE_METIER.md)** ⭐ **LOGIQUE MÉTIER & ÉTATS**
+   - Workflow complet des missions
+   - États internes et transitions
+   - Règles métier par rôle
+   - Workflow de paiement
+   - Workflow de validation
+   - Règles de sécurité
+
+5. **[DOCUMENT_AUDIT_PATTERNS_ARCHITECTURE.md](./DOCUMENT_AUDIT_PATTERNS_ARCHITECTURE.md)** ⭐ **PATTERNS D'ARCHITECTURE**
+   - Vue d'ensemble architecturale
+   - Patterns principaux utilisés
+   - Structure du code
+   - Couches d'abstraction
+   - Gestion des erreurs
+   - Sécurité et performance
+
+6. **[README.md](./README.md)** - Vue d'ensemble et quick start
 
 ---
 
